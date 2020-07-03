@@ -1,6 +1,5 @@
 import wx
-import Panels
-import test_frame
+from wx_Panels import Start, Analyze, Validate
 
 class HomeFrame(wx.Frame):
     
@@ -14,17 +13,17 @@ class HomeFrame(wx.Frame):
         super(HomeFrame, self).__init__(*args, **kw)
 
 
-        self.HeaderPanel = Panels.HeaderPanel(self)
-        self.HeaderPanel.Hide()
+        self.StartPanel = Start.StartPanel(self)
+        self.StartPanel.Hide()
 
-        self.AnalyzePanel = Panels.AnalyzePanel(self)
+        self.AnalyzePanel = Analyze.AnalyzePanel(self)
         self.AnalyzePanel.Hide()
         
-        self.ValidatePanel = Panels.ValidatePanel(self)
+        self.ValidatePanel = Validate.ValidatePanel(self)
         self.ValidatePanel.Hide()
 
 
-        self.current_panel = self.HeaderPanel
+        self.current_panel = self.StartPanel
         
 
         # configure UI organization
@@ -51,8 +50,11 @@ class HomeFrame(wx.Frame):
 
         ################################################################
 
-        file_menu = wx.Menu()      
+        file_menu = wx.Menu()
+        
 
+        start_item = file_menu.Append(-1, "&Home page...\tCtrl-H",
+                "Help string shown in status bar for this menu item")
         import_item = file_menu.Append(-1, "&Import file...\tCtrl-I",
                 "Help string shown in status bar for this menu item")
         save_item = file_menu.Append(-1, "&Save...\t",
@@ -102,20 +104,27 @@ class HomeFrame(wx.Frame):
         self.SetMenuBar(menu_bar)
         
         # configure events for menu items
-
+        self.Bind(wx.EVT_MENU, self.on_start, start_item)
         self.Bind(wx.EVT_MENU, self.on_about, about_item)
         self.Bind(wx.EVT_MENU, self.on_quit, quit_item)
         self.Bind(wx.EVT_MENU, self.on_analyze, analyze_item)
         self.Bind(wx.EVT_MENU, self.on_validate, validate_item)
 
+    def on_start(self, event):
+        
+        self.current_panel.Hide()
 
+        self.myGridSizer.Replace(self.current_panel, self.StartPanel)
+        self.SetSizer(self.myGridSizer)
+
+        self.current_panel = self.StartPanel
+        self.current_panel.Show()
+
+        self.SetStatusText('')
+        self.Layout()
+        self.Refresh()
     
     def on_import(self, event):
-        
-        pass
-
-
-    def on_save(self, event):
         
         pass
 
@@ -141,10 +150,7 @@ class HomeFrame(wx.Frame):
         self.current_panel = self.AnalyzePanel
         self.current_panel.Show()
 
-        # self.current_panel.header.SetLabel('Analyze')
-        # font = wx.Font(15,wx.MODERN,wx.NORMAL,wx.NORMAL)
-        # self.HeaderPanel.header.SetFont(font)
-        self.SetStatusText('Analyze data')
+        self.SetStatusText('Slip detector ready for new job')
         self.Layout()
         self.Refresh()
 

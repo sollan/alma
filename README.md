@@ -1,5 +1,9 @@
 # slip_detector
 GUI for DeepLabCut-based behavioral analysis
 
-```pip install requirements.txt
-python ./wx_app.py```
+```bash
+pip install requirements.txt 
+# not including deeplabcut-related packages
+# sufficient for validating / predicting slips from DLC-generated csv files
+python ./wx_app.py
+```

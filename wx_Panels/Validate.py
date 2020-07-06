@@ -1,5 +1,7 @@
 import wx
 from wx.lib.stattext import GenStaticText as StaticText
+from Functions import ValidateFunctions
+import os
 
 
 class ValidatePanel(wx.Panel):
@@ -9,16 +11,27 @@ class ValidatePanel(wx.Panel):
         """Constructor"""
         wx.Panel.__init__(self, parent=parent)
 
-        # create a sizer to manage the layout of child widgets
-        self.SliderSizer = wx.GridBagSizer(600, 100)
+        self.dirname = os.getcwd()
 
-        self.sld = wx.Slider(self, value=200, minValue=1, maxValue=2000,
+        # create a sizer to manage the layout of child widgets
+        self.SliderSizer = wx.GridBagSizer(10, 10)
+
+        self.import_button = wx.Button(self, id=wx.ID_ANY, label="Press Me")
+        self.SliderSizer.Add(self.import_button, pos = (1, 0), flag = wx.ALL, border=25)
+        self.import_button.Bind(wx.EVT_BUTTON, self.ImportFunc)
+
+        self.bodypart = 'HR'
+        self.threshold = 0.4
+
+        # self.SliderSizer.Add(self.import_button, 0, wx.ALIGN_CENTER) 
+
+        self.slider = wx.Slider(self, value=200, minValue=1, maxValue=2000,
                         style=wx.SL_HORIZONTAL)
-        self.sld.Bind(wx.EVT_SCROLL, self.OnSliderScroll)
-        self.SliderSizer.Add(self.sld, pos=(0, 0), flag=wx.ALL|wx.EXPAND, border=15)
+        self.slider.Bind(wx.EVT_SCROLL, self.OnSliderScroll)
+        self.SliderSizer.Add(self.slider, pos=(2, 0), flag=wx.ALL|wx.EXPAND, border=5)
 
         self.txt = wx.StaticText(self, label='300')
-        self.SliderSizer.Add(self.txt, pos=(0, 1), flag=wx.TOP|wx.RIGHT, border=15)
+        self.SliderSizer.Add(self.txt, pos=(2, 1), flag=wx.TOP|wx.RIGHT, border=5)
 
         self.SliderSizer.AddGrowableCol(0)
         self.SetSizer(self.SliderSizer)
@@ -35,11 +48,24 @@ class ValidatePanel(wx.Panel):
         self.txt.SetLabel(str(val))
 
 
+    def ImportFunc(self, e):
+        
+        dlg=wx.FileDialog(self, 'Choose a file', self.dirname, '', 'CSV files (*.csv)|*.csv|All files(*.*)|*.*', wx.FD_OPEN)
+        if dlg.ShowModal() == wx.ID_OK:
+            self.dirname = dlg.GetDirectory()
+            self.filename = os.path.join(self.dirname, dlg.GetFilename())
+            self.df, self.filename = ValidateFunctions.read_file(self.filename)
+            self.df = ValidateFunctions.fix_column_names(self.df)
+            self.df = ValidateFunctions.filter_predictions(self.df, self.bodypart, self.threshold)
+
+    
+
+
 
     #################################
-    # --> import csv file (analyzed) 
+    # import csv file (analyzed)  
     # (automatically find csv output from same session?)
-    # generate plots
+    # --> generate plots
     # predict peaks (start with baseline correction & scipy find peak)
     # display axis plot, current frame, and frame with opencv
     # slider to adjust frames

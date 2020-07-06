@@ -23,7 +23,7 @@ class HomeFrame(wx.Frame):
         self.ValidatePanel.Hide()
 
 
-        self.current_panel = self.StartPanel
+        self.current_panel = self.ValidatePanel
         
 
         # configure UI organization

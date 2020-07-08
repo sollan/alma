@@ -69,8 +69,8 @@ class ValidatePanel(wx.Panel):
 
         assert self.df is not None, "Cannot read file. Try another one?"
 
-        n_pred, depth_pred, t_pred, properties_pred = ValidateFunctions.find_slips(self.df, self.bodypart) 
-        self.n_pred, self.depth_pred, self.t_pred = n_pred, depth_pred, t_pred
+        n_pred, depth_pred, t_pred, start_pred, end_pred = ValidateFunctions.find_slips(self.df, self.bodypart) 
+        self.n_pred, self.depth_pred, self.t_pred, self.start_pred, self.end_pred = n_pred, depth_pred, t_pred, start_pred, end_pred
         self.pred_text = wx.StaticText(self, label = f"The algorithm predicted {self.n_pred} slips with an average depth of {self.depth_pred:.2f} pixels. \nYou can validate the prediction now.")
         self.sizer.Add(self.pred_text, pos= (9, 1) , flag = wx.ALL, border = 25)
         self.SetSizer(self.sizer)
@@ -92,12 +92,27 @@ class ValidatePanel(wx.Panel):
 
 
     def ValidateFunc(self, e):
-
-        pass
+        wx.MessageBox("This function is still under development. Thanks for your patience! :)")
 
     def SavePredFunc(self, e):
 
-        wx.MessageBox("This function is still under development. Thanks for your patience! :)")
+        with wx.FileDialog(self, 'Save current prediction as... ', \
+                           self.dirname, '', 'CSV files (*.csv)|*.csv|All files(*.*)|*.*', \
+                           wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT) as save_pred_dialog:
+                            
+            if save_pred_dialog.ShowModal() == wx.ID_CANCEL:
+                return
+
+            pathname = save_pred_dialog.GetPath()
+
+            try:
+                ValidateFunctions.make_output(pathname, self.t_pred, self.depth_pred, self.start_pred, self.end_pred)
+
+            except IOError:
+                wx.LogError(f"Cannot save current data in file {pathname}. Try another location or filename?")
+
+                
+        # wx.MessageBox("This function is still under development. Thanks for your patience! :)")
 
 
     # def Validate(self, e):

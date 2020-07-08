@@ -1,6 +1,7 @@
 import pandas as pd
 from scipy.signal import peak_widths, find_peaks
 import numpy as np
+import matplotlib.pyplot as plt
 import os
 
 
@@ -86,3 +87,15 @@ def make_output(pathname, t_slips, depth_slips, start_slips, end_slips):
                             'end': end_slips})
 
     df_output.to_csv(pathname, index = False)
+
+
+def plot_frame(video_file, n_frame):
+
+    pass
+
+
+def plot_labels(df, bodypart):
+
+    plt.figure(figsize=(20,5))
+    plt.scatter(df['bodyparts coords'].iloc[:], df['%s %s' %(bodypart, 'y')].iloc[:], s=1)
+    plt.title('DeepLabCut labels')

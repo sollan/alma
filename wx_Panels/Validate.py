@@ -92,7 +92,33 @@ class ValidatePanel(wx.Panel):
 
 
     def ValidateFunc(self, e):
-        wx.MessageBox("This function is still under development. Thanks for your patience! :)")
+
+        import matplotlib as mpl
+        ## Import the matplotlib backend for wxPython
+        from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
+        import numpy as np
+        self.import_button.Hide()
+        self.pred_text.Hide()
+
+        x = np.arange(10)
+        y = np.arange(10)
+        ## This is to work with matplotlib inside wxPython
+        ## I prefer to use the object oriented API
+        self.figure  = mpl.figure.Figure(figsize=(15, 5))
+        self.axes    = self.figure.add_subplot(111)
+        self.canvas  = FigureCanvas(self, -1, self.figure)
+        ## This is to avoid showing the plot area. When set to True
+        ## clicking the button show the canvas and the canvas covers the button
+        ## since the canvas is placed by default in the top left corner of the window
+        # self.canvas.Show(False)
+        self.axes.scatter(x, y)
+        # self.canvas.Show(True)
+
+        # self.png = wx.Image('../top_40_train.png', wx.BITMAP_TYPE_ANY).ConvertToBitmap()
+        # self.sizer.Add(wx.StaticBitmap(self, -1, self.png, (10, 5), (self.png.GetWidth(), self.png.GetHeight())), pos = (0, 1))
+
+        # wx.MessageBox("This function is still under development. Thanks for your patience! :)")
+
 
     def SavePredFunc(self, e):
 
@@ -112,9 +138,6 @@ class ValidatePanel(wx.Panel):
                 wx.LogError(f"Cannot save current data in file {pathname}. Try another location or filename?")
 
                 
-        # wx.MessageBox("This function is still under development. Thanks for your patience! :)")
-
-
     # def Validate(self, e):
         
     #     if self.df is not None:

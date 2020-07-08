@@ -1,6 +1,7 @@
 import wx
 from wx_Panels import Start, Analyze, Validate
 
+
 class HomeFrame(wx.Frame):
     
     """
@@ -211,8 +212,17 @@ class HomeFrame(wx.Frame):
 if __name__ == '__main__':
     # When this module is run (not imported) then create the app, the
     # frame, show it, and start the event loop.
+
+
+    from Functions import ConfigFunctions
+
+
+
+
+    window_width, window_height = ConfigFunctions.load_config('./config.yaml')
+
     app = wx.App(redirect = True)
-    home_frame = HomeFrame(None, title='Slip Detector', size=(1000,800))
+    home_frame = HomeFrame(None, title='Slip Detector', size=(window_width, window_height))
     # test_frame = test_frame.Example(None, title='Slip Detector', size=(1000,800))
     # home_frame.test_frame = test_frame
     # test_frame.Hide()

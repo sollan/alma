@@ -1,4 +1,6 @@
 import pandas as pd
+from scipy.signal import peak_widths, find_peaks
+import numpy as np
 import os
 
 
@@ -39,3 +41,37 @@ def filter_predictions(pd_dataframe, bodyparts, threshold):
     # raise error if any bodypart name not identical as in csv
         
     return pd_dataframe
+
+
+def find_slips(pd_dataframe, bodypart, **kwargs): 
+        
+    peaks, properties = find_peaks(-pd_dataframe['%s y'%bodypart], height=-5000, prominence=(10,100000))
+    # peaks, properties = find_peaks(pd_dataframe, prominence=0, distance=18, height=-10, width = 0)
+    # width_half = peak_widths(data, peaks, rel_height=0.5)
+    
+#         peaks, properties = find_peaks(-data, prominence=(10,100000), height=-5000, width = 0)
+#         width_half = peak_widths(-data, peaks, rel_height=0.5)
+    
+    index = pd_dataframe['bodyparts coords'].iloc[:]
+    
+    is_peak = np.zeros(len(index))
+    n_peaks = 0
+    current_data = pd_dataframe.iloc[0]
+    norm = np.max(pd_dataframe['%s y'%bodypart])
+    std = np.std(pd_dataframe['%s y'%bodypart])
+    
+    for i in range(len(is_peak)):
+        
+        if i in peaks:
+            # is_peak[i] = df['toe y'][i]
+            is_peak[i] = norm-std*4
+            n_peaks += 1
+        
+        else:
+            is_peak[i] = norm-std*2
+            
+        current_data = pd_dataframe.iloc[i]
+        
+        h_peaks = np.mean(properties["prominences"])
+        
+    return n_peaks, h_peaks, peaks, properties

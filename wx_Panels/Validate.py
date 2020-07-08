@@ -70,10 +70,19 @@ class ValidatePanel(wx.Panel):
         assert self.df is not None, "Cannot read file. Try another one?"
 
         n_pred, depth_pred, t_pred, properties_pred = ValidateFunctions.find_slips(self.df, self.bodypart) 
-        self.n_pred = n_pred
-        self.n_pred_text = wx.StaticText(self, label = f"The algorithm predicted {self.n_pred} slips. You can validate the prediction now.")
-        self.sizer.Add(self.n_pred_text, pos= (9, 1) , flag = wx.ALL, border = 25)
+        self.n_pred, self.depth_pred, self.t_pred = n_pred, depth_pred, t_pred
+        self.pred_text = wx.StaticText(self, label = f"The algorithm predicted {self.n_pred} slips with an average depth of {self.depth_pred:.2f} pixels. \nYou can validate the prediction now.")
+        self.sizer.Add(self.pred_text, pos= (9, 1) , flag = wx.ALL, border = 25)
         self.SetSizer(self.sizer)
+
+        self.validate_button = wx.Button(self, id=wx.ID_ANY, label="Validate")
+        self.validate_button.Bind(wx.EVT_BUTTON, self.ValidateFunc)
+        self.sizer.Add(self.validate_button, pos = (10, 1), flag = wx.LEFT, border = 25)
+
+        self.save_pred_button = wx.Button(self, id=wx.ID_ANY, label="Export Prediction")
+        self.save_pred_button.Bind(wx.EVT_BUTTON, self.SavePredFunc)
+        self.sizer.Add(self.save_pred_button, pos = (10, 2), flag = wx.LEFT, border = 25)
+
         self.Layout()
 
         #################################
@@ -82,9 +91,13 @@ class ValidatePanel(wx.Panel):
         #################################
 
 
-    def ValidatePrediction(self, e):
+    def ValidateFunc(self, e):
 
         pass
+
+    def SavePredFunc(self, e):
+
+        wx.MessageBox("This function is still under development. Thanks for your patience! :)")
 
 
     # def Validate(self, e):

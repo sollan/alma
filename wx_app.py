@@ -28,10 +28,10 @@ class HomeFrame(wx.Frame):
         
 
         # configure UI organization
-        self.myGridSizer = wx.GridBagSizer(100,100)
-        self.myGridSizer.SetEmptyCellSize((0,0))
-        self.myGridSizer.Add(self.current_panel, pos=(0, 0), span=(4,8), flag=wx.EXPAND)
-        self.SetSizer(self.myGridSizer)
+        self.main_sizer = wx.GridBagSizer(0, 0)
+        self.main_sizer.SetEmptyCellSize((0, 0))
+        self.main_sizer.Add(self.current_panel, pos=(0, 0), span = (5, 5), flag=wx.EXPAND)
+        self.SetSizer(self.main_sizer)
 
         # create a menu bar
         self.makeMenuBar()
@@ -115,13 +115,13 @@ class HomeFrame(wx.Frame):
         
         self.current_panel.Hide()
 
-        self.myGridSizer.Replace(self.current_panel, self.StartPanel)
-        self.SetSizer(self.myGridSizer)
+        self.main_sizer.Replace(self.current_panel, self.StartPanel)
+        self.SetSizer(self.main_sizer)
 
         self.current_panel = self.StartPanel
         self.current_panel.Show()
 
-        self.SetStatusText('')
+        self.SetStatusText('Welcome!')
         self.Layout()
         self.Refresh()
     
@@ -145,8 +145,8 @@ class HomeFrame(wx.Frame):
         
         self.current_panel.Hide()
 
-        self.myGridSizer.Replace(self.current_panel, self.AnalyzePanel)
-        self.SetSizer(self.myGridSizer)
+        self.main_sizer.Replace(self.current_panel, self.AnalyzePanel)
+        self.SetSizer(self.main_sizer)
 
         self.current_panel = self.AnalyzePanel
         self.current_panel.Show()
@@ -160,8 +160,8 @@ class HomeFrame(wx.Frame):
 
         self.current_panel.Hide()
 
-        self.myGridSizer.Replace(self.current_panel, self.ValidatePanel)
-        self.SetSizer(self.myGridSizer)
+        self.main_sizer.Replace(self.current_panel, self.ValidatePanel)
+        self.SetSizer(self.main_sizer)
 
         self.current_panel = self.ValidatePanel
         self.current_panel.Show()

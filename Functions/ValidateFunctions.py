@@ -1,7 +1,9 @@
 import pandas as pd
 from scipy.signal import peak_widths, find_peaks
 import numpy as np
-import matplotlib.pyplot as plt
+import matplotlib as mpl
+from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
+import cv2
 
 def read_file(file):
     
@@ -87,13 +89,37 @@ def make_output(pathname, t_slips, depth_slips, start_slips, end_slips):
     df_output.to_csv(pathname, index = False)
 
 
-def plot_frame(video_file, n_frame):
+def load_video(filename):
 
-    pass
+    vidcap = cv2.VideoCapture(filename)
+    return vidcap
 
 
-def plot_labels(df, bodypart):
+def plot_frame(video_file, n_frame, width, height, frame_rate, baseline = 0):
 
-    plt.figure(figsize=(20,5))
-    plt.scatter(df['bodyparts coords'].iloc[:], df['%s %s' %(bodypart, 'y')].iloc[:], s=1)
-    plt.title('DeepLabCut labels')
+    try: 
+        figure = mpl.figure.Figure(figsize=(width, height))
+        axes = figure.add_subplot(111)
+        axes.margins(x = 0)
+        # figure.tight_layout()
+
+        vidcap = load_video(video_file)
+        vidcap.set(1, n_frame)
+        ret, frame = vidcap.read()
+        image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+        axes.imshow(image)
+        axes.title.set_text(f'frame {n_frame} ({n_frame/frame_rate:.1f} s)')
+
+        return figure
+        
+    except cv2.error:
+
+        print(f'Frame {n_frame} cannot be displayed! (cv2 error)')
+
+
+# def plot_labels(df, bodypart):
+
+#     plt.figure(figsize=(20,5))
+#     plt.scatter(df['bodyparts coords'].iloc[:], df['%s %s' %(bodypart, 'y')].iloc[:], s=1)
+#     plt.title('DeepLabCut labels')

@@ -8,11 +8,12 @@ def load_config(config_path):
     return parsed_config_file
 
 
-def configGUI(window_width, window_height):
+def configGUI(window_width, window_height, frame_rate):
 
     dict = {
         'window_width': window_width,
-        'window_height': window_height
+        'window_height': window_height,
+        'frame_rate': frame_rate
     }
 
     with open('./config.yaml', 'w') as file:

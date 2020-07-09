@@ -7,11 +7,29 @@ import matplotlib as mpl
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 import numpy as np # remove later; for testing
 
+
+
+    #################################
+    # import csv file (analyzed)  
+    # (automatically find csv output from same session?)
+    # generate plots
+    # --> add checkbox to label slips
+    # predict peaks (start with baseline correction & scipy find peak)
+    # display axis plot, current frame, and frame with opencv
+    # slider to adjust frames
+    # tick box to select slip (start with slip, onset / end for future
+    # duration calculations)
+    # confirm / finish button
+    # export option to save manual labels as csv
+    #################################
+
+
+
 class ValidatePanel(wx.Panel):
 
 
     def __init__(self, parent):
-        """Constructor"""
+        
         wx.Panel.__init__(self, parent=parent)
 
         # load parameters to set dimension of frames and graphs
@@ -48,7 +66,8 @@ class ValidatePanel(wx.Panel):
 
         # self.SetLabel('Validate')
         # self.Centre()
-        # self.Layout()
+        self.Layout()
+        self.Refresh()
 
 
 
@@ -62,10 +81,14 @@ class ValidatePanel(wx.Panel):
             self.df, self.filename = ValidateFunctions.read_file(self.filename)
             self.df = ValidateFunctions.fix_column_names(self.df)
             self.df = ValidateFunctions.filter_predictions(self.df, self.bodypart, self.threshold)
+            self.Layout()
+            self.Refresh()
         if self.df is not None:
             self.has_imported_file = True
             self.import_text.SetLabel("File imported! ")
             self.MakePrediction(self)
+            self.Layout()
+            self.Refresh()
 
 
     def MakePrediction(self, e):
@@ -76,22 +99,16 @@ class ValidatePanel(wx.Panel):
         self.n_pred, self.depth_pred, self.t_pred, self.start_pred, self.end_pred = n_pred, depth_pred, t_pred, start_pred, end_pred
         self.pred_text = wx.StaticText(self, label = f"The algorithm predicted {self.n_pred} slips with an average depth of {self.depth_pred:.2f} pixels. \nYou can validate the prediction now.")
         self.sizer.Add(self.pred_text, pos= (9, 1) , flag = wx.ALL, border = 25)
-        self.SetSizer(self.sizer)
 
         self.validate_button = wx.Button(self, id=wx.ID_ANY, label="Validate")
-        self.validate_button.Bind(wx.EVT_BUTTON, self.ValidateFunc)
+        self.validate_button.Bind(wx.EVT_BUTTON, self.DisplayValidationFunc)
         self.sizer.Add(self.validate_button, pos = (10, 1), flag = wx.LEFT, border = 25)
 
         self.save_pred_button = wx.Button(self, id=wx.ID_ANY, label="Export Prediction")
         self.save_pred_button.Bind(wx.EVT_BUTTON, self.SavePredFunc)
         self.sizer.Add(self.save_pred_button, pos = (10, 2), flag = wx.LEFT, border = 25)
-
-        self.Layout()
-
-        #################################
-        # add button to go to validation
-        #  & refresh view
-        #################################
+        self.SetSizer(self.sizer)
+        self.GetParent().Layout()
 
 
     def SavePredFunc(self, e):
@@ -112,59 +129,70 @@ class ValidatePanel(wx.Panel):
                 wx.LogError(f"Cannot save current data in file {pathname}. Try another location or filename?")
                 
 
-    def ValidateFunc(self, e):
+    def DisplayValidationFunc(self, e):
 
-
+        # remove previous content
         self.import_button.Hide()
-        self.pred_text.Hide()
         self.import_button.Destroy()
 
+        self.import_text.Hide()
+        self.import_text.Destroy()
 
-        x = np.arange(10)
-        y = np.arange(10)
+        self.pred_text.Hide()
+        self.pred_text.Destroy()
+
+        self.validate_button.Hide()
+        self.validate_button.Destroy()
+
+        self.save_pred_button.Hide()
+        self.save_pred_button.Destroy()
         
-        self.figure  = mpl.figure.Figure(figsize=((self.window_width-50) / 100, (self.window_height // 3) // 100))
-        self.axes    = self.figure.add_subplot(111)
-        self.axes.scatter(x, y)
-        self.axes.margins(x=0)
-        self.canvas  = FigureCanvas(self, -1, self.figure)
-        self.sizer.Add(self.canvas, pos= (8, 0), flag = wx.ALL, border = 25)
-        self.SetSizer(self.sizer)
-        self.figure.tight_layout()
+
+        configs = ConfigFunctions.load_config('./config.yaml')
+        self.frame_rate = configs['frame_rate']
+
+        # display frame from video
+        figure = ValidateFunctions.plot_frame('/home/annette/Desktop/DeepLabCut/ladder rung results/Irregular_347_21dpi_cropped.avi', 10, \
+            (self.window_width-50) / 200, (self.window_height // 3) // 100, int(self.frame_rate))
+        self.canvas  = FigureCanvas(self, -1, figure)
+        self.sizer.Add(self.canvas, pos= (8, 1))
         self.Fit()
-        # self.Show()
-        self.canvas.draw()
+
+        # display slider
+        slider = wx.Slider(self, value=200, minValue=1, maxValue=2000,
+            style=wx.SL_HORIZONTAL)
+        slider.Bind(wx.EVT_SCROLL, self.OnSliderScroll)
+        self.sizer.Add(slider, pos=(9, 0), span = (1, 3), flag=wx.TOP | wx.LEFT | wx.EXPAND, border = 25)
+        self.slider_label = wx.StaticText(self, label='300')
+        self.sizer.Add(self.slider_label, pos=(9, 4), flag=wx.TOP | wx.RIGHT, border = 25)
+
+        self.SetSizer(self.sizer)
+        self.GetParent().Layout()
+
         wx.MessageBox("This function is still under development. Thanks for your patience! :)")
 
 
+    def OnSliderScroll(self, e):
 
+        obj = e.GetEventObject()
+        val = obj.GetValue()
 
+        self.slider_label.SetLabel(str(val))
+
+        try:
+            figure = ValidateFunctions.plot_frame('/home/annette/Desktop/DeepLabCut/ladder rung results/Irregular_347_21dpi_cropped.avi', val, \
+                (self.window_width-50) / 200, (self.window_height // 3) // 100, int(self.frame_rate))
+            canvas  = FigureCanvas(self, -1, figure)
+            self.canvas.Hide()
+            self.sizer.Replace(self.canvas, canvas)
+            self.canvas = canvas
+            self.canvas.Show()
+            self.SetSizer(self.sizer)
+            self.GetParent().Layout()
+            
+        except AttributeError:
+            pass
         
-    # def Validate(self, e):
-        
-    #     if self.df is not None:
-    #         self.import_text.SetLabel("Import another csv file for validation")
-
-    #     self.Hide()
-    #     home_frame.ValidatePanel = Validate.ValidatePanel(self)
-    #     home_frame.ValidatePanel.Show()
-
-    
-
-
-
-    #################################
-    # import csv file (analyzed)  
-    # (automatically find csv output from same session?)
-    # --> generate plots
-    # predict peaks (start with baseline correction & scipy find peak)
-    # display axis plot, current frame, and frame with opencv
-    # slider to adjust frames
-    # tick box to select slip (start with slip, onset / end for future
-    # duration calculations)
-    # confirm / finish button
-    # export option to save manual labels as csv
-    #################################
 
 
     # def show_img(self):
@@ -190,12 +218,3 @@ class ValidatePanel(wx.Panel):
 
     #     self.sizer.AddGrowableCol(0)
     #     self.SetSizer(self.sizer)
-
-
-
-    # def OnSliderScroll(self, e):
-
-    #     obj = e.GetEventObject()
-    #     val = obj.GetValue()
-
-    #     self.txt.SetLabel(str(val))

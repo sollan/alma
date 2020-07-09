@@ -1,9 +1,11 @@
 import wx
 from wx.lib.stattext import GenStaticText as StaticText
-from Functions import ValidateFunctions
-# from wx_Panels import Validate
+from Functions import ValidateFunctions, ConfigFunctions
 import os
-
+import yaml
+import matplotlib as mpl
+from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
+import numpy as np # remove later; for testing
 
 class ValidatePanel(wx.Panel):
 
@@ -11,6 +13,10 @@ class ValidatePanel(wx.Panel):
     def __init__(self, parent):
         """Constructor"""
         wx.Panel.__init__(self, parent=parent)
+
+        # load parameters to set dimension of frames and graphs
+        configs = ConfigFunctions.load_config('./config.yaml')
+        self.window_width, self.window_height = configs['window_width'], configs['window_height']
 
         self.has_imported_file = False
 
@@ -32,10 +38,7 @@ class ValidatePanel(wx.Panel):
         self.sizer.Add(self.import_button, pos = (8, 0), flag = wx.LEFT, border = 25)
 
         self.import_text = wx.StaticText(self, label = "Import a csv file for validation. " + "\nThe file should be DeepLabCut output (or of a similar format) to ensure proper parsing!")
-        self.sizer.Add(self.import_text, pos=(8, 1), flag = wx.LEFT, border = 25)
-
-
-
+        self.sizer.Add(self.import_text, pos=(8, 1), flag = wx.LEFT, border = 25)        
 
         self.bodypart = 'HR' # modify this to include user selection
         self.threshold = 0.4 # modify this to include user selection
@@ -91,35 +94,6 @@ class ValidatePanel(wx.Panel):
         #################################
 
 
-    def ValidateFunc(self, e):
-
-        import matplotlib as mpl
-        ## Import the matplotlib backend for wxPython
-        from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
-        import numpy as np
-        self.import_button.Hide()
-        self.pred_text.Hide()
-
-        x = np.arange(10)
-        y = np.arange(10)
-        ## This is to work with matplotlib inside wxPython
-        ## I prefer to use the object oriented API
-        self.figure  = mpl.figure.Figure(figsize=(15, 5))
-        self.axes    = self.figure.add_subplot(111)
-        self.canvas  = FigureCanvas(self, -1, self.figure)
-        ## This is to avoid showing the plot area. When set to True
-        ## clicking the button show the canvas and the canvas covers the button
-        ## since the canvas is placed by default in the top left corner of the window
-        # self.canvas.Show(False)
-        self.axes.scatter(x, y)
-        # self.canvas.Show(True)
-
-        # self.png = wx.Image('../top_40_train.png', wx.BITMAP_TYPE_ANY).ConvertToBitmap()
-        # self.sizer.Add(wx.StaticBitmap(self, -1, self.png, (10, 5), (self.png.GetWidth(), self.png.GetHeight())), pos = (0, 1))
-
-        # wx.MessageBox("This function is still under development. Thanks for your patience! :)")
-
-
     def SavePredFunc(self, e):
 
         with wx.FileDialog(self, 'Save current prediction as... ', \
@@ -136,8 +110,36 @@ class ValidatePanel(wx.Panel):
 
             except IOError:
                 wx.LogError(f"Cannot save current data in file {pathname}. Try another location or filename?")
-
                 
+
+    def ValidateFunc(self, e):
+
+
+        self.import_button.Hide()
+        self.pred_text.Hide()
+        self.import_button.Destroy()
+
+
+        x = np.arange(10)
+        y = np.arange(10)
+        
+        self.figure  = mpl.figure.Figure(figsize=((self.window_width-50) / 100, (self.window_height // 3) // 100))
+        self.axes    = self.figure.add_subplot(111)
+        self.axes.scatter(x, y)
+        self.axes.margins(x=0)
+        self.canvas  = FigureCanvas(self, -1, self.figure)
+        self.sizer.Add(self.canvas, pos= (8, 0), flag = wx.ALL, border = 25)
+        self.SetSizer(self.sizer)
+        self.figure.tight_layout()
+        self.Fit()
+        # self.Show()
+        self.canvas.draw()
+        wx.MessageBox("This function is still under development. Thanks for your patience! :)")
+
+
+
+
+        
     # def Validate(self, e):
         
     #     if self.df is not None:

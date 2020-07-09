@@ -216,10 +216,8 @@ if __name__ == '__main__':
 
     from Functions import ConfigFunctions
 
-
-
-
-    window_width, window_height = ConfigFunctions.load_config('./config.yaml')
+    configs = ConfigFunctions.load_config('./config.yaml')
+    window_width, window_height = configs['window_width'], configs['window_height']
 
     app = wx.App(redirect = True)
     home_frame = HomeFrame(None, title='Slip Detector', size=(window_width, window_height))

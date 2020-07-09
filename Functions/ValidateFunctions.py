@@ -2,8 +2,6 @@ import pandas as pd
 from scipy.signal import peak_widths, find_peaks
 import numpy as np
 import matplotlib.pyplot as plt
-import os
-
 
 def read_file(file):
     

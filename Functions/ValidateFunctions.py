@@ -123,3 +123,6 @@ def plot_frame(video_file, n_frame, width, height, frame_rate, baseline = 0):
 #     plt.figure(figsize=(20,5))
 #     plt.scatter(df['bodyparts coords'].iloc[:], df['%s %s' %(bodypart, 'y')].iloc[:], s=1)
 #     plt.title('DeepLabCut labels')
+
+
+

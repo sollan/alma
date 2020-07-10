@@ -94,6 +94,7 @@ class ValidatePanel(wx.Panel):
         self.import_new_video_button.Hide()
 
         self.bodypart = 'HR' # modify this to include user selection
+        self.axis = 'y'
         self.threshold = 0.4 # modify this to include user selection
 
         self.SetSizer(self.sizer)
@@ -111,7 +112,7 @@ class ValidatePanel(wx.Panel):
             self.filename = os.path.join(self.csv_dirname, import_dialog.GetFilename())
             self.df, self.filename = ValidateFunctions.read_file(self.filename)
             self.df = ValidateFunctions.fix_column_names(self.df)
-            self.df = ValidateFunctions.filter_predictions(self.df, self.bodypart, self.threshold)
+            self.filtered_df = ValidateFunctions.filter_predictions(self.df, self.bodypart, self.threshold)
 
         if self.df is not None:
             self.has_imported_file = True
@@ -125,7 +126,7 @@ class ValidatePanel(wx.Panel):
 
         self.import_csv_button.Disable()
 
-        n_pred, depth_pred, t_pred, start_pred, end_pred = ValidateFunctions.find_slips(self.df, self.bodypart) 
+        n_pred, depth_pred, t_pred, start_pred, end_pred = ValidateFunctions.find_slips(self.filtered_df, self.bodypart, self.axis) 
         self.n_pred, self.depth_pred, self.t_pred, self.start_pred, self.end_pred = n_pred, depth_pred, t_pred, start_pred, end_pred
         self.pred_text.SetLabel(f"The algorithm predicted {self.n_pred} slips with an average depth of {self.depth_pred:.2f} pixels.")
 
@@ -199,8 +200,6 @@ class ValidatePanel(wx.Panel):
         self.import_video_text.Hide()
         self.import_video_text.Destroy()
 
-                
-
         self.import_new_video_button.Hide()
         self.import_new_video_button.Destroy()
 
@@ -212,19 +211,27 @@ class ValidatePanel(wx.Panel):
         self.frame_rate = configs['frame_rate']
 
         # display frame from video
-        figure = ValidateFunctions.plot_frame(self.video, 10, 
+        frame = ValidateFunctions.plot_frame(self.video, 10, 
             (self.window_width-50) / 200, (self.window_height // 3) // 100, int(self.frame_rate))
-        self.canvas  = FigureCanvas(self, -1, figure)
-        self.sizer.Add(self.canvas, pos= (8, 1))
+        self.frame_canvas = FigureCanvas(self, -1, frame)
+        self.sizer.Add(self.frame_canvas, pos= (8, 1))
+        self.Fit()
+        # self.frame_canvas.tight_layout()
+
+        # display location graphs
+        graph = ValidateFunctions.plot_labels(self.filtered_df, 
+            (self.window_width-50) / 100, (self.window_height // 3) // 100, self.bodypart, self.axis, self.threshold)
+        self.graph_canvas = FigureCanvas(self, -1, graph)
+        self.sizer.Add(self.graph_canvas, pos = (9, 0), span = (1, 3), flag = wx.TOP | wx.LEFT, border = 25)        
         self.Fit()
 
         # display slider
-        slider = wx.Slider(self, value=200, minValue=1, maxValue=2000,
+        slider = wx.Slider(self, value=200, minValue=1, maxValue=len(self.df),
             style=wx.SL_HORIZONTAL)
         slider.Bind(wx.EVT_SCROLL, self.OnSliderScroll)
-        self.sizer.Add(slider, pos=(9, 0), span = (1, 3), flag=wx.TOP | wx.LEFT | wx.EXPAND, border = 25)
+        self.sizer.Add(slider, pos=(10, 0), span = (4, 4), flag= wx.LEFT | wx.EXPAND, border = 25)
         self.slider_label = wx.StaticText(self, label='300')
-        self.sizer.Add(self.slider_label, pos=(9, 4), flag=wx.TOP | wx.RIGHT, border = 25)
+        self.sizer.Add(self.slider_label, pos=(10, 4), flag=wx.TOP | wx.RIGHT, border = 25)
 
         self.SetSizer(self.sizer)
         self.GetParent().Layout()
@@ -240,13 +247,13 @@ class ValidatePanel(wx.Panel):
         self.slider_label.SetLabel(str(val))
 
         try:
-            figure = ValidateFunctions.plot_frame('/home/annette/Desktop/DeepLabCut/ladder rung results/Irregular_347_21dpi_cropped.avi', val, \
+            frame = ValidateFunctions.plot_frame('/home/annette/Desktop/DeepLabCut/ladder rung results/Irregular_347_21dpi_cropped.avi', val, \
                 (self.window_width-50) / 200, (self.window_height // 3) // 100, int(self.frame_rate))
-            canvas  = FigureCanvas(self, -1, figure)
-            self.canvas.Hide()
-            self.sizer.Replace(self.canvas, canvas)
-            self.canvas = canvas
-            self.canvas.Show()
+            frame_canvas  = FigureCanvas(self, -1, frame)
+            self.frame_canvas.Hide()
+            self.sizer.Replace(self.frame_canvas, frame_canvas)
+            self.frame_canvas = frame_canvas
+            self.frame_canvas.Show()
             self.SetSizer(self.sizer)
             self.GetParent().Layout()
             

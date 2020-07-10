@@ -27,26 +27,26 @@ def fix_column_names(pd_dataframe):
     return pd_dataframe
 
 
-def filter_predictions(pd_dataframe, bodyparts, threshold):
+def filter_predictions(pd_dataframe, bodypart, threshold):
     
-    if type(bodyparts) is list and len(bodyparts) > 1:
-        for bodypart in bodyparts:
+    if type(bodypart) is list and len(bodypart) > 1:
+        for bodypart in bodypart:
             pd_dataframe = pd_dataframe[pd_dataframe[bodypart + ' likelihood'] >= threshold]
     
-    elif type(bodyparts) is list and len(bodyparts) == 1:
-        pd_dataframe = pd_dataframe[pd_dataframe[bodyparts[0] + ' likelihood'] >= threshold]
+    elif type(bodypart) is list and len(bodypart) == 1:
+        pd_dataframe = pd_dataframe[pd_dataframe[bodypart[0] + ' likelihood'] >= threshold]
     
-    elif type(bodyparts) is str:
-        pd_dataframe = pd_dataframe[pd_dataframe[bodyparts + ' likelihood'] >= threshold]
+    elif type(bodypart) is str:
+        pd_dataframe = pd_dataframe[pd_dataframe[bodypart + ' likelihood'] >= threshold]
         
     # raise error if any bodypart name not identical as in csv
         
     return pd_dataframe
 
 
-def find_slips(pd_dataframe, bodypart, **kwargs): 
+def find_slips(pd_dataframe, bodypart, axis, **kwargs): 
         
-    t_peaks, properties = find_peaks(-pd_dataframe['%s y'%bodypart], height=-5000, prominence=(10,100000))
+    t_peaks, properties = find_peaks(-pd_dataframe[f'{bodypart} {axis}'], height=-5000, prominence=(10,100000))
     # t_peaks, properties = find_peaks(pd_dataframe, prominence=0, distance=18, height=-10, width = 0)
     # width_half = peak_widths(data, t_peaks, rel_height=0.5)
     
@@ -58,8 +58,8 @@ def find_slips(pd_dataframe, bodypart, **kwargs):
     is_peak = np.zeros(len(index))
     n_peaks = 0
     current_data = pd_dataframe.iloc[0]
-    norm = np.max(pd_dataframe['%s y'%bodypart])
-    std = np.std(pd_dataframe['%s y'%bodypart])
+    norm = np.max(pd_dataframe[f'{bodypart} {axis}'])
+    std = np.std(pd_dataframe[f'{bodypart} {axis}'])
     
     for i in range(len(is_peak)):
         
@@ -101,7 +101,6 @@ def plot_frame(video_file, n_frame, width, height, frame_rate, baseline = 0):
         figure = mpl.figure.Figure(figsize=(width, height))
         axes = figure.add_subplot(111)
         axes.margins(x = 0)
-        # figure.tight_layout()
 
         vidcap = load_video(video_file)
         vidcap.set(1, n_frame)
@@ -118,11 +117,19 @@ def plot_frame(video_file, n_frame, width, height, frame_rate, baseline = 0):
         print(f'Frame {n_frame} cannot be displayed! (cv2 error)')
 
 
-# def plot_labels(df, bodypart):
+def plot_labels(pd_dataframe, width, height, bodypart, axis, threshold = 0):
+    
+    figure = mpl.figure.Figure(figsize=(width, height))
+    axes = figure.add_subplot(111)
+    axes.margins(x = 0)
+    figure.tight_layout()
 
-#     plt.figure(figsize=(20,5))
-#     plt.scatter(df['bodyparts coords'].iloc[:], df['%s %s' %(bodypart, 'y')].iloc[:], s=1)
-#     plt.title('DeepLabCut labels')
+    axes.scatter(pd_dataframe['bodyparts coords'], pd_dataframe[f'{bodypart} {axis}'], s = 1)
+            
+    axes.legend([bodypart], loc='center right')
+    # axes.set_xlabel('n frame')
+    # axes.set_xlim(0, len(pd_dataframe['bodyparts coords'].iloc[:]))
+    # axes.set_ylabel('distance from 0 (pixel)')
+    # axes.title.set_text(f'{bodypart} {axis} coordinates by frame')
 
-
-
+    return figure

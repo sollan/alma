@@ -203,20 +203,38 @@ class ValidatePanel(wx.Panel):
         self.import_new_video_button.Hide()
         self.import_new_video_button.Destroy()
 
-
         self.validate_button.Hide()
         self.validate_button.Destroy()
 
         configs = ConfigFunctions.load_config('./config.yaml')
         self.frame_rate = configs['frame_rate']
+        
+        if self.n_pred is not None:
+            self.n_frame = self.t_pred[0]
+        else:
+            self.n_frame = 0
+
+
+        # initialize validation results
+        # n_val, depth_val, t_val, start_val, end_val = self.n_pred, [], [], [], []
+        self.n_val, self.depth_val, self.t_val, self.start_val, self.end_val = self.n_pred, self.depth_pred, self.t_pred, self.start_pred, self.end_pred
 
         # display frame from video
         frame = ValidateFunctions.plot_frame(self.video, 10, 
             (self.window_width-50) / 200, (self.window_height // 3) // 100, int(self.frame_rate))
         self.frame_canvas = FigureCanvas(self, -1, frame)
-        self.sizer.Add(self.frame_canvas, pos= (8, 1))
+        self.sizer.Add(self.frame_canvas, pos= (8, 0))
         self.Fit()
         # self.frame_canvas.tight_layout()
+
+        # checkbox to validate slip / non-slip
+        self.checkbox = wx.CheckBox(self, label='Mark as slip')
+        self.checkbox.SetValue(True)
+        self.checkbox.Bind(wx.EVT_CHECKBOX, self.MarkSlip)
+        
+        self.sizer.Add(self.checkbox, pos = (8, 1))
+
+
 
         # display location graphs
         graph = ValidateFunctions.plot_labels(self.filtered_df, 
@@ -230,7 +248,7 @@ class ValidatePanel(wx.Panel):
             style=wx.SL_HORIZONTAL)
         slider.Bind(wx.EVT_SCROLL, self.OnSliderScroll)
         self.sizer.Add(slider, pos=(10, 0), span = (4, 4), flag= wx.LEFT | wx.EXPAND, border = 25)
-        self.slider_label = wx.StaticText(self, label='300')
+        self.slider_label = wx.StaticText(self, label=str(self.n_frame))
         self.sizer.Add(self.slider_label, pos=(10, 4), flag=wx.TOP | wx.RIGHT, border = 25)
 
         self.SetSizer(self.sizer)
@@ -239,15 +257,42 @@ class ValidatePanel(wx.Panel):
         wx.MessageBox("This function is still under development. Thanks for your patience! :)")
 
 
+
+    def MarkSlip(self, e):
+        # if isChecked: 
+        #   check if current frame is in t_pred
+        #      if no: append current to val arrays
+        #          n val +=1
+        # if not is Checked: 
+        #   if current frame in t_pred:
+        #     pop current frame from val arrays
+        #           n val -= 1
+        sender = e.GetEventObject()
+        isChecked = sender.GetValue()
+
+        if isChecked:
+            if self.n_frame not in self.t_pred:
+                self.n_val +=1
+                # self.
+        else:
+            if self.n_frame in self.t_pred:
+                self.n_val -= 1
+                index = self.t_pred.index(self.n_frame)
+                self.depth_val.pop(index)
+                self.t_val.pop(index)
+                self.start_val.pop(index)
+                self.end_val.pop(index)
+
+
     def OnSliderScroll(self, e):
 
         obj = e.GetEventObject()
-        val = obj.GetValue()
+        self.n_frame = obj.GetValue()
 
-        self.slider_label.SetLabel(str(val))
+        self.slider_label.SetLabel(str(self.n_frame))
 
         try:
-            frame = ValidateFunctions.plot_frame('/home/annette/Desktop/DeepLabCut/ladder rung results/Irregular_347_21dpi_cropped.avi', val, \
+            frame = ValidateFunctions.plot_frame('/home/annette/Desktop/DeepLabCut/ladder rung results/Irregular_347_21dpi_cropped.avi', self.n_frame, \
                 (self.window_width-50) / 200, (self.window_height // 3) // 100, int(self.frame_rate))
             frame_canvas  = FigureCanvas(self, -1, frame)
             self.frame_canvas.Hide()
@@ -260,3 +305,4 @@ class ValidatePanel(wx.Panel):
         except AttributeError:
             pass
         
+    

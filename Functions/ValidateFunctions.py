@@ -122,7 +122,7 @@ def plot_labels(pd_dataframe, width, height, bodypart, axis, threshold = 0):
     figure = mpl.figure.Figure(figsize=(width, height))
     axes = figure.add_subplot(111)
     axes.margins(x = 0)
-    figure.tight_layout()
+    # figure.tight_layout()
 
     axes.scatter(pd_dataframe['bodyparts coords'], pd_dataframe[f'{bodypart} {axis}'], s = 1)
             

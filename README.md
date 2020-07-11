@@ -3,11 +3,9 @@
 An add-on for DeepLabCut-assisted behavioral analysis. 
 
 ### To get started
+
 ```bash
-pip install -r requirements.txt 
-# not including deeplabcut-related packages but would be
-# sufficient for validating / predicting slips from 
-# DLC-generated csv files
+pip install -r requirements.txt
 python ./wx_app.py
 ```
 We will hopefully provide a package installer in the near future (for a more mature version).

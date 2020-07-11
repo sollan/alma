@@ -237,8 +237,7 @@ class ValidatePanel(wx.Panel):
 
 
         # initialize validation results
-        # n_val, depth_val, t_val, start_val, end_val = self.n_pred, [], [], [], []
-        self.n_val, self.depth_val, self.t_val, self.start_val, self.end_val = self.n_pred, self.depth_pred, self.t_pred, self.start_pred, self.end_pred
+        self.n_val, self.depth_val, self.t_val, self.start_val, self.end_val = self.n_pred, self.depth_pred[:], self.t_pred[:], self.start_pred[:], self.end_pred[:]
 
         # display frame from video
         frame = ValidateFunctions.plot_frame(self.video, 10, 
@@ -330,7 +329,7 @@ class ValidatePanel(wx.Panel):
 
         if isChecked:
             if self.n_frame not in self.t_pred:
-                self.n_val +=1
+                self.n_val += 1
                 self.t_val.append(self.n_frame)
                 self.depth_val.append(np.nan)
                 self.start_val.append(np.nan)
@@ -382,7 +381,7 @@ class ValidatePanel(wx.Panel):
             self.GetParent().Layout()
             print(self.n_frame)
             print(self.n_frame in self.t_pred)
-            if self.n_frame in self.t_pred:
+            if self.n_frame in self.t_val:
                 self.checkbox.SetValue(True)
             else:
                 self.checkbox.SetValue(False)
@@ -427,7 +426,7 @@ class ValidatePanel(wx.Panel):
             # self.GetParent().Layout()
             print(self.n_frame)
             print(self.n_frame in self.t_pred)
-            if self.n_frame in self.t_pred:
+            if self.n_frame in self.t_val:
                 self.checkbox.SetValue(True)
             else:
                 self.checkbox.SetValue(False)
@@ -474,7 +473,7 @@ class ValidatePanel(wx.Panel):
             # self.GetParent().Layout()
             print(self.n_frame)
             print(self.n_frame in self.t_pred)
-            if self.n_frame in self.t_pred:
+            if self.n_frame in self.t_val:
                 self.checkbox.SetValue(True)
             else:
                 self.checkbox.SetValue(False)
@@ -530,7 +529,7 @@ class ValidatePanel(wx.Panel):
             # self.GetParent().Layout()
             print(self.n_frame)
             print(self.n_frame in self.t_pred)
-            if self.n_frame in self.t_pred:
+            if self.n_frame in self.t_val:
                 self.checkbox.SetValue(True)
             else:
                 self.checkbox.SetValue(False)

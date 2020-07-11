@@ -44,39 +44,57 @@ def filter_predictions(pd_dataframe, bodypart, threshold):
     return pd_dataframe
 
 
-def find_slips(pd_dataframe, bodypart, axis, **kwargs): 
+def find_slips(pd_dataframe, bodypart, axis, method, **kwargs): 
         
-    t_peaks, properties = find_peaks(-pd_dataframe[f'{bodypart} {axis}'], height=-5000, prominence=(10,100000))
-    # t_peaks, properties = find_peaks(pd_dataframe, prominence=0, distance=18, height=-10, width = 0)
-    # width_half = peak_widths(data, t_peaks, rel_height=0.5)
+
+    if method == 'deviation':
     
-#         t_peaks, properties = find_peaks(-data, prominence=(10,100000), height=-5000, width = 0)
-#         width_half = peak_widths(-data, t_peaks, rel_height=0.5)
-    
-    index = pd_dataframe['bodyparts coords'].iloc[:]
-    
-    is_peak = np.zeros(len(index))
-    n_peaks = 0
-    current_data = pd_dataframe.iloc[0]
-    norm = np.max(pd_dataframe[f'{bodypart} {axis}'])
-    std = np.std(pd_dataframe[f'{bodypart} {axis}'])
-    
-    for i in range(len(is_peak)):
-        
-        if i in t_peaks:
-            is_peak[i] = norm-std*4
-            n_peaks += 1
-        
-        else:
-            is_peak[i] = norm-std*2
-            
-        current_data = pd_dataframe.iloc[i]
-        
-        h_peaks = np.mean(properties["prominences"])
+        t_peaks, properties = find_peaks(-pd_dataframe[f'{bodypart} {axis}'], height=-5000, prominence=(10,100000))
+        n_peaks = len(t_peaks)        
+        h_peaks = properties["prominences"]
         start_times = properties['left_bases']
         end_times = properties['right_bases']
+
+    if method == 'baseline':
         
-    return n_peaks, h_peaks, t_peaks, start_times, end_times
+        baseline = baseline_als(pd_dataframe[f'{bodypart} {axis}'], 1, 0.01)
+        corrected = pd_dataframe[f'{bodypart} {axis}'] - baseline
+
+        t_peaks, properties = find_peaks(-corrected, height=-5000, prominence=(10,100000))
+        n_peaks = len(t_peaks)
+        h_peaks = properties["prominences"]
+        start_times = properties['left_bases']
+        end_times = properties['right_bases']
+            
+    return n_peaks, list(h_peaks), list(t_peaks), list(start_times), list(end_times)
+
+
+
+def baseline_als(y, lam, p, niter=10):
+
+    from scipy import sparse
+    from scipy.sparse.linalg import spsolve
+
+    '''
+    * based on ALS paper
+    There are two parameters: 
+    p for asymmetry and λ for smoothness. 
+    Both have to be tuned to the data at hand. 
+    We found that generally 0.001 ≤ p ≤ 0.1 is a good choice 
+    (for a signal with positive peaks) 
+    and 10^2 ≤ λ ≤ 10^9 , 
+    but exceptions may occur. 
+    In any case one should vary λ on a grid that is approximately linear for log λ
+    '''
+    L = len(y)
+    D = sparse.csc_matrix(np.diff(np.eye(L), 2))
+    w = np.ones(L)
+    for i in range(niter):
+        W = sparse.spdiags(w, 0, L, L)
+        Z = W + lam * D.dot(D.transpose())
+        z = spsolve(Z, w*y)
+        w = p * (y > z) + (1-p) * (y < z)
+    return z
 
 
 def make_output(pathname, t_slips, depth_slips, start_slips, end_slips):
@@ -117,19 +135,59 @@ def plot_frame(video_file, n_frame, width, height, frame_rate, baseline = 0):
         print(f'Frame {n_frame} cannot be displayed! (cv2 error)')
 
 
-def plot_labels(pd_dataframe, width, height, bodypart, axis, threshold = 0):
+def plot_labels(pd_dataframe, n_current_frame, t_pred, start_pred, end_pred, width, height, bodypart, axis, threshold = 0):
     
     figure = mpl.figure.Figure(figsize=(width, height))
     axes = figure.add_subplot(111)
     axes.margins(x = 0)
     # figure.tight_layout()
-
+    # low_likelihood = np.array(pd_dataframe[pd_dataframe[bodyparts + ' likelihood'] < threshold]['bodyparts coords'])
+    
     axes.scatter(pd_dataframe['bodyparts coords'], pd_dataframe[f'{bodypart} {axis}'], s = 1)
-            
-    axes.legend([bodypart], loc='center right')
+    axes.scatter(pd_dataframe['bodyparts coords'].iloc[n_current_frame], pd_dataframe[f'{bodypart} {axis}'].iloc[n_current_frame], marker = 'x', c = 'r')
+    axes.scatter(pd_dataframe[pd_dataframe[f'{bodypart} likelihood'] < threshold]['bodyparts coords'], \
+        pd_dataframe[pd_dataframe[f'{bodypart} likelihood'] < threshold][f'{bodypart} {axis}'], s = 1, c = 'lightgrey')
+    # axes.legend([bodypart], loc='center right')
     # axes.set_xlabel('n frame')
     # axes.set_xlim(0, len(pd_dataframe['bodyparts coords'].iloc[:]))
     # axes.set_ylabel('distance from 0 (pixel)')
     # axes.title.set_text(f'{bodypart} {axis} coordinates by frame')
 
     return figure
+
+
+def find_neighbors(n_current_frame, t_pred):     
+
+    if n_current_frame in t_pred:
+        current_ind = t_pred.index(n_current_frame)
+        if n_current_frame == t_pred[-1]:
+            return t_pred[-2], 0
+        elif n_current_frame == t_pred[0]:
+            return 0, t_pred[1]
+        else:
+            return t_pred[current_ind - 1], t_pred[current_ind + 1]
+    else:
+        return find_closest_neighbors(n_current_frame, t_pred, t_pred[0], t_pred[-1])
+
+
+def find_closest_neighbors(n_current_frame, t_pred, low, high):
+
+    while t_pred.index(high) - t_pred.index(low) > 1:
+        mid = t_pred[(t_pred.index(high) + t_pred.index(low)) // 2]
+        if n_current_frame > mid:
+            return find_closest_neighbors(n_current_frame, t_pred, mid, high)
+        elif n_current_frame < mid:
+            return find_closest_neighbors(n_current_frame, t_pred, low, mid)
+
+    return low, high
+
+
+def test(use_preset = True):
+    
+    filename = '/home/annette/Desktop/DeepLabCut/ladder rung results/Irregular_362_3dpi_croppedDLC_resnet50_Ladder RungMay12shuffle1_500000.csv'
+    df, filename = read_file(filename)
+    df = fix_column_names(df)
+    filtered_df = filter_predictions(df, 'HL', 0.3)
+    video = '/home/annette/Desktop/DeepLabCut/ladder rung results/Irregular_362_3dpi_cropped.avi'
+
+    return filename, df, filtered_df, video

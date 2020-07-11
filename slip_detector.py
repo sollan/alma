@@ -1,5 +1,5 @@
 import wx
-from wx_Panels import Start, Analyze, Validate
+from Panels import Start, Analyze, Validate
 
 
 class HomeFrame(wx.Frame):

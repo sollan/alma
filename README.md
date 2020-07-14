@@ -15,7 +15,7 @@ We will hopefully provide a package installer in the near future (for a more mat
 
 In Action - Validation, the user can
 
-- import the csv output from a DeepLabCut model (or a spreadsheets containing the same header and column structures as a DLC output file),
+- import the csv output from a DeepLabCut model (or a spreadsheet containing the same header and column structures as a DLC output file),
 - have a frame-by-frame comparison of the model-predicted bodypart location alongside the original video,
 - automatically identify "slips" during the ladder rung experiment, including the number of slips, slip depths and the on- and offset of each slip,
 - save the predicted slip properties as a csv file,

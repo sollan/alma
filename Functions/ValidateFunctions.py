@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib as mpl
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 import cv2
+import wx
 
 def read_file(file):
     
@@ -184,10 +185,42 @@ def find_closest_neighbors(n_current_frame, t_pred, low, high):
 
 def test(use_preset = True):
     
-    filename = '/home/annette/Desktop/DeepLabCut/ladder rung results/Irregular_362_3dpi_croppedDLC_resnet50_Ladder RungMay12shuffle1_500000.csv'
+    filename = '/home/annette/Desktop/Irregular_347_3dpi_croppedDLC_resnet50_Ladder RungMay12shuffle1_50000.csv'
     df, filename = read_file(filename)
     df = fix_column_names(df)
     filtered_df = filter_predictions(df, 'HL', 0.3)
-    video = '/home/annette/Desktop/DeepLabCut/ladder rung results/Irregular_362_3dpi_cropped.avi'
+    video = '/home/annette/Desktop/Irregular_347_3dpi_cropped.avi'
 
     return filename, df, filtered_df, video
+
+
+def ControlButton(panel):
+    
+    panel.prev_pred_button.Enable()
+    panel.next_pred_button.Enable()
+    panel.prev10_button.Enable()
+    panel.next10_button.Enable()
+    panel.prev_button.Enable()
+    panel.next_button.Enable()
+
+    if panel.n_frame <= panel.t_pred[0]:
+        panel.prev_pred_button.Disable()
+    elif panel.n_frame >= panel.t_pred[-1]:
+        panel.next_pred_button.Disable()
+    
+    if panel.n_frame < 10:
+        panel.prev10_button.Disable()
+        if panel.n_frame == 0:
+            panel.prev_button.Disable()
+    elif panel.n_frame > len(panel.df) - 10:
+        panel.next10_button.Disable()
+        if panel.n_frame == len(panel.df):
+            panel.next_button.Disable()
+
+
+def ControlPrediction(panel):
+
+    if panel.n_frame in panel.t_val:
+        panel.checkbox.SetValue(True)
+    else:
+        panel.checkbox.SetValue(False)

@@ -21,7 +21,7 @@ import numpy as np # remove later; for testing
     # regenerate panel after leaving
     #################################
 
-TEST = False
+TEST = True
 # set to True: import default files to reduce clicks :)
 # default files are set in ValidateFunctions.test()
 
@@ -125,13 +125,16 @@ class ValidatePanel(wx.Panel):
                 self.df, self.filename = ValidateFunctions.read_file(self.filename)
                 self.df = ValidateFunctions.fix_column_names(self.df)
                 self.filtered_df = ValidateFunctions.filter_predictions(self.df, self.bodypart, self.threshold)
+        try: 
+            if self.df is not None:
+                self.has_imported_file = True
+                self.import_csv_text.SetLabel("File imported! ")
+                self.MakePrediction(self)
 
-        if self.df is not None:
-            self.has_imported_file = True
-            self.import_csv_text.SetLabel("File imported! ")
-            self.MakePrediction(self)
+                self.Layout()
 
-            self.Layout()
+        except AttributeError:
+            pass
 
 
     def MakePrediction(self, e):
@@ -238,18 +241,15 @@ class ValidatePanel(wx.Panel):
         self.frame_canvas = FigureCanvas(self, -1, frame)
         self.sizer.Add(self.frame_canvas, pos= (8, 0), span = (4, 0),flag = wx.LEFT, border = 25)
         self.Fit()
-        # self.frame_canvas.tight_layout()
-        # if yes set as true
-        # self.checkbox.SetValue(True)
         self.checkbox.Bind(wx.EVT_CHECKBOX, self.MarkSlip)
         self.sizer.Add(self.checkbox, pos = (8, 1), flag = wx.LEFT | wx.TOP, border = 25)
 
         # display prev / next buttons
         self.prev_pred_button = wx.Button(self, id=wx.ID_ANY, label="<- prev prediction")
-        self.prev_pred_button.Bind(wx.EVT_BUTTON, self.ToPrevPred)
+        self.prev_pred_button.Bind(wx.EVT_BUTTON, lambda event, new_frame = 'prev_pred' : self.SwitchFrame(event, new_frame))
         self.frame_label = wx.StaticText(self, label='Frame')
         self.next_pred_button = wx.Button(self, id=wx.ID_ANY, label="next prediction ->")
-        self.next_pred_button.Bind(wx.EVT_BUTTON, self.ToNextPred)
+        self.next_pred_button.Bind(wx.EVT_BUTTON, lambda event, new_frame = 'next_pred' : self.SwitchFrame(event, new_frame))
 
         self.prev_pred, self.next_pred = ValidateFunctions.find_neighbors(self.n_frame, self.t_pred)
 
@@ -258,18 +258,18 @@ class ValidatePanel(wx.Panel):
         self.sizer.Add(self.next_pred_button, pos = (9, 4), span = (0,2), flag = wx.LEFT | wx.RIGHT, border = 25)
 
         self.prev_button = wx.Button(self, id=wx.ID_ANY, label="<")
-        self.prev_button.Bind(wx.EVT_BUTTON, lambda event, temp = -1 : self.SwitchFrame(event, temp))
+        self.prev_button.Bind(wx.EVT_BUTTON, lambda event, new_frame = -1 : self.SwitchFrame(event, new_frame))
         self.next_button = wx.Button(self, id=wx.ID_ANY, label=">")
-        self.next_button.Bind(wx.EVT_BUTTON, lambda event, temp = 1 : self.SwitchFrame(event, temp))
+        self.next_button.Bind(wx.EVT_BUTTON, lambda event, new_frame = 1 : self.SwitchFrame(event, new_frame))
 
         self.slider_label = wx.StaticText(self, label=str(self.n_frame))
 
         self.prev10_button = wx.Button(self, id=wx.ID_ANY, label="<<")
-        self.prev10_button.Bind(wx.EVT_BUTTON, lambda event, temp = -10 : self.SwitchFrame(event, temp))
+        self.prev10_button.Bind(wx.EVT_BUTTON, lambda event, new_frame = -10 : self.SwitchFrame(event, new_frame))
         self.next10_button = wx.Button(self, id=wx.ID_ANY, label=">>")
-        self.next10_button.Bind(wx.EVT_BUTTON, lambda event, temp = 10 : self.SwitchFrame(event, temp))
+        self.next10_button.Bind(wx.EVT_BUTTON, lambda event, new_frame = 10 : self.SwitchFrame(event, new_frame))
 
-        self.ControlButton()
+        ValidateFunctions.ControlButton(self)
 
         self.sizer.Add(self.prev10_button, pos = (10, 1), flag = wx.LEFT, border = 25)
         self.sizer.Add(self.prev_button, pos = (10, 2))        
@@ -280,7 +280,6 @@ class ValidatePanel(wx.Panel):
         self.save_val_button = wx.Button(self, id=wx.ID_ANY, label="Save validated results")
         self.save_val_button.Bind(wx.EVT_BUTTON, self.SaveValFunc)
         self.sizer.Add(self.save_val_button, pos = (11, 4), span = (1, 3), flag = wx.TOP | wx.BOTTOM, border = 40)
-        # self.save_pred_button.Hide()
 
         # display location graphs
         graph = ValidateFunctions.plot_labels(self.df, self.n_frame, self.t_pred, self.start_pred, \
@@ -299,7 +298,6 @@ class ValidatePanel(wx.Panel):
         self.GetParent().Layout()
 
         wx.MessageBox("This function is still under development. Thanks for your patience! :)")
-
 
 
     def MarkSlip(self, e):
@@ -332,7 +330,7 @@ class ValidatePanel(wx.Panel):
         self.prev_pred, self.next_pred = ValidateFunctions.find_neighbors(self.n_frame, self.t_pred)
         self.slider_label.SetLabel(str(self.n_frame + 1))
         
-        self.ControlButton()
+        ValidateFunctions.ControlButton(self)
 
         try:
             frame = ValidateFunctions.plot_frame(self.video, self.n_frame, 
@@ -354,26 +352,27 @@ class ValidatePanel(wx.Panel):
 
             self.SetSizer(self.sizer)
             self.GetParent().Layout()
-            print(self.n_frame)
-            print(self.n_frame in self.t_pred)
-            if self.n_frame in self.t_val:
-                self.checkbox.SetValue(True)
-            else:
-                self.checkbox.SetValue(False)
+            ValidateFunctions.ControlPrediction(self)
             
         except AttributeError:
             pass
-        
-        
-    def ToPrevPred(self, e):        
-        
-        self.n_frame = self.prev_pred
+
+
+    def SwitchFrame(self, e, new_frame):
+
+        if type(new_frame) is int:
+            self.n_frame = self.n_frame + new_frame
+        elif new_frame == 'next_pred':
+            self.n_frame = self.next_pred
+        elif new_frame == 'prev_pred':
+            self.n_frame = self.prev_pred
+
         self.slider.SetValue(self.n_frame)
         self.slider_label.SetLabel(str(self.n_frame + 1))
 
         self.prev_pred, self.next_pred = ValidateFunctions.find_neighbors(self.n_frame, self.t_pred)
 
-        self.ControlButton()
+        ValidateFunctions.ControlButton(self)
 
         try:
             frame = ValidateFunctions.plot_frame(self.video, self.n_frame, 
@@ -394,99 +393,7 @@ class ValidatePanel(wx.Panel):
             self.Fit()
 
             self.SetSizer(self.sizer)
-            # self.GetParent().Layout()
-            print(self.n_frame)
-            print(self.n_frame in self.t_pred)
-            if self.n_frame in self.t_val:
-                self.checkbox.SetValue(True)
-            else:
-                self.checkbox.SetValue(False)
-            self.GetParent().Layout()
-            
-        except AttributeError:
-            pass
-        
-    
-    def ToNextPred(self, e):
-
-
-        self.n_frame = self.next_pred
-        self.slider.SetValue(self.n_frame)
-        self.slider_label.SetLabel(str(self.n_frame + 1))
-
-        self.prev_pred, self.next_pred = ValidateFunctions.find_neighbors(self.n_frame, self.t_pred)
-
-        self.ControlButton()
-
-        try:
-            frame = ValidateFunctions.plot_frame(self.video, self.n_frame, 
-            (self.window_width-50) / 200, (self.window_height // 3) // 100, int(self.frame_rate))
-            frame_canvas  = FigureCanvas(self, -1, frame)
-            self.frame_canvas.Hide()
-            self.sizer.Replace(self.frame_canvas, frame_canvas)
-            self.frame_canvas = frame_canvas
-            self.frame_canvas.Show()
-
-            graph = ValidateFunctions.plot_labels(self.df, self.n_frame, self.t_pred, self.start_pred, \
-                self.end_pred, (self.window_width-50) / 100, (self.window_height // 3) // 100, self.bodypart, self.axis, self.threshold)
-            graph_canvas = FigureCanvas(self, -1, graph)
-            self.graph_canvas.Hide()
-            self.sizer.Replace(self.graph_canvas, graph_canvas)
-            self.graph_canvas = graph_canvas
-            self.graph_canvas.Show()     
-            self.Fit()
-
-            self.SetSizer(self.sizer)
-            print(self.n_frame)
-            print(self.n_frame in self.t_pred)
-            if self.n_frame in self.t_val:
-                self.checkbox.SetValue(True)
-            else:
-                self.checkbox.SetValue(False)
-            self.GetParent().Layout()
-            
-        except AttributeError:
-            pass
-
-
-    def SwitchFrame(self, e, num):
-
-
-        self.n_frame = self.n_frame + num
-        self.slider.SetValue(self.n_frame)
-        self.slider_label.SetLabel(str(self.n_frame + 1))
-
-        self.prev_pred, self.next_pred = ValidateFunctions.find_neighbors(self.n_frame, self.t_pred)
-
-
-        self.ControlButton()
-
-        try:
-            frame = ValidateFunctions.plot_frame(self.video, self.n_frame, 
-            (self.window_width-50) / 200, (self.window_height // 3) // 100, int(self.frame_rate))
-            frame_canvas  = FigureCanvas(self, -1, frame)
-            self.frame_canvas.Hide()
-            self.sizer.Replace(self.frame_canvas, frame_canvas)
-            self.frame_canvas = frame_canvas
-            self.frame_canvas.Show()
-
-            graph = ValidateFunctions.plot_labels(self.df, self.n_frame, self.t_pred, self.start_pred, \
-                self.end_pred, (self.window_width-50) / 100, (self.window_height // 3) // 100, self.bodypart, self.axis, self.threshold)
-            graph_canvas = FigureCanvas(self, -1, graph)
-            self.graph_canvas.Hide()
-            self.sizer.Replace(self.graph_canvas, graph_canvas)
-            self.graph_canvas = graph_canvas
-            self.graph_canvas.Show()     
-            self.Fit()
-
-            self.SetSizer(self.sizer)
-            # self.GetParent().Layout()
-            print(self.n_frame)
-            print(self.n_frame in self.t_pred)
-            if self.n_frame in self.t_val:
-                self.checkbox.SetValue(True)
-            else:
-                self.checkbox.SetValue(False)
+            ValidateFunctions.ControlPrediction(self)
             self.GetParent().Layout()
             
         except AttributeError:
@@ -509,27 +416,3 @@ class ValidatePanel(wx.Panel):
 
             except IOError:
                 wx.LogError(f"Cannot save current data in file {pathname}. Try another location or filename?")
-
-    
-    def ControlButton(self):
-        
-        self.prev_pred_button.Enable()
-        self.next_pred_button.Enable()
-        self.prev10_button.Enable()
-        self.next10_button.Enable()
-        self.prev_button.Enable()
-        self.next_button.Enable()
-
-        if self.n_frame <= self.t_pred[0]:
-            self.prev_pred_button.Disable()
-        elif self.n_frame >= self.t_pred[-1]:
-            self.next_pred_button.Disable()
-        
-        if self.n_frame < 10:
-            self.prev10_button.Disable()
-            if self.n_frame == 0:
-                self.prev_button.Disable()
-        elif self.n_frame > len(self.df) - 10:
-            self.next10_button.Disable()
-            if self.n_frame == len(self.df):
-                self.next_button.Disable()

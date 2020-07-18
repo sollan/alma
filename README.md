@@ -6,7 +6,7 @@ An add-on for DeepLabCut-assisted behavioral analysis.
 
 ```bash
 pip install -r requirements.txt
-python ./wx_app.py
+python ./slip_detector.py
 ```
 We will hopefully provide a package installer in the near future (for a more mature version).
 

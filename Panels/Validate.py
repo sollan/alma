@@ -7,26 +7,18 @@ import matplotlib as mpl
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 import numpy as np # remove later; for testing
 
-
-
     #################################
-    # import csv file (analyzed)  
     # display file and video name after import
     # (automatically find csv output from same session?)
-    # generate plots
-    # add checkbox to label slips
-    # take video frame range as slider setting (add load video function 
-    # that returns video specs: dim & range)
+    # generate plots --> plot onset and offset?
+    # add checkbox --> clickable button? to label slips
     # --> predict peaks (start with baseline correction & scipy find peak)
-    # display axis plot & current frame label
-    # slider to adjust frames
-    # tick box to select slip (start with slip, onset / end for future
-    # duration calculations)
     # prev and next prediction button
-    # confirm / finish button
-    # export option to save manual labels as csv
+    # start another button
     # --> get window size and resize elements?
-    # --> button to select bodypart name & likelihood threshold
+    # --> input bodypart name & likelihood threshold
+    # prompt user to save before going to another panel
+    # regenerate panel after leaving
     #################################
 
 TEST = False
@@ -103,6 +95,10 @@ class ValidatePanel(wx.Panel):
         self.sizer.Add(self.import_new_video_button, pos = (12, 2), flag = wx.TOP, border = 25)
         self.import_new_video_button.Hide()
 
+
+        ################################################################
+        # user input here
+
         self.bodypart = 'HR' # modify this to include user selection
         self.axis = 'y'
         self.threshold = 0.4 # modify this to include user selection
@@ -110,7 +106,6 @@ class ValidatePanel(wx.Panel):
 
 
         if TEST is True:
-
             self.filename, self.df, self.filtered_df, self.video = ValidateFunctions.test(TEST)
 
 

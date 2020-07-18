@@ -21,7 +21,7 @@ import numpy as np # remove later; for testing
     # regenerate panel after leaving
     #################################
 
-TEST = True
+TEST = False
 # set to True: import default files to reduce clicks :)
 # default files are set in ValidateFunctions.test()
 
@@ -163,7 +163,7 @@ class ValidatePanel(wx.Panel):
         obj = e.GetEventObject()
         self.n_frame = obj.GetValue() - 1
 
-        self.prev_pred, self.next_pred = ValidateFunctions.find_neighbors(self.n_frame, self.t_pred)
+        self.prev_pred, self.next_pred = ValidateFunctions.find_neighbors(self.n_frame, self.t_val)
         self.slider_label.SetLabel(str(self.n_frame + 1))
         
         ValidateFunctions.ControlButton(self)
@@ -183,7 +183,7 @@ class ValidatePanel(wx.Panel):
         self.slider.SetValue(self.n_frame)
         self.slider_label.SetLabel(str(self.n_frame + 1))
 
-        self.prev_pred, self.next_pred = ValidateFunctions.find_neighbors(self.n_frame, self.t_pred)
+        self.prev_pred, self.next_pred = ValidateFunctions.find_neighbors(self.n_frame, self.t_val)
 
         ValidateFunctions.ControlButton(self)
 
@@ -336,7 +336,7 @@ class ValidatePanel(wx.Panel):
         self.next_pred_button = wx.Button(self, id=wx.ID_ANY, label="next prediction ->")
         self.next_pred_button.Bind(wx.EVT_BUTTON, lambda event, new_frame = 'next_pred' : self.SwitchFrame(event, new_frame))
 
-        self.prev_pred, self.next_pred = ValidateFunctions.find_neighbors(self.n_frame, self.t_pred)
+        self.prev_pred, self.next_pred = ValidateFunctions.find_neighbors(self.n_frame, self.t_val)
 
         self.second_sizer.Add(self.prev_pred_button, pos = (9, 1), span = (0,2), flag = wx.LEFT | wx.RIGHT, border = 25)
         self.second_sizer_widgets.append(self.prev_pred_button)
@@ -384,8 +384,8 @@ class ValidatePanel(wx.Panel):
         self.second_sizer_widgets.append(self.restart_button)
 
         # display location graphs
-        graph = ValidateFunctions.plot_labels(self.df, self.n_frame, self.t_pred, self.start_pred, \
-            self.end_pred, (self.window_width-50) / 100, (self.window_height // 3) // 100, self.bodypart, self.axis, self.threshold)
+        graph = ValidateFunctions.plot_labels(self.df, self.n_frame, self.t_val, self.start_val, \
+            self.end_val, (self.window_width-50) / 100, (self.window_height // 3) // 100, self.bodypart, self.axis, self.threshold)
         self.graph_canvas = FigureCanvas(self, -1, graph)
         self.second_sizer.Add(self.graph_canvas, pos = (12, 0), span = (1, 6), flag = wx.TOP | wx.LEFT, border = 25) 
         self.second_sizer_widgets.append(self.graph_canvas)       
@@ -421,6 +421,7 @@ class ValidatePanel(wx.Panel):
         self.first_sizer.Add(self.header, pos = (0, 0), span = (2, 5), flag = wx.LEFT|wx.TOP, border = 25)
         self.first_sizer.Add(self.instructions, pos = (2, 0), span = (1, 3), flag = wx.LEFT|wx.TOP, border=25)
         self.FirstPage()
+        self.GetParent().Layout()
 
     def DisplaySecondPage(self, e):
 

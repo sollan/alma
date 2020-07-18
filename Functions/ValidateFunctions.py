@@ -218,6 +218,10 @@ def find_neighbors(n_current_frame, t_pred):
             return 0, t_pred[1]
         else:
             return t_pred[current_ind - 1], t_pred[current_ind + 1]
+    elif n_current_frame <= t_pred[0]:
+        return 0, t_pred[0]
+    elif n_current_frame >= t_pred[-1]:
+        return t_pred[-1], 0
     else:
         return find_closest_neighbors(n_current_frame, t_pred, t_pred[0], t_pred[-1])
 
@@ -275,15 +279,18 @@ def DisplayPlots(panel):
         frame_canvas  = FigureCanvas(panel, -1, frame)
         panel.frame_canvas.Hide()
         panel.second_sizer.Replace(panel.frame_canvas, frame_canvas)
+        panel.second_sizer_widgets.append(panel.frame_canvas)  
         panel.frame_canvas = frame_canvas
         panel.frame_canvas.Show()
 
-        graph = plot_labels(panel.df, panel.n_frame, panel.t_pred, panel.start_pred, \
+        graph = plot_labels(panel.df, panel.n_frame, panel.t_pred, panel.start_pred, 
             panel.end_pred, (panel.window_width-50) / 100, (panel.window_height // 3) // 100, panel.bodypart, panel.axis, panel.threshold)
         graph_canvas = FigureCanvas(panel, -1, graph)
         panel.graph_canvas.Hide()
         panel.second_sizer.Replace(panel.graph_canvas, graph_canvas)
+
         panel.graph_canvas = graph_canvas
+        panel.second_sizer_widgets.append(panel.graph_canvas)  
         panel.graph_canvas.Show()     
         panel.Fit()
 

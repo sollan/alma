@@ -251,18 +251,12 @@ class ValidatePanel(wx.Panel):
         self.checkbox.Bind(wx.EVT_CHECKBOX, self.MarkSlip)
         self.sizer.Add(self.checkbox, pos = (8, 1), flag = wx.LEFT | wx.TOP, border = 25)
 
-
         # display prev / next buttons
         self.prev_pred_button = wx.Button(self, id=wx.ID_ANY, label="<- prev prediction")
         self.prev_pred_button.Bind(wx.EVT_BUTTON, self.ToPrevPred)
         self.frame_label = wx.StaticText(self, label='Frame')
         self.next_pred_button = wx.Button(self, id=wx.ID_ANY, label="next prediction ->")
         self.next_pred_button.Bind(wx.EVT_BUTTON, self.ToNextPred)
-
-        if self.n_frame <= self.t_pred[0]:
-            self.prev_pred_button.Disable()
-        elif self.n_frame >= self.t_pred[-1]:
-            self.next_pred_button.Disable()
 
         self.prev_pred, self.next_pred = ValidateFunctions.find_neighbors(self.n_frame, self.t_pred)
 
@@ -282,14 +276,7 @@ class ValidatePanel(wx.Panel):
         self.next10_button = wx.Button(self, id=wx.ID_ANY, label=">>")
         self.next10_button.Bind(wx.EVT_BUTTON, lambda event, temp = 10 : self.SwitchFrame(event, temp))
 
-        if self.n_frame < 10:
-            self.prev10_button.Disable()
-            if self.n_frame == 0:
-                self.prev_button.Disable()
-        elif self.n_frame > len(self.df) - 10:
-            self.next10_button.Disable()
-            if self.n_frame == len(self.df):
-                self.next_button.Disable()
+        self.ControlButton()
 
         self.sizer.Add(self.prev10_button, pos = (10, 1), flag = wx.LEFT, border = 25)
         self.sizer.Add(self.prev_button, pos = (10, 2))        
@@ -351,13 +338,8 @@ class ValidatePanel(wx.Panel):
 
         self.prev_pred, self.next_pred = ValidateFunctions.find_neighbors(self.n_frame, self.t_pred)
         self.slider_label.SetLabel(str(self.n_frame + 1))
-        self.prev_pred_button.Enable()
-        self.next_pred_button.Enable()
         
-        if self.n_frame <= self.t_pred[0]:
-            self.prev_pred_button.Disable()
-        elif self.n_frame >= self.t_pred[-1]:
-            self.next_pred_button.Disable()
+        self.ControlButton()
 
         try:
             frame = ValidateFunctions.plot_frame(self.video, self.n_frame, 
@@ -395,14 +377,10 @@ class ValidatePanel(wx.Panel):
         self.n_frame = self.prev_pred
         self.slider.SetValue(self.n_frame)
         self.slider_label.SetLabel(str(self.n_frame + 1))
-        self.prev_pred_button.Enable()
-        self.next_pred_button.Enable()
 
         self.prev_pred, self.next_pred = ValidateFunctions.find_neighbors(self.n_frame, self.t_pred)
-        if self.n_frame <= self.t_pred[0]:
-            self.prev_pred_button.Disable()
-        elif self.n_frame >= self.t_pred[-1]:
-            self.next_pred_button.Disable()
+
+        self.ControlButton()
 
         try:
             frame = ValidateFunctions.plot_frame(self.video, self.n_frame, 
@@ -442,14 +420,10 @@ class ValidatePanel(wx.Panel):
         self.n_frame = self.next_pred
         self.slider.SetValue(self.n_frame)
         self.slider_label.SetLabel(str(self.n_frame + 1))
-        self.prev_pred_button.Enable()
-        self.next_pred_button.Enable()
 
         self.prev_pred, self.next_pred = ValidateFunctions.find_neighbors(self.n_frame, self.t_pred)
-        if self.n_frame <= self.t_pred[0]:
-            self.prev_pred_button.Disable()
-        elif self.n_frame >= self.t_pred[-1]:
-            self.next_pred_button.Disable()
+
+        self.ControlButton()
 
         try:
             frame = ValidateFunctions.plot_frame(self.video, self.n_frame, 
@@ -489,23 +463,11 @@ class ValidatePanel(wx.Panel):
         self.n_frame = self.n_frame + num
         self.slider.SetValue(self.n_frame)
         self.slider_label.SetLabel(str(self.n_frame + 1))
-        self.prev_pred_button.Enable()
-        self.next_pred_button.Enable()
 
         self.prev_pred, self.next_pred = ValidateFunctions.find_neighbors(self.n_frame, self.t_pred)
-        if self.n_frame <= self.t_pred[0]:
-            self.prev_pred_button.Disable()
-        elif self.n_frame >= self.t_pred[-1]:
-            self.next_pred_button.Disable()
-        
-        if self.n_frame < 10:
-            self.prev10_button.Disable()
-            if self.n_frame == 0:
-                self.prev_button.Disable()
-        elif self.n_frame > len(self.df) - 10:
-            self.next10_button.Disable()
-            if self.n_frame == len(self.df):
-                self.next_button.Disable()
+
+
+        self.ControlButton()
 
         try:
             frame = ValidateFunctions.plot_frame(self.video, self.n_frame, 
@@ -555,3 +517,27 @@ class ValidatePanel(wx.Panel):
 
             except IOError:
                 wx.LogError(f"Cannot save current data in file {pathname}. Try another location or filename?")
+
+    
+    def ControlButton(self):
+        
+        self.prev_pred_button.Enable()
+        self.next_pred_button.Enable()
+        self.prev10_button.Enable()
+        self.next10_button.Enable()
+        self.prev_button.Enable()
+        self.next_button.Enable()
+
+        if self.n_frame <= self.t_pred[0]:
+            self.prev_pred_button.Disable()
+        elif self.n_frame >= self.t_pred[-1]:
+            self.next_pred_button.Disable()
+        
+        if self.n_frame < 10:
+            self.prev10_button.Disable()
+            if self.n_frame == 0:
+                self.prev_button.Disable()
+        elif self.n_frame > len(self.df) - 10:
+            self.next10_button.Disable()
+            if self.n_frame == len(self.df):
+                self.next_button.Disable()

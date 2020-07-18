@@ -56,16 +56,16 @@ def filter_predictions(pd_dataframe, bodypart, threshold):
     return pd_dataframe
 
 
-def find_slips(pd_dataframe, bodypart, axis, panel = None, method = 'baseline', window = None, threshold = None, **kwargs): 
+def find_slips(pd_dataframe, bodypart, axis, panel = None, method = 'Baseline', window = None, threshold = None, **kwargs): 
         
 
-    if method == 'deviation':
+    if method == 'Deviation':
         '''
         recommended for smooth / noiseless prediction
         '''
         t_peaks, properties = find_peaks(-pd_dataframe[f'{bodypart} {axis}'], height=-5000, prominence=(10,100000))
 
-    if method == 'baseline':
+    elif method == 'Baseline':
         '''
         recommended for prediction with much jittering / noise
         '''
@@ -78,7 +78,7 @@ def find_slips(pd_dataframe, bodypart, axis, panel = None, method = 'baseline', 
                 window = 10
         t_peaks = adjust_times(pd_dataframe[f'{bodypart} {axis}'], t_peaks, window)
 
-    if method == 'threshold':
+    elif method == 'Threshold':
         '''
         when there is a clear cut off pixel value for the entire video, 
         e.g. location of ladder in frame

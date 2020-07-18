@@ -72,9 +72,10 @@ class ValidatePanel(wx.Panel):
             if self.df is not None:
                 self.has_imported_file = True
                 self.import_csv_text.SetLabel("File imported! ")
-                self.MakePrediction(self)
 
-                self.Layout()
+                self.method_label.Show()
+                self.method.Show()
+                self.GetParent().Layout()
 
         except AttributeError:
             pass
@@ -84,7 +85,7 @@ class ValidatePanel(wx.Panel):
 
         self.import_csv_button.Disable()
 
-        n_pred, depth_pred, t_pred, start_pred, end_pred = ValidateFunctions.find_slips(self.df, self.bodypart, self.axis, panel=self) 
+        n_pred, depth_pred, t_pred, start_pred, end_pred = ValidateFunctions.find_slips(self.df, self.bodypart, self.axis, panel=self, method = self.method_selection) 
         self.n_pred, self.depth_pred, self.t_pred, self.start_pred, self.end_pred = n_pred, depth_pred, t_pred, start_pred, end_pred
         self.pred_text.SetLabel(f"The algorithm predicted {self.n_pred} slips with an average depth of {np.mean(self.depth_pred):.2f} pixels.")
 
@@ -217,43 +218,55 @@ class ValidatePanel(wx.Panel):
         self.first_sizer.Add(self.import_csv_text, pos=(8, 1), flag = wx.LEFT, border = 25)
         self.first_sizer_widgets.append(self.import_csv_text)
 
-        self.pred_text = wx.StaticText(self, label = "The default algorithm will make a prediction using csv input.")
+        self.pred_text = wx.StaticText(self, label = "The chosen algorithm will make a prediction using csv input.")
         self.first_sizer.Add(self.pred_text, pos= (9, 1) , flag = wx.LEFT | wx.TOP, border = 25)      
         self.first_sizer_widgets.append(self.pred_text)  
         
 
+        self.method_label = wx.StaticText(self, label = 'Select algorithm for slip prediction:') 
+        self.first_sizer.Add(self.method_label, pos=(10, 1), flag = wx.LEFT | wx.TOP, border = 25)
+        self.first_sizer_widgets.append(self.method_label)  
+        self.method_label.Hide()
+
+        methods = ['Deviation', 'Baseline', 'Threshold']
+        self.method = wx.ComboBox(self, choices = methods)
+        self.first_sizer.Add(self.method, pos= (10, 2) , flag = wx.LEFT | wx.TOP, border = 25)
+        self.first_sizer_widgets.append(self.method)  
+        self.method.Bind(wx.EVT_COMBOBOX, self.OnMethod)
+        self.method.Hide()
+        
         #################################
         # add algorithm selection menu
 
         self.save_pred_button = wx.Button(self, id=wx.ID_ANY, label="Save initial prediction")
-        self.first_sizer.Add(self.save_pred_button, pos = (10, 1), flag = wx.TOP | wx.LEFT | wx.BOTTOM, border = 25)
+        self.first_sizer.Add(self.save_pred_button, pos = (11, 1), flag = wx.TOP | wx.LEFT | wx.BOTTOM, border = 25)
         self.first_sizer_widgets.append(self.save_pred_button)
         self.save_pred_button.Hide()
 
         self.import_new_csv_button = wx.Button(self, id=wx.ID_ANY, label="Import a different file")
-        self.first_sizer.Add(self.import_new_csv_button, pos = (10, 2), flag = wx.TOP | wx.BOTTOM, border = 25)
+        self.first_sizer.Add(self.import_new_csv_button, pos = (11, 2), flag = wx.TOP | wx.BOTTOM, border = 25)
         self.first_sizer_widgets.append(self.import_new_csv_button)
         self.import_new_csv_button.Hide()
 
         self.import_video_button = wx.Button(self, id=wx.ID_ANY, label="Import")
         
-        self.first_sizer.Add(self.import_video_button, pos = (11, 0), flag = wx.LEFT | wx.TOP, border = 25)
+        self.first_sizer.Add(self.import_video_button, pos = (12, 0), flag = wx.LEFT | wx.TOP, border = 25)
         self.first_sizer_widgets.append(self.import_video_button)
         self.import_video_button.Hide()
         
         self.import_video_text = wx.StaticText(self, label = "Import the corresponding video file for validation. ")
-        self.first_sizer.Add(self.import_video_text, pos=(11, 1), flag = wx.LEFT | wx.TOP, border = 25)
+        self.first_sizer.Add(self.import_video_text, pos=(12, 1), flag = wx.LEFT | wx.TOP, border = 25)
         self.first_sizer_widgets.append(self.import_video_text)
         self.import_video_text.Hide()
 
         self.validate_button = wx.Button(self, id=wx.ID_ANY, label="Validate")
         
-        self.first_sizer.Add(self.validate_button, pos = (12, 1), flag = wx.TOP | wx.LEFT, border = 25)
+        self.first_sizer.Add(self.validate_button, pos = (13, 1), flag = wx.TOP | wx.LEFT, border = 25)
         self.first_sizer_widgets.append(self.validate_button)
         self.validate_button.Hide()
 
         self.import_new_video_button = wx.Button(self, id=wx.ID_ANY, label="Import a different video")
-        self.first_sizer.Add(self.import_new_video_button, pos = (12, 2), flag = wx.TOP, border = 25)
+        self.first_sizer.Add(self.import_new_video_button, pos = (13, 2), flag = wx.TOP, border = 25)
         self.first_sizer_widgets.append(self.import_new_video_button)
         self.import_new_video_button.Hide()
 
@@ -276,7 +289,6 @@ class ValidatePanel(wx.Panel):
 
         self.SetSizer(self.first_sizer)
                 
-        # self.Layout()
         self.GetParent().Layout()
 
 
@@ -413,3 +425,9 @@ class ValidatePanel(wx.Panel):
     def DisplaySecondPage(self, e):
 
         self.SecondPage()
+
+    def OnMethod(self, e):
+
+        self.method_selection = self.method.GetValue()
+        self.MakePrediction(self)
+        self.GetParent().Layout()

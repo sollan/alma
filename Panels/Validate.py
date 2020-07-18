@@ -332,30 +332,7 @@ class ValidatePanel(wx.Panel):
         
         ValidateFunctions.ControlButton(self)
 
-        try:
-            frame = ValidateFunctions.plot_frame(self.video, self.n_frame, 
-            (self.window_width-50) / 200, (self.window_height // 3) // 100, int(self.frame_rate))
-            frame_canvas  = FigureCanvas(self, -1, frame)
-            self.frame_canvas.Hide()
-            self.sizer.Replace(self.frame_canvas, frame_canvas)
-            self.frame_canvas = frame_canvas
-            self.frame_canvas.Show()
-
-            graph = ValidateFunctions.plot_labels(self.df, self.n_frame, self.t_pred, self.start_pred, \
-                self.end_pred, (self.window_width-50) / 100, (self.window_height // 3) // 100, self.bodypart, self.axis, self.threshold)
-            graph_canvas = FigureCanvas(self, -1, graph)
-            self.graph_canvas.Hide()
-            self.sizer.Replace(self.graph_canvas, graph_canvas)
-            self.graph_canvas = graph_canvas
-            self.graph_canvas.Show()     
-            self.Fit()
-
-            self.SetSizer(self.sizer)
-            self.GetParent().Layout()
-            ValidateFunctions.ControlPrediction(self)
-            
-        except AttributeError:
-            pass
+        self.DisplayPlots()
 
 
     def SwitchFrame(self, e, new_frame):
@@ -374,6 +351,29 @@ class ValidatePanel(wx.Panel):
 
         ValidateFunctions.ControlButton(self)
 
+        self.DisplayPlots()
+
+
+    def SaveValFunc(self, e):
+
+        with wx.FileDialog(self, 'Save validated results as... ', \
+                           self.dirname, '', 'CSV files (*.csv)|*.csv|All files(*.*)|*.*', \
+                           wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT) as save_pred_dialog:
+                            
+            if save_pred_dialog.ShowModal() == wx.ID_CANCEL:
+                return
+
+            pathname = save_pred_dialog.GetPath()
+
+            try:
+                ValidateFunctions.make_output(pathname, self.t_val, self.depth_val, self.start_val, self.end_val)
+
+            except IOError:
+                wx.LogError(f"Cannot save current data in file {pathname}. Try another location or filename?")
+
+
+    def DisplayPlots(self):
+
         try:
             frame = ValidateFunctions.plot_frame(self.video, self.n_frame, 
             (self.window_width-50) / 200, (self.window_height // 3) // 100, int(self.frame_rate))
@@ -398,21 +398,3 @@ class ValidatePanel(wx.Panel):
             
         except AttributeError:
             pass
-
-
-    def SaveValFunc(self, e):
-
-        with wx.FileDialog(self, 'Save validated results as... ', \
-                           self.dirname, '', 'CSV files (*.csv)|*.csv|All files(*.*)|*.*', \
-                           wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT) as save_pred_dialog:
-                            
-            if save_pred_dialog.ShowModal() == wx.ID_CANCEL:
-                return
-
-            pathname = save_pred_dialog.GetPath()
-
-            try:
-                ValidateFunctions.make_output(pathname, self.t_val, self.depth_val, self.start_val, self.end_val)
-
-            except IOError:
-                wx.LogError(f"Cannot save current data in file {pathname}. Try another location or filename?")

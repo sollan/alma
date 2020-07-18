@@ -39,8 +39,7 @@ class ValidatePanel(wx.Panel):
 
         # load parameters to set dimension of frames and graphs
         configs = ConfigFunctions.load_config('./config.yaml')
-        self.window_width, self.window_height = configs['window_width'], configs['window_height']
-
+        self.window_width, self.window_height, self.frame_rate = configs['window_width'], configs['window_height'], configs['frame_rate']
         self.has_imported_file = False
 
         self.dirname = os.getcwd()
@@ -65,6 +64,10 @@ class ValidatePanel(wx.Panel):
 
         self.pred_text = wx.StaticText(self, label = "The default algorithm will make a prediction using csv input.")
         self.sizer.Add(self.pred_text, pos= (9, 1) , flag = wx.LEFT | wx.TOP, border = 25)        
+        
+
+        #################################
+        # add algorithm selection menu
 
         self.save_pred_button = wx.Button(self, id=wx.ID_ANY, label="Save initial prediction")
         self.save_pred_button.Bind(wx.EVT_BUTTON, self.SavePredFunc)
@@ -108,7 +111,6 @@ class ValidatePanel(wx.Panel):
         if TEST is True:
             self.filename, self.df, self.filtered_df, self.video = ValidateFunctions.test(TEST)
 
-
         self.SetSizer(self.sizer)
 
         self.Layout()
@@ -141,7 +143,7 @@ class ValidatePanel(wx.Panel):
 
         self.import_csv_button.Disable()
 
-        n_pred, depth_pred, t_pred, start_pred, end_pred = ValidateFunctions.find_slips(self.df, self.bodypart, self.axis, 'baseline') 
+        n_pred, depth_pred, t_pred, start_pred, end_pred = ValidateFunctions.find_slips(self.df, self.bodypart, self.axis, panel=self) 
         self.n_pred, self.depth_pred, self.t_pred, self.start_pred, self.end_pred = n_pred, depth_pred, t_pred, start_pred, end_pred
         self.pred_text.SetLabel(f"The algorithm predicted {self.n_pred} slips with an average depth of {np.mean(self.depth_pred):.2f} pixels.")
 
@@ -221,9 +223,6 @@ class ValidatePanel(wx.Panel):
 
         self.validate_button.Hide()
         self.validate_button.Destroy()
-
-        configs = ConfigFunctions.load_config('./config.yaml')
-        self.frame_rate = configs['frame_rate']
         
         if self.n_pred is not None:
             self.n_frame = self.t_pred[0]
@@ -332,7 +331,7 @@ class ValidatePanel(wx.Panel):
         
         ValidateFunctions.ControlButton(self)
 
-        self.DisplayPlots()
+        ValidateFunctions.DisplayPlots(self)
 
 
     def SwitchFrame(self, e, new_frame):
@@ -351,7 +350,7 @@ class ValidatePanel(wx.Panel):
 
         ValidateFunctions.ControlButton(self)
 
-        self.DisplayPlots()
+        ValidateFunctions.DisplayPlots(self)
 
 
     def SaveValFunc(self, e):

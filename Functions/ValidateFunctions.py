@@ -15,7 +15,7 @@ def test(use_preset = True):
     video = '/home/annette/Desktop/Irregular_347_3dpi_cropped.avi'
 
     return filename, df, filtered_df, video
-    
+
 
 def read_file(file):
     
@@ -56,27 +56,43 @@ def filter_predictions(pd_dataframe, bodypart, threshold):
     return pd_dataframe
 
 
-def find_slips(pd_dataframe, bodypart, axis, method, **kwargs): 
+def find_slips(pd_dataframe, bodypart, axis, panel = None, method = 'baseline', window = None, threshold = None, **kwargs): 
         
 
     if method == 'deviation':
-    
+        '''
+        recommended for smooth / noiseless prediction
+        '''
         t_peaks, properties = find_peaks(-pd_dataframe[f'{bodypart} {axis}'], height=-5000, prominence=(10,100000))
-        n_peaks = len(t_peaks)        
-        h_peaks = properties["prominences"]
-        start_times = properties['left_bases']
-        end_times = properties['right_bases']
 
     if method == 'baseline':
-        
-        baseline = baseline_als(pd_dataframe[f'{bodypart} {axis}'], 1, 0.01)
-        corrected = pd_dataframe[f'{bodypart} {axis}'] - baseline
+        '''
+        recommended for prediction with much jittering / noise
+        '''
+        baseline = baseline_als(pd_dataframe[f'{bodypart} {axis}'], 8**3, 0.01)
+        t_peaks, properties = find_peaks(-baseline, prominence=(10,1000))
+        if window is None:
+            if panel is not None:
+                window = panel.frame_rate // 5
+            else:
+                window = 10
+        t_peaks = adjust_times(pd_dataframe[f'{bodypart} {axis}'], t_peaks, window)
 
-        t_peaks, properties = find_peaks(-corrected, height=-5000, prominence=(10,100000))
-        n_peaks = len(t_peaks)
-        h_peaks = properties["prominences"]
-        start_times = properties['left_bases']
-        end_times = properties['right_bases']
+    if method == 'threshold':
+        '''
+        when there is a clear cut off pixel value for the entire video, 
+        e.g. location of ladder in frame
+        '''
+        if threshold is None:  
+            threshold = np.mean(pd_dataframe[f'{bodypart} {axis}']) - np.std(pd_dataframe[f'{bodypart} {axis}'])
+        adjusted = fit_threshold(pd_dataframe[f'{bodypart} {axis}'], threshold)
+        
+        t_peaks, properties = find_peaks(-adjusted, prominence=(10,1000))
+
+    n_peaks = len(t_peaks)
+    h_peaks = properties["prominences"]
+    start_times = properties['left_bases']
+    end_times = properties['right_bases']
             
     return n_peaks, list(h_peaks), list(t_peaks), list(start_times), list(end_times)
 
@@ -89,14 +105,14 @@ def baseline_als(y, lam, p, niter=10):
 
     '''
     * based on ALS paper
-    There are two parameters: 
+    "There are two parameters: 
     p for asymmetry and λ for smoothness. 
     Both have to be tuned to the data at hand. 
     We found that generally 0.001 ≤ p ≤ 0.1 is a good choice 
     (for a signal with positive peaks) 
     and 10^2 ≤ λ ≤ 10^9 , 
     but exceptions may occur. 
-    In any case one should vary λ on a grid that is approximately linear for log λ
+    In any case one should vary λ on a grid that is approximately linear for log λ"
     '''
     L = len(y)
     D = sparse.csc_matrix(np.diff(np.eye(L), 2))
@@ -109,11 +125,35 @@ def baseline_als(y, lam, p, niter=10):
     return z
 
 
+def fit_threshold(y, threshold):
+    
+    result = np.full(len(y), threshold)
+    for i, data in enumerate(y):
+        if data < threshold:
+            result[i] = y[i]
+    return result
+
+def adjust_times(y, t_prediction, window):
+    
+    for i, t in enumerate(t_prediction):
+        start = t - window
+        end = t + window
+        if start < 0:
+            start = 0
+        if end > len(y):
+            end = len(y)
+        sublist = list(y[start:end])
+        minimum = start + sublist.index(np.min(sublist))
+        t_prediction[i] = minimum
+    
+    return t_prediction
+
+
 def make_output(pathname, t_slips, depth_slips, start_slips, end_slips):
 
-    df_output = pd.DataFrame({'time': t_slips,\
-                            'depth': depth_slips,\
-                            'start': start_slips,\
+    df_output = pd.DataFrame({'time': t_slips,
+                            'depth': depth_slips,
+                            'start': start_slips,
                             'end': end_slips})
 
     df_output.to_csv(pathname, index = False)
@@ -134,7 +174,7 @@ def plot_frame(video_file, n_frame, width, height, frame_rate, baseline = 0):
 
         vidcap = load_video(video_file)
         vidcap.set(1, n_frame)
-        ret, frame = vidcap.read()
+        _, frame = vidcap.read()
         image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
         axes.imshow(image)

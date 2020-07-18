@@ -274,7 +274,7 @@ def DisplayPlots(panel):
         (panel.window_width-50) / 200, (panel.window_height // 3) // 100, int(panel.frame_rate))
         frame_canvas  = FigureCanvas(panel, -1, frame)
         panel.frame_canvas.Hide()
-        panel.sizer.Replace(panel.frame_canvas, frame_canvas)
+        panel.second_sizer.Replace(panel.frame_canvas, frame_canvas)
         panel.frame_canvas = frame_canvas
         panel.frame_canvas.Show()
 
@@ -282,12 +282,12 @@ def DisplayPlots(panel):
             panel.end_pred, (panel.window_width-50) / 100, (panel.window_height // 3) // 100, panel.bodypart, panel.axis, panel.threshold)
         graph_canvas = FigureCanvas(panel, -1, graph)
         panel.graph_canvas.Hide()
-        panel.sizer.Replace(panel.graph_canvas, graph_canvas)
+        panel.second_sizer.Replace(panel.graph_canvas, graph_canvas)
         panel.graph_canvas = graph_canvas
         panel.graph_canvas.Show()     
         panel.Fit()
 
-        panel.SetSizer(panel.sizer)
+        panel.SetSizer(panel.second_sizer)
         ControlPrediction(panel)
         panel.GetParent().Layout()
         

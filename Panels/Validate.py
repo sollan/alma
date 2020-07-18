@@ -40,81 +40,22 @@ class ValidatePanel(wx.Panel):
         # load parameters to set dimension of frames and graphs
         configs = ConfigFunctions.load_config('./config.yaml')
         self.window_width, self.window_height, self.frame_rate = configs['window_width'], configs['window_height'], configs['frame_rate']
+        self.first_sizer_widgets = []
+        self.second_sizer_widgets = []
         self.has_imported_file = False
-
         self.dirname = os.getcwd()
-
-        # create a sizer to manage the layout of child widgets
-        self.sizer = wx.GridBagSizer(0, 0)
+        
+        self.first_sizer = wx.GridBagSizer(0, 0)
 
         self.header = wx.StaticText(self, -1, "Validate")
         font = wx.Font(20,wx.MODERN,wx.NORMAL,wx.NORMAL)
         self.header.SetFont(font)
-        self.sizer.Add(self.header, pos = (0, 0), flag = wx.LEFT|wx.TOP, border = 25)
+        self.first_sizer.Add(self.header, pos = (0, 0), span = (2, 5), flag = wx.LEFT|wx.TOP, border = 25)
 
         self.instructions = wx.StaticText(self, -1, "Load the csv output from DeepLabCut and validate behavioral predictions manually.")
-        self.sizer.Add(self.instructions, pos = (1, 0), span = (1, 3), flag = wx.LEFT|wx.TOP, border=25)
+        self.first_sizer.Add(self.instructions, pos = (2, 0), span = (1, 3), flag = wx.LEFT|wx.TOP, border=25)
 
-        self.import_csv_button = wx.Button(self, id=wx.ID_ANY, label="Import")
-        self.import_csv_button.Bind(wx.EVT_BUTTON, self.ImportCSV)
-        self.sizer.Add(self.import_csv_button, pos = (8, 0), flag = wx.LEFT, border = 25)
-
-        self.import_csv_text = wx.StaticText(self, label = "Import a csv file for slip prediction. " + "\nThe file should be DeepLabCut output (or of a similar format) to ensure proper parsing!")
-        self.sizer.Add(self.import_csv_text, pos=(8, 1), flag = wx.LEFT, border = 25)
-
-        self.pred_text = wx.StaticText(self, label = "The default algorithm will make a prediction using csv input.")
-        self.sizer.Add(self.pred_text, pos= (9, 1) , flag = wx.LEFT | wx.TOP, border = 25)        
-        
-
-        #################################
-        # add algorithm selection menu
-
-        self.save_pred_button = wx.Button(self, id=wx.ID_ANY, label="Save initial prediction")
-        self.save_pred_button.Bind(wx.EVT_BUTTON, self.SavePredFunc)
-        self.sizer.Add(self.save_pred_button, pos = (10, 1), flag = wx.TOP | wx.LEFT | wx.BOTTOM, border = 25)
-        self.save_pred_button.Hide()
-
-        self.import_new_csv_button = wx.Button(self, id=wx.ID_ANY, label="Import a different file")
-        self.import_new_csv_button.Bind(wx.EVT_BUTTON, self.ImportCSV)
-        self.sizer.Add(self.import_new_csv_button, pos = (10, 2), flag = wx.TOP | wx.BOTTOM, border = 25)
-        self.import_new_csv_button.Hide()
-
-        self.import_video_button = wx.Button(self, id=wx.ID_ANY, label="Import")
-        self.import_video_button.Bind(wx.EVT_BUTTON, self.ImportVideo)
-        self.sizer.Add(self.import_video_button, pos = (11, 0), flag = wx.LEFT | wx.TOP, border = 25)
-        self.import_video_button.Hide()
-        
-        self.import_video_text = wx.StaticText(self, label = "Import the corresponding video file for validation. ")
-        self.sizer.Add(self.import_video_text, pos=(11, 1), flag = wx.LEFT | wx.TOP, border = 25)
-        self.import_video_text.Hide()
-
-        self.validate_button = wx.Button(self, id=wx.ID_ANY, label="Validate")
-        self.validate_button.Bind(wx.EVT_BUTTON, self.DisplayValidationFunc)
-        self.sizer.Add(self.validate_button, pos = (12, 1), flag = wx.TOP | wx.LEFT, border = 25)
-        self.validate_button.Hide()
-
-        self.import_new_video_button = wx.Button(self, id=wx.ID_ANY, label="Import a different video")
-        self.import_new_video_button.Bind(wx.EVT_BUTTON, self.ImportVideo)
-        self.sizer.Add(self.import_new_video_button, pos = (12, 2), flag = wx.TOP, border = 25)
-        self.import_new_video_button.Hide()
-
-
-        ################################################################
-        # user input here
-
-        self.bodypart = 'HR' # modify this to include user selection
-        self.axis = 'y'
-        self.threshold = 0.4 # modify this to include user selection
-
-
-
-        if TEST is True:
-            self.filename, self.df, self.filtered_df, self.video = ValidateFunctions.test(TEST)
-
-        self.SetSizer(self.sizer)
-
-        self.Layout()
-
+        self.FirstPage()
 
 
     def ImportCSV(self, e):
@@ -194,111 +135,6 @@ class ValidatePanel(wx.Panel):
                 wx.LogError(f"Cannot save current data in file {pathname}. Try another location or filename?")
                 
 
-    def DisplayValidationFunc(self, e):
-
-        # remove previous content
-        self.import_csv_button.Hide()
-        self.import_csv_button.Destroy()
-
-        self.import_csv_text.Hide()
-        self.import_csv_text.Destroy()
-
-        self.import_new_csv_button.Hide()
-        self.import_new_csv_button.Destroy()
-
-        self.pred_text.Hide()
-        self.pred_text.Destroy()
-
-        self.save_pred_button.Hide()
-        self.save_pred_button.Destroy()
-
-        self.import_video_button.Hide()
-        self.import_video_button.Destroy()
-
-        self.import_video_text.Hide()
-        self.import_video_text.Destroy()
-
-        self.import_new_video_button.Hide()
-        self.import_new_video_button.Destroy()
-
-        self.validate_button.Hide()
-        self.validate_button.Destroy()
-        
-        if self.n_pred is not None:
-            self.n_frame = self.t_pred[0]
-        else:
-            self.n_frame = 0
-        self.checkbox = wx.CheckBox(self, label='Slip')
-        self.checkbox.SetValue(True)
-
-        # initialize validation results
-        self.n_val, self.depth_val, self.t_val, self.start_val, self.end_val = self.n_pred, self.depth_pred[:], self.t_pred[:], self.start_pred[:], self.end_pred[:]
-
-        # display frame from video
-        frame = ValidateFunctions.plot_frame(self.video, 10, 
-            (self.window_width-50) / 200, (self.window_height // 3) // 100, int(self.frame_rate))
-        self.frame_canvas = FigureCanvas(self, -1, frame)
-        self.sizer.Add(self.frame_canvas, pos= (8, 0), span = (4, 0),flag = wx.LEFT, border = 25)
-        self.Fit()
-        self.checkbox.Bind(wx.EVT_CHECKBOX, self.MarkSlip)
-        self.sizer.Add(self.checkbox, pos = (8, 1), flag = wx.LEFT | wx.TOP, border = 25)
-
-        # display prev / next buttons
-        self.prev_pred_button = wx.Button(self, id=wx.ID_ANY, label="<- prev prediction")
-        self.prev_pred_button.Bind(wx.EVT_BUTTON, lambda event, new_frame = 'prev_pred' : self.SwitchFrame(event, new_frame))
-        self.frame_label = wx.StaticText(self, label='Frame')
-        self.next_pred_button = wx.Button(self, id=wx.ID_ANY, label="next prediction ->")
-        self.next_pred_button.Bind(wx.EVT_BUTTON, lambda event, new_frame = 'next_pred' : self.SwitchFrame(event, new_frame))
-
-        self.prev_pred, self.next_pred = ValidateFunctions.find_neighbors(self.n_frame, self.t_pred)
-
-        self.sizer.Add(self.prev_pred_button, pos = (9, 1), span = (0,2), flag = wx.LEFT | wx.RIGHT, border = 25)
-        self.sizer.Add(self.frame_label, pos = (9, 3), span = (0,1), flag = wx.LEFT, border = 15)
-        self.sizer.Add(self.next_pred_button, pos = (9, 4), span = (0,2), flag = wx.LEFT | wx.RIGHT, border = 25)
-
-        self.prev_button = wx.Button(self, id=wx.ID_ANY, label="<")
-        self.prev_button.Bind(wx.EVT_BUTTON, lambda event, new_frame = -1 : self.SwitchFrame(event, new_frame))
-        self.next_button = wx.Button(self, id=wx.ID_ANY, label=">")
-        self.next_button.Bind(wx.EVT_BUTTON, lambda event, new_frame = 1 : self.SwitchFrame(event, new_frame))
-
-        self.slider_label = wx.StaticText(self, label=str(self.n_frame))
-
-        self.prev10_button = wx.Button(self, id=wx.ID_ANY, label="<<")
-        self.prev10_button.Bind(wx.EVT_BUTTON, lambda event, new_frame = -10 : self.SwitchFrame(event, new_frame))
-        self.next10_button = wx.Button(self, id=wx.ID_ANY, label=">>")
-        self.next10_button.Bind(wx.EVT_BUTTON, lambda event, new_frame = 10 : self.SwitchFrame(event, new_frame))
-
-        ValidateFunctions.ControlButton(self)
-
-        self.sizer.Add(self.prev10_button, pos = (10, 1), flag = wx.LEFT, border = 25)
-        self.sizer.Add(self.prev_button, pos = (10, 2))        
-        self.sizer.Add(self.slider_label, pos = (10, 3), flag = wx.LEFT | wx.RIGHT, border = 25)
-        self.sizer.Add(self.next_button, pos = (10, 4))
-        self.sizer.Add(self.next10_button, pos = (10, 5))
-
-        self.save_val_button = wx.Button(self, id=wx.ID_ANY, label="Save validated results")
-        self.save_val_button.Bind(wx.EVT_BUTTON, self.SaveValFunc)
-        self.sizer.Add(self.save_val_button, pos = (11, 4), span = (1, 3), flag = wx.TOP | wx.BOTTOM, border = 40)
-
-        # display location graphs
-        graph = ValidateFunctions.plot_labels(self.df, self.n_frame, self.t_pred, self.start_pred, \
-            self.end_pred, (self.window_width-50) / 100, (self.window_height // 3) // 100, self.bodypart, self.axis, self.threshold)
-        self.graph_canvas = FigureCanvas(self, -1, graph)
-        self.sizer.Add(self.graph_canvas, pos = (12, 0), span = (1, 6), flag = wx.TOP | wx.LEFT, border = 25)        
-        self.Fit()
-
-        # display slider
-        self.slider = wx.Slider(self, value=self.n_frame, minValue=1, maxValue=len(self.df),
-            style=wx.SL_HORIZONTAL)
-        self.slider.Bind(wx.EVT_SCROLL, self.OnSliderScroll)
-        self.sizer.Add(self.slider, pos=(13, 0), span = (2, 6), flag = wx.LEFT | wx.EXPAND | wx.TOP, border = 25)
-
-        self.SetSizer(self.sizer)
-        self.GetParent().Layout()
-
-        wx.MessageBox("This function is still under development. Thanks for your patience! :)")
-
-
     def MarkSlip(self, e):
         # if isChecked: 
         sender = e.GetEventObject()
@@ -369,3 +205,211 @@ class ValidatePanel(wx.Panel):
 
             except IOError:
                 wx.LogError(f"Cannot save current data in file {pathname}. Try another location or filename?")
+
+
+    def FirstPage(self):
+
+        self.import_csv_button = wx.Button(self, id=wx.ID_ANY, label="Import")
+        self.first_sizer.Add(self.import_csv_button, pos = (8, 0), flag = wx.LEFT, border = 25)
+        self.first_sizer_widgets.append(self.import_csv_button)
+
+        self.import_csv_text = wx.StaticText(self, label = "Import a csv file for slip prediction. " + "\nThe file should be DeepLabCut output (or of a similar format) to ensure proper parsing!")
+        self.first_sizer.Add(self.import_csv_text, pos=(8, 1), flag = wx.LEFT, border = 25)
+        self.first_sizer_widgets.append(self.import_csv_text)
+
+        self.pred_text = wx.StaticText(self, label = "The default algorithm will make a prediction using csv input.")
+        self.first_sizer.Add(self.pred_text, pos= (9, 1) , flag = wx.LEFT | wx.TOP, border = 25)      
+        self.first_sizer_widgets.append(self.pred_text)  
+        
+
+        #################################
+        # add algorithm selection menu
+
+        self.save_pred_button = wx.Button(self, id=wx.ID_ANY, label="Save initial prediction")
+        self.first_sizer.Add(self.save_pred_button, pos = (10, 1), flag = wx.TOP | wx.LEFT | wx.BOTTOM, border = 25)
+        self.first_sizer_widgets.append(self.save_pred_button)
+        self.save_pred_button.Hide()
+
+        self.import_new_csv_button = wx.Button(self, id=wx.ID_ANY, label="Import a different file")
+        self.first_sizer.Add(self.import_new_csv_button, pos = (10, 2), flag = wx.TOP | wx.BOTTOM, border = 25)
+        self.first_sizer_widgets.append(self.import_new_csv_button)
+        self.import_new_csv_button.Hide()
+
+        self.import_video_button = wx.Button(self, id=wx.ID_ANY, label="Import")
+        
+        self.first_sizer.Add(self.import_video_button, pos = (11, 0), flag = wx.LEFT | wx.TOP, border = 25)
+        self.first_sizer_widgets.append(self.import_video_button)
+        self.import_video_button.Hide()
+        
+        self.import_video_text = wx.StaticText(self, label = "Import the corresponding video file for validation. ")
+        self.first_sizer.Add(self.import_video_text, pos=(11, 1), flag = wx.LEFT | wx.TOP, border = 25)
+        self.first_sizer_widgets.append(self.import_video_text)
+        self.import_video_text.Hide()
+
+        self.validate_button = wx.Button(self, id=wx.ID_ANY, label="Validate")
+        
+        self.first_sizer.Add(self.validate_button, pos = (12, 1), flag = wx.TOP | wx.LEFT, border = 25)
+        self.first_sizer_widgets.append(self.validate_button)
+        self.validate_button.Hide()
+
+        self.import_new_video_button = wx.Button(self, id=wx.ID_ANY, label="Import a different video")
+        self.first_sizer.Add(self.import_new_video_button, pos = (12, 2), flag = wx.TOP, border = 25)
+        self.first_sizer_widgets.append(self.import_new_video_button)
+        self.import_new_video_button.Hide()
+
+        ################################################################
+        # user input here
+
+        self.bodypart = 'HR' # modify this to include user selection
+        self.axis = 'y'
+        self.threshold = 0.4 # modify this to include user selection
+
+        self.save_pred_button.Bind(wx.EVT_BUTTON, self.SavePredFunc)
+        self.import_csv_button.Bind(wx.EVT_BUTTON, self.ImportCSV)
+        self.import_new_csv_button.Bind(wx.EVT_BUTTON, self.ImportCSV)
+        self.import_video_button.Bind(wx.EVT_BUTTON, self.ImportVideo)
+        self.validate_button.Bind(wx.EVT_BUTTON, self.DisplaySecondPage)
+        self.import_new_video_button.Bind(wx.EVT_BUTTON, self.ImportVideo)
+
+        if TEST is True:
+            self.filename, self.df, self.filtered_df, self.video = ValidateFunctions.test(TEST)
+
+        self.SetSizer(self.first_sizer)
+                
+        # self.Layout()
+        self.GetParent().Layout()
+
+
+
+    def SecondPage(self):
+        
+        for widget in self.first_sizer_widgets:
+            try:
+                widget.Hide()
+                widget.Destroy()
+            except:
+                # widget has already been destroyed
+                pass
+
+        self.second_sizer_widgets = []
+        self.second_sizer = wx.GridBagSizer(0, 0)
+
+        if self.n_pred is not None:
+            self.n_frame = self.t_pred[0]
+        else:
+            self.n_frame = 0
+        self.checkbox = wx.CheckBox(self, label='Slip')
+        self.checkbox.SetValue(True)
+
+        # initialize validation results
+        self.n_val, self.depth_val, self.t_val, self.start_val, self.end_val = self.n_pred, self.depth_pred[:], self.t_pred[:], self.start_pred[:], self.end_pred[:]
+
+
+        # display frame from video
+        frame = ValidateFunctions.plot_frame(self.video, 10, 
+            (self.window_width-50) / 200, (self.window_height // 3) // 100, int(self.frame_rate))
+        self.frame_canvas = FigureCanvas(self, -1, frame)
+        self.second_sizer.Add(self.frame_canvas, pos= (8, 0), span = (4, 0),flag = wx.LEFT, border = 25)
+        self.second_sizer_widgets.append(self.frame_canvas)
+        self.Fit()
+
+        self.checkbox.Bind(wx.EVT_CHECKBOX, self.MarkSlip)
+        self.second_sizer.Add(self.checkbox, pos = (8, 1), flag = wx.LEFT | wx.TOP, border = 25)
+        self.second_sizer_widgets.append(self.checkbox)
+
+        # display prev / next buttons
+        self.prev_pred_button = wx.Button(self, id=wx.ID_ANY, label="<- prev prediction")
+        self.prev_pred_button.Bind(wx.EVT_BUTTON, lambda event, new_frame = 'prev_pred' : self.SwitchFrame(event, new_frame))
+        self.frame_label = wx.StaticText(self, label='Frame')
+        self.next_pred_button = wx.Button(self, id=wx.ID_ANY, label="next prediction ->")
+        self.next_pred_button.Bind(wx.EVT_BUTTON, lambda event, new_frame = 'next_pred' : self.SwitchFrame(event, new_frame))
+
+        self.prev_pred, self.next_pred = ValidateFunctions.find_neighbors(self.n_frame, self.t_pred)
+
+        self.second_sizer.Add(self.prev_pred_button, pos = (9, 1), span = (0,2), flag = wx.LEFT | wx.RIGHT, border = 25)
+        self.second_sizer_widgets.append(self.prev_pred_button)
+        self.second_sizer.Add(self.frame_label, pos = (9, 3), span = (0,1), flag = wx.LEFT, border = 15)
+        self.second_sizer_widgets.append(self.frame_label)
+        self.second_sizer.Add(self.next_pred_button, pos = (9, 4), span = (0,2), flag = wx.LEFT | wx.RIGHT, border = 25)
+        self.second_sizer_widgets.append(self.next_pred_button)
+
+        self.prev_button = wx.Button(self, id=wx.ID_ANY, label="<")
+        self.prev_button.Bind(wx.EVT_BUTTON, lambda event, new_frame = -1 : self.SwitchFrame(event, new_frame))
+        self.second_sizer_widgets.append(self.prev_button)
+        self.next_button = wx.Button(self, id=wx.ID_ANY, label=">")
+        self.next_button.Bind(wx.EVT_BUTTON, lambda event, new_frame = 1 : self.SwitchFrame(event, new_frame))
+        self.second_sizer_widgets.append(self.next_button)
+
+        self.slider_label = wx.StaticText(self, label=str(self.n_frame))
+
+        self.prev10_button = wx.Button(self, id=wx.ID_ANY, label="<<")
+        self.prev10_button.Bind(wx.EVT_BUTTON, lambda event, new_frame = -10 : self.SwitchFrame(event, new_frame))
+        self.next10_button = wx.Button(self, id=wx.ID_ANY, label=">>")
+        self.next10_button.Bind(wx.EVT_BUTTON, lambda event, new_frame = 10 : self.SwitchFrame(event, new_frame))
+
+        ValidateFunctions.ControlButton(self)
+
+        self.second_sizer.Add(self.prev10_button, pos = (10, 1), flag = wx.LEFT, border = 25)
+        self.second_sizer.Add(self.prev_button, pos = (10, 2))        
+        self.second_sizer.Add(self.slider_label, pos = (10, 3), flag = wx.LEFT | wx.RIGHT, border = 25)
+        self.second_sizer.Add(self.next_button, pos = (10, 4))
+        self.second_sizer.Add(self.next10_button, pos = (10, 5))
+
+        self.second_sizer_widgets.append(self.prev10_button)
+        self.second_sizer_widgets.append(self.prev_button)
+        self.second_sizer_widgets.append(self.slider_label)
+        self.second_sizer_widgets.append(self.next_button)
+        self.second_sizer_widgets.append(self.next10_button)
+
+        self.save_val_button = wx.Button(self, id=wx.ID_ANY, label="Save")
+        self.save_val_button.Bind(wx.EVT_BUTTON, self.SaveValFunc)
+        self.second_sizer.Add(self.save_val_button, pos = (11, 2), span = (1, 2), flag = wx.TOP | wx.BOTTOM, border = 40)
+        self.second_sizer_widgets.append(self.save_val_button)
+
+        self.restart_button = wx.Button(self, id=wx.ID_ANY, label="Validate another file")
+        self.restart_button.Bind(wx.EVT_BUTTON, self.DisplayFirstPage)
+        self.second_sizer.Add(self.restart_button, pos = (11, 4), span = (1, 3), flag = wx.TOP | wx.BOTTOM, border = 40)
+        self.second_sizer_widgets.append(self.restart_button)
+
+        # display location graphs
+        graph = ValidateFunctions.plot_labels(self.df, self.n_frame, self.t_pred, self.start_pred, \
+            self.end_pred, (self.window_width-50) / 100, (self.window_height // 3) // 100, self.bodypart, self.axis, self.threshold)
+        self.graph_canvas = FigureCanvas(self, -1, graph)
+        self.second_sizer.Add(self.graph_canvas, pos = (12, 0), span = (1, 6), flag = wx.TOP | wx.LEFT, border = 25) 
+        self.second_sizer_widgets.append(self.graph_canvas)       
+        self.Fit()
+
+        # display slider
+        self.slider = wx.Slider(self, value=self.n_frame, minValue=1, maxValue=len(self.df),
+            style=wx.SL_HORIZONTAL)
+        self.slider.Bind(wx.EVT_SCROLL, self.OnSliderScroll)
+        self.second_sizer.Add(self.slider, pos=(13, 0), span = (2, 6), flag = wx.LEFT | wx.EXPAND | wx.TOP, border = 25)
+        self.second_sizer_widgets.append(self.slider)
+
+        self.SetSizer(self.second_sizer)
+        # self.Layout()
+        self.GetParent().Layout()
+
+        wx.MessageBox("This function is still under development. Thanks for your patience! :)")
+
+    def DisplayFirstPage(self, e):
+
+        for widget in self.second_sizer_widgets:
+            try:
+                widget.Hide()
+                widget.Destroy()
+            except:
+                # widget has already been destroyed
+                pass
+
+
+        self.first_sizer_widgets = []
+        self.first_sizer = wx.GridBagSizer(0, 0)
+
+        self.first_sizer.Add(self.header, pos = (0, 0), span = (2, 5), flag = wx.LEFT|wx.TOP, border = 25)
+        self.first_sizer.Add(self.instructions, pos = (2, 0), span = (1, 3), flag = wx.LEFT|wx.TOP, border=25)
+        self.FirstPage()
+
+    def DisplaySecondPage(self, e):
+
+        self.SecondPage()

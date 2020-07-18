@@ -13,9 +13,9 @@ import numpy as np # remove later; for testing
     # generate plots --> plot onset and offset?
     # add checkbox --> clickable button? to label slips
     # --> predict peaks (start with baseline correction & scipy find peak)
-    # prev and next prediction button
-    # start another button
-    # --> get window size and resize elements?
+    # --> predict for multiple bodyparts simultaneously
+    # "start another" button
+    # get window size and resize elements?
     # --> input bodypart name & likelihood threshold
     # prompt user to save before going to another panel
     # regenerate panel after leaving

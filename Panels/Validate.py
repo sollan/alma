@@ -228,8 +228,6 @@ class ValidatePanel(wx.Panel):
             self.n_frame = 0
         self.checkbox = wx.CheckBox(self, label='Slip')
         self.checkbox.SetValue(True)
-            
-
 
         # initialize validation results
         self.n_val, self.depth_val, self.t_val, self.start_val, self.end_val = self.n_pred, self.depth_pred[:], self.t_pred[:], self.start_pred[:], self.end_pred[:]
@@ -439,7 +437,6 @@ class ValidatePanel(wx.Panel):
             self.Fit()
 
             self.SetSizer(self.sizer)
-            # self.GetParent().Layout()
             print(self.n_frame)
             print(self.n_frame in self.t_pred)
             if self.n_frame in self.t_val:

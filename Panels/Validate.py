@@ -370,31 +370,3 @@ class ValidatePanel(wx.Panel):
 
             except IOError:
                 wx.LogError(f"Cannot save current data in file {pathname}. Try another location or filename?")
-
-
-    def DisplayPlots(self):
-
-        try:
-            frame = ValidateFunctions.plot_frame(self.video, self.n_frame, 
-            (self.window_width-50) / 200, (self.window_height // 3) // 100, int(self.frame_rate))
-            frame_canvas  = FigureCanvas(self, -1, frame)
-            self.frame_canvas.Hide()
-            self.sizer.Replace(self.frame_canvas, frame_canvas)
-            self.frame_canvas = frame_canvas
-            self.frame_canvas.Show()
-
-            graph = ValidateFunctions.plot_labels(self.df, self.n_frame, self.t_pred, self.start_pred, \
-                self.end_pred, (self.window_width-50) / 100, (self.window_height // 3) // 100, self.bodypart, self.axis, self.threshold)
-            graph_canvas = FigureCanvas(self, -1, graph)
-            self.graph_canvas.Hide()
-            self.sizer.Replace(self.graph_canvas, graph_canvas)
-            self.graph_canvas = graph_canvas
-            self.graph_canvas.Show()     
-            self.Fit()
-
-            self.SetSizer(self.sizer)
-            ValidateFunctions.ControlPrediction(self)
-            self.GetParent().Layout()
-            
-        except AttributeError:
-            pass

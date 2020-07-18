@@ -6,6 +6,17 @@ from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 import cv2
 import wx
 
+def test(use_preset = True):
+    
+    filename = '/home/annette/Desktop/Irregular_347_3dpi_croppedDLC_resnet50_Ladder RungMay12shuffle1_50000.csv'
+    df, filename = read_file(filename)
+    df = fix_column_names(df)
+    filtered_df = filter_predictions(df, 'HL', 0.3)
+    video = '/home/annette/Desktop/Irregular_347_3dpi_cropped.avi'
+
+    return filename, df, filtered_df, video
+    
+
 def read_file(file):
     
     pd_dataframe = pd.read_csv(file, header=[1,2])
@@ -183,17 +194,6 @@ def find_closest_neighbors(n_current_frame, t_pred, low, high):
     return low, high
 
 
-def test(use_preset = True):
-    
-    filename = '/home/annette/Desktop/Irregular_347_3dpi_croppedDLC_resnet50_Ladder RungMay12shuffle1_50000.csv'
-    df, filename = read_file(filename)
-    df = fix_column_names(df)
-    filtered_df = filter_predictions(df, 'HL', 0.3)
-    video = '/home/annette/Desktop/Irregular_347_3dpi_cropped.avi'
-
-    return filename, df, filtered_df, video
-
-
 def ControlButton(panel):
     
     panel.prev_pred_button.Enable()
@@ -224,3 +224,32 @@ def ControlPrediction(panel):
         panel.checkbox.SetValue(True)
     else:
         panel.checkbox.SetValue(False)
+
+
+
+def DisplayPlots(panel):
+
+    try:
+        frame = plot_frame(panel.video, panel.n_frame, 
+        (panel.window_width-50) / 200, (panel.window_height // 3) // 100, int(panel.frame_rate))
+        frame_canvas  = FigureCanvas(panel, -1, frame)
+        panel.frame_canvas.Hide()
+        panel.sizer.Replace(panel.frame_canvas, frame_canvas)
+        panel.frame_canvas = frame_canvas
+        panel.frame_canvas.Show()
+
+        graph = plot_labels(panel.df, panel.n_frame, panel.t_pred, panel.start_pred, \
+            panel.end_pred, (panel.window_width-50) / 100, (panel.window_height // 3) // 100, panel.bodypart, panel.axis, panel.threshold)
+        graph_canvas = FigureCanvas(panel, -1, graph)
+        panel.graph_canvas.Hide()
+        panel.sizer.Replace(panel.graph_canvas, graph_canvas)
+        panel.graph_canvas = graph_canvas
+        panel.graph_canvas.Show()     
+        panel.Fit()
+
+        panel.SetSizer(panel.sizer)
+        ControlPrediction(panel)
+        panel.GetParent().Layout()
+        
+    except AttributeError:
+        pass

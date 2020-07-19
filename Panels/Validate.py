@@ -6,6 +6,8 @@ import yaml
 import matplotlib as mpl
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 import numpy as np # remove later; for testing
+import warnings
+warnings.filterwarnings("error")
 
     #################################
     # display file and video name after import
@@ -21,7 +23,7 @@ import numpy as np # remove later; for testing
     # regenerate panel after leaving
     #################################
 
-TEST = True
+TEST = False
 # set to True: import default files to reduce clicks :)
 # default files are set in ValidateFunctions.test()
 
@@ -86,8 +88,8 @@ class ValidatePanel(wx.Panel):
             bodypart_choices = wx.CheckListBox(self, choices = self.bodyparts)
             self.first_sizer.Replace(self.bodypart_choices, bodypart_choices)
             self.bodypart_choices = bodypart_choices
-            self.bodypart_choices.SetCheckedItems([0])
-            self.bodypart = self.bodyparts[list(self.bodypart_choices.GetCheckedItems())[0]]
+            # self.bodypart_choices.SetCheckedItems([0])
+            # self.bodypart = self.bodyparts[list(self.bodypart_choices.GetCheckedItems())[0]]
             self.first_sizer_widgets.append(self.bodypart_choices)
             self.bodypart_choices.Bind(wx.EVT_CHECKLISTBOX, self.OnBodypart)
             self.bodypart_choices.Show()
@@ -123,26 +125,20 @@ class ValidatePanel(wx.Panel):
         end_pred = ValidateFunctions.sort_list(t_pred, end_pred)
         bodypart_list_pred = ValidateFunctions.sort_list(t_pred, bodypart_list_pred)
         t_pred = sorted(t_pred)
-        print(t_pred)
 
         to_remove = ValidateFunctions.find_duplicates(t_pred)
         for ind in range(len(to_remove)-1, -1, -1):
-            print(ind)
             i = to_remove[ind]
             _,_,_,_,_ = t_pred.pop(i), depth_pred.pop(i), end_pred.pop(i), start_pred.pop(i), bodypart_list_pred.pop(i)
             n_pred -= 1
-            print(i)
-        print(to_remove)
 
         self.n_pred, self.depth_pred, self.t_pred, self.start_pred, self.end_pred, self.bodypart_list_pred = n_pred, depth_pred, t_pred, start_pred, end_pred, bodypart_list_pred
-        self.pred_text.SetLabel(f"The algorithm predicted {self.n_pred} slips with an average depth of {np.mean(self.depth_pred):.2f} pixels.")
+        self.pred_text.SetLabel(f"\nThe algorithm predicted {self.n_pred} slips with an average depth of {np.mean(self.depth_pred):.2f} pixels.\n")
 
         self.save_pred_button.Show()
         self.import_new_csv_button.Show()
         self.import_video_button.Show()
         self.import_video_text.Show()
-        print(self.t_pred)
-        print(t_pred)
         self.GetParent().Layout()
 
             
@@ -187,7 +183,7 @@ class ValidatePanel(wx.Panel):
                 
 
     def MarkSlip(self, e):
-        # if isChecked: 
+
         sender = e.GetEventObject()
         isChecked = sender.GetValue()
 
@@ -515,10 +511,10 @@ class ValidatePanel(wx.Panel):
 
         if self.n_frame in self.t_pred:
             self.bodypart = self.bodypart_list_pred[self.t_pred.index(self.n_frame)]
-        else:
+        elif self.bodypart is None:
             self.bodypart = self.selected_bodyparts[0]
 
-        graph = ValidateFunctions.plot_labels(self.df, self.n_frame, self.t_val, self.start_val, \
+        graph = ValidateFunctions.plot_labels(self.df, self.n_frame, self.method_selection, self.t_val, self.start_val, \
             self.end_val, (self.window_width-50) / 100, (self.window_height // 3) // 100, self.bodypart, 'y', self.likelihood_threshold)
         self.graph_canvas = FigureCanvas(self, -1, graph)
         self.second_sizer.Add(self.graph_canvas, pos = (12, 0), span = (1, 7), flag = wx.TOP | wx.LEFT, border = 25) 
@@ -578,15 +574,24 @@ class ValidatePanel(wx.Panel):
 
         self.selected_bodyparts = [self.bodyparts[i] for i in list(self.bodypart_choices.GetCheckedItems())]
         self.method_selection = self.method_choices.GetValue()
-        self.MakePrediction(self)
-        self.GetParent().Layout()
+        try:
+            self.MakePrediction(self)
+            self.GetParent().Layout()
+        except RuntimeWarning:
+            # awaiting bodypart selection
+            self.pred_text.SetLabel("\n\n")
+            pass
 
     def OnBodypart(self, e):
 
         self.selected_bodyparts = [self.bodyparts[i] for i in list(self.bodypart_choices.GetCheckedItems())]
-        print(self.selected_bodyparts)
-        self.MakePrediction(self)
-        self.GetParent().Layout()
+        try:
+            self.MakePrediction(self)
+            self.GetParent().Layout()
+        except:
+            # awaiting bodypart selection
+            self.pred_text.SetLabel("\n\n")
+            pass
 
     def OnLikelihood(self, e):
 

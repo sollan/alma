@@ -7,12 +7,15 @@ import cv2
 import wx
 
 def test(use_preset = True):
-    
-    filename = '/home/annette/Desktop/DeepLabCut/ladder rung results/Irregular_347_21dpi_croppedDLC_resnet50_Ladder RungMay12shuffle1_500000.csv'
+    '''
+    replace comments with local file paths
+    to speed up testing
+    '''
+    # filename = '/home/annette/Desktop/DeepLabCut/ladder rung results/Irregular_347_21dpi_croppedDLC_resnet50_Ladder RungMay12shuffle1_500000.csv'
     df, filename = read_file(filename)
     df, bodyparts = fix_column_names(df)
-    video = '/home/annette/Desktop/DeepLabCut/ladder rung results/Irregular_347_21dpi_cropped.avi'
-    video_name = 'Irregular_347_21dpi_cropped.avi'
+    # video = '/home/annette/Desktop/DeepLabCut/ladder rung results/Irregular_347_21dpi_cropped.avi'
+    # video_name = 'Irregular_347_21dpi_cropped.avi'
 
     return filename, df, bodyparts, video, video_name
 
@@ -172,8 +175,10 @@ def adjust_times(y, t_prediction, window):
         if end > len(y):
             end = len(y)
         sublist = list(y[start:end])
-        minimum = start + sublist.index(np.min(sublist))
-        t_prediction[i] = minimum
+        lowest_timepoint = start + sublist.index(np.max(sublist))
+        # DLC and opencv indexing: 
+        # lowest point has largest axis value
+        t_prediction[i] = lowest_timepoint
     
     return t_prediction
 
@@ -217,7 +222,7 @@ def plot_frame(video_file, n_frame, width, height, frame_rate, baseline = 0):
         print(f'Frame {n_frame} cannot be displayed! (cv2 error)')
 
 
-def plot_labels(pd_dataframe, n_current_frame, t_pred, start_pred, end_pred, width, height, bodypart, axis, likelihood_threshold = 0):
+def plot_labels(pd_dataframe, n_current_frame, method, t_pred, start_pred, end_pred, width, height, bodypart, axis, likelihood_threshold = 0):
     
     figure = mpl.figure.Figure(figsize=(width, height))
     axes = figure.add_subplot(111)
@@ -231,10 +236,12 @@ def plot_labels(pd_dataframe, n_current_frame, t_pred, start_pred, end_pred, wid
         pd_dataframe[pd_dataframe[f'{bodypart} likelihood'] < likelihood_threshold][f'{bodypart} {axis}'], s = 1, c = 'lightgrey')
     axes.invert_yaxis()
 
-    if n_current_frame in t_pred:
-        index = t_pred.index(n_current_frame)
-        for i in range(start_pred[index], end_pred[index]):
-            axes.axvspan(i, i+1, facecolor='0.2', alpha=0.5)
+    if method != 'Baseline':
+        # the find minimum step in "baseline" interferes with on- and offset judgment
+        if n_current_frame in t_pred:
+            index = t_pred.index(n_current_frame)
+            for i in range(start_pred[index], end_pred[index]):
+                axes.axvspan(i, i+1, facecolor='0.2', alpha=0.5)
 
     return figure
 
@@ -334,7 +341,7 @@ def DisplayPlots(panel):
         panel.second_sizer_widgets.append(panel.frame_canvas)  
         panel.frame_canvas.Show()
 
-        graph = plot_labels(panel.df, panel.n_frame, panel.t_pred, panel.start_pred, 
+        graph = plot_labels(panel.df, panel.n_frame, panel.method_selection, panel.t_pred, panel.start_pred, 
             panel.end_pred, (panel.window_width-50) / 100, (panel.window_height // 3) // 100, panel.bodypart, 'y', panel.likelihood_threshold)
         graph_canvas = FigureCanvas(panel, -1, graph)
         panel.graph_canvas.Hide()

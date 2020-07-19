@@ -545,8 +545,6 @@ class ValidatePanel(wx.Panel):
         # self.Layout()
         self.GetParent().Layout()
 
-        wx.MessageBox("This function is still under development. Thanks for your patience! :)")
-
     def DisplayFirstPage(self, e):
 
         for widget in self.second_sizer_widgets:

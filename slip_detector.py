@@ -126,12 +126,15 @@ class HomeFrame(wx.Frame):
         self.Refresh()
     
     def on_import(self, event):
+
+        wx.MessageBox("This function is still under development. Thanks for your patience! :)")
         
         pass
 
 
     def on_save_as(self, event):
         
+        wx.MessageBox("This function is still under development. Thanks for your patience! :)")
         
         pass
 
@@ -150,6 +153,8 @@ class HomeFrame(wx.Frame):
 
         self.current_panel = self.AnalyzePanel
         self.current_panel.Show()
+        
+        wx.MessageBox("This function is still under development. Thanks for your patience! :)")
 
         self.SetStatusText('Slip detector ready for new job')
         self.Layout()
@@ -173,10 +178,14 @@ class HomeFrame(wx.Frame):
 
     def on_t_test(self, event):
 
+        wx.MessageBox("This function is still under development. Thanks for your patience! :)")
+
         pass
 
 
     def on_anova(self, event):
+
+        wx.MessageBox("This function is still under development. Thanks for your patience! :)")
 
         pass
 
@@ -190,18 +199,16 @@ class HomeFrame(wx.Frame):
                         "About Slip Detector",
                         wx.OK|wx.ICON_INFORMATION)
 
-
-    def show_img(self):
-
-        png = wx.Image('/home/annette/Desktop/DeepLabCut/jumps.jpg', wx.BITMAP_TYPE_ANY).ConvertToBitmap()
-        wx.StaticBitmap(self, -1, png, (10, 5), (png.GetWidth(), png.GetHeight()))
-
     def on_help(self, event):
+
+        wx.MessageBox("This function is still under development. Thanks for your patience! :)")
 
         pass
 
 
     def on_contact(self, event):
+
+        wx.MessageBox("This function is still under development. Thanks for your patience! :)")
 
         pass
 

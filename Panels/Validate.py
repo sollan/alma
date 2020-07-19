@@ -8,6 +8,7 @@ from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 import numpy as np # remove later; for testing
 import warnings
 warnings.filterwarnings("error")
+warnings.filterwarnings("ignore", category=ResourceWarning)
 
     #################################
     # display file and video name after import

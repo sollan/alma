@@ -11,17 +11,12 @@ warnings.filterwarnings("error")
 warnings.filterwarnings("ignore", category=ResourceWarning)
 
     #################################
-    # display file and video name after import
     # (automatically find csv output from same session?)
-    # generate plots --> plot onset and offset?
-    # add checkbox --> clickable button? to label slips
-    # --> predict peaks (start with baseline correction & scipy find peak)
-    # --> predict for multiple bodyparts simultaneously
     # "start another" button
     # get window size and resize elements?
-    # --> input bodypart name & likelihood threshold
     # prompt user to save before going to another panel
-    # regenerate panel after leaving
+    # add option to display prediction vs validated slips
+    # update button after reject
     #################################
 
 TEST = False
@@ -71,36 +66,37 @@ class ValidatePanel(wx.Panel):
                 self.df, self.filename = ValidateFunctions.read_file(self.filename)
                 self.df, self.bodyparts = ValidateFunctions.fix_column_names(self.df)
                 # self.filtered_df = ValidateFunctions.filter_predictions(self.df, self.bodyparts[0], self.threshold)
-        # try: 
-        if self.df is not None:
-            self.has_imported_file = True
-            self.import_csv_text.SetLabel(f"File imported! \n\n{self.filename}\n")
-            self.GetParent().Layout()
+        try: 
+            if self.df is not None:
+                self.has_imported_file = True
+                self.import_csv_text.SetLabel(f"File imported! \n\n{self.filename}\n")
+                self.GetParent().Layout()
 
-            self.method_label.Show()
+                self.method_label.Show()
 
-            self.method_choices.SetSelection(0)
-            self.method_selection = self.method_choices.GetValue()
-            self.method_choices.Show()
+                self.method_choices.SetSelection(0)
+                self.method_selection = self.method_choices.GetValue()
+                self.method_choices.Show()
 
-            self.bodypart_label.Show()
-            self.bodypart_choices.Hide()
+                self.bodypart_label.Show()
+                self.bodypart_choices.Hide()
 
-            bodypart_choices = wx.CheckListBox(self, choices = self.bodyparts)
-            self.first_sizer.Replace(self.bodypart_choices, bodypart_choices)
-            self.bodypart_choices = bodypart_choices
-            # self.bodypart_choices.SetCheckedItems([0])
-            # self.bodypart = self.bodyparts[list(self.bodypart_choices.GetCheckedItems())[0]]
-            self.first_sizer_widgets.append(self.bodypart_choices)
-            self.bodypart_choices.Bind(wx.EVT_CHECKLISTBOX, self.OnBodypart)
-            self.bodypart_choices.Show()
+                bodypart_choices = wx.CheckListBox(self, choices = self.bodyparts)
+                self.first_sizer.Replace(self.bodypart_choices, bodypart_choices)
+                self.bodypart_choices = bodypart_choices
+                # self.bodypart_choices.SetCheckedItems([0])
+                # self.bodypart = self.bodyparts[list(self.bodypart_choices.GetCheckedItems())[0]]
+                self.first_sizer_widgets.append(self.bodypart_choices)
+                self.bodypart_choices.Bind(wx.EVT_CHECKLISTBOX, self.OnBodypart)
+                self.bodypart_choices.Show()
 
-            # self.MakePrediction(self)
+                # self.MakePrediction(self)
 
-            self.GetParent().Layout()
+                self.GetParent().Layout()
 
-        # except AttributeError:
-        #     pass
+        except AttributeError:
+            # user cancelled file import in pop up
+            pass
 
 
     def MakePrediction(self, e):
@@ -206,10 +202,81 @@ class ValidatePanel(wx.Panel):
                 self.end_val.pop(index)
                 self.bodypart_list_val.pop(index)
 
+    def MarkFrame(self, e, mark_type):
+
+        sender = e.GetEventObject()
+        isChecked = sender.GetValue()
+
+        if mark_type == "slip": 
+            if isChecked:
+                if self.n_frame not in self.t_val:
+                    self.n_val += 1
+                    self.t_val.append(self.n_frame)
+                    self.depth_val.append(np.nan)
+                    self.start_val.append(np.nan)
+                    self.end_val.append(np.nan)
+                    self.bodypart_list_val.append(np.nan)
+
+                    self.depth_val = ValidateFunctions.sort_list(self.t_val, self.depth_val)
+                    self.start_val = ValidateFunctions.sort_list(self.t_val, self.start_val)
+                    self.end_val = ValidateFunctions.sort_list(self.t_val, self.end_val)
+                    self.bodypart_list_val = ValidateFunctions.sort_list(self.t_val, self.bodypart_list_val)
+                    self.t_val = sorted(self.t_val)
+
+            else:
+                if self.n_frame in self.t_val:
+                    self.n_val -= 1
+                    index = self.t_val.index(self.n_frame)
+                    self.depth_val.pop(index)
+                    self.t_val.pop(index)
+                    self.start_val.pop(index)
+                    self.end_val.pop(index)
+                    self.bodypart_list_val.pop(index)
+
+        # assuming there is always an existing next/prev prediction
+        # that matches the frame to be labelled as start/end of slip
+        elif mark_type == "start":
+            
+            if self.n_frame in self.t_val:
+                index = self.t_val.index(self.n_frame)
+            else:
+                index = self.t_val.index(self.next_val)
+            
+            if isChecked:
+                if self.n_frame not in self.start_val:
+                    self.start_val.pop(index)
+                    self.start_val.insert(index, self.n_frame)
+                    print(index, self.next_val, self.n_frame)
+            else:
+                if self.n_frame in self.start_val:
+                    self.start_val.pop(index)
+                    self.start_val.insert(index, np.nan)
+
+            print(self.start_val, self.t_val, self.next_val)
+
+            
+        elif mark_type == "end":
+            if self.n_frame in self.t_val:
+                index = self.t_val.index(self.n_frame)
+            else:
+                index = self.t_val.index(self.prev_val)
+
+            if isChecked:
+                if self.n_frame not in self.end_val:
+                    self.end_val.pop(index)
+                    self.end_val.insert(index, self.n_frame)
+                    print(index, self.prev_val, self.n_frame)
+            else:
+                if self.n_frame in self.end_val:
+                    self.end_val.pop(index)
+                    self.end_val.insert(index, np.nan)
+            print(self.end_val, self.t_val, self.prev_val)
+            print(index)
+
 
     def OnValidate(self, e):
 
-        self.checkbox.SetValue(True)
+        self.val_check_box.SetValue(True)
 
         if self.n_frame not in self.t_val:
             self.n_val += 1
@@ -218,13 +285,13 @@ class ValidatePanel(wx.Panel):
             self.start_val.append(np.nan)
             self.end_val.append(np.nan)
             self.bodypart_list_val.append(np.nan)
-    
 
         self.n_frame = self.next_pred
         self.slider.SetValue(self.n_frame)
         self.slider_label.SetLabel(str(self.n_frame + 1))
 
         self.prev_pred, self.next_pred = ValidateFunctions.find_neighbors(self.n_frame, self.t_pred)
+        self.prev_val, self.next_val = ValidateFunctions.find_neighbors(self.n_frame, self.t_val)
 
         ValidateFunctions.ControlButton(self)
         ValidateFunctions.DisplayPlots(self)
@@ -234,7 +301,7 @@ class ValidatePanel(wx.Panel):
 
     def OnReject(self, e):
 
-        self.checkbox.SetValue(False)
+        self.val_check_box.SetValue(False)
 
         if self.n_frame in self.t_val:
             self.n_val -= 1
@@ -250,6 +317,7 @@ class ValidatePanel(wx.Panel):
         self.slider_label.SetLabel(str(self.n_frame + 1))
 
         self.prev_pred, self.next_pred = ValidateFunctions.find_neighbors(self.n_frame, self.t_pred)
+        self.prev_val, self.next_val = ValidateFunctions.find_neighbors(self.n_frame, self.t_val)
 
         ValidateFunctions.ControlButton(self)
         ValidateFunctions.DisplayPlots(self)
@@ -263,6 +331,7 @@ class ValidatePanel(wx.Panel):
         self.n_frame = obj.GetValue() - 1
 
         self.prev_pred, self.next_pred = ValidateFunctions.find_neighbors(self.n_frame, self.t_pred)
+        self.prev_val, self.next_val = ValidateFunctions.find_neighbors(self.n_frame, self.t_val)
         self.slider_label.SetLabel(str(self.n_frame + 1))
         
         ValidateFunctions.ControlButton(self)
@@ -276,18 +345,27 @@ class ValidatePanel(wx.Panel):
         if type(new_frame) is int:
             self.n_frame = self.n_frame + new_frame
         elif new_frame == 'next_pred':
-            self.n_frame = self.next_pred
+            # self.n_frame = self.next_pred
+            self.n_frame = self.next_val
         elif new_frame == 'prev_pred':
-            self.n_frame = self.prev_pred
-
+            # self.n_frame = self.prev_pred
+            self.n_frame = self.prev_val
+        elif self.n_frame in self.t_val:
+            index = self.t_val.index(self.n_frame)
+            if self.start_val[index] is not np.nan and new_frame == 'start': 
+                self.n_frame = self.start_val[index]
+            elif self.end_val[index] is not np.nan and new_frame == 'end':
+                self.n_frame = self.end_val[index]              
+            
         self.slider.SetValue(self.n_frame)
         self.slider_label.SetLabel(str(self.n_frame + 1))
 
         self.prev_pred, self.next_pred = ValidateFunctions.find_neighbors(self.n_frame, self.t_pred)
-
+        self.prev_val, self.next_val = ValidateFunctions.find_neighbors(self.n_frame, self.t_val)
 
         ValidateFunctions.ControlButton(self)
         ValidateFunctions.DisplayPlots(self)
+        print(self.end_val)
 
         self.GetParent().Layout()
 
@@ -418,18 +496,23 @@ class ValidatePanel(wx.Panel):
         self.second_sizer_widgets = []
         self.second_sizer = wx.GridBagSizer(0, 0)
 
-        self.checkbox = wx.CheckBox(self, label='Slip')
+        # initialize checkboxes (related to n_frame and plotting)
+        self.start_check_box = wx.CheckBox(self, label="Start of slip")
+        self.val_check_box = wx.CheckBox(self, label="Slip")
+        self.end_check_box = wx.CheckBox(self, label="End of slip")
 
         if self.n_pred is not None:
             self.n_frame = self.t_pred[0]
-            self.checkbox.SetValue(True)
+            # self.val_check_box.SetValue(True)
         else:
             self.n_frame = 0
-            self.checkbox.SetValue(False)
+            # self.val_check_box.SetValue(False)
 
-        self.checkbox.Bind(wx.EVT_CHECKBOX, self.MarkSlip)
-        self.second_sizer.Add(self.checkbox, pos = (8, 1), flag = wx.LEFT | wx.BOTTOM | wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL, border = 25)
-        self.second_sizer_widgets.append(self.checkbox)
+        # if self.n_frame in self.start_pred:
+        #     self.start_check_box.SetValue(True)
+        
+        # if self.n_frame in self.end_pred:
+        #     self.end_check_box.SetValue(True)
 
         # initialize validation results
         self.likelihood_threshold = 0
@@ -440,7 +523,7 @@ class ValidatePanel(wx.Panel):
         frame = ValidateFunctions.plot_frame(self.video, self.n_frame, 
             (self.window_width-50) / 200, (self.window_height // 3) // 100, int(self.frame_rate))
         self.frame_canvas = FigureCanvas(self, -1, frame)
-        self.second_sizer.Add(self.frame_canvas, pos= (8, 0), span = (4, 0),flag = wx.LEFT, border = 25)
+        self.second_sizer.Add(self.frame_canvas, pos= (8, 0), span = (6, 0),flag = wx.LEFT, border = 25)
         self.second_sizer_widgets.append(self.frame_canvas)
         self.Fit()
 
@@ -462,6 +545,7 @@ class ValidatePanel(wx.Panel):
         self.next_pred_button.Bind(wx.EVT_BUTTON, lambda event, new_frame = 'next_pred' : self.SwitchFrame(event, new_frame))
 
         self.prev_pred, self.next_pred = ValidateFunctions.find_neighbors(self.n_frame, self.t_pred)
+        self.prev_val, self.next_val = ValidateFunctions.find_neighbors(self.n_frame, self.t_val)
 
         self.second_sizer.Add(self.prev_pred_button, pos = (9, 1), span = (0,2), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL)
         self.second_sizer_widgets.append(self.prev_pred_button)
@@ -484,8 +568,6 @@ class ValidatePanel(wx.Panel):
         self.next10_button = wx.Button(self, id=wx.ID_ANY, label=">>")
         self.next10_button.Bind(wx.EVT_BUTTON, lambda event, new_frame = 10 : self.SwitchFrame(event, new_frame))
 
-        ValidateFunctions.ControlButton(self)
-
         self.second_sizer.Add(self.prev10_button, pos = (10, 1), span = (0,1), flag = wx.LEFT | wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL, border = 25)
         self.second_sizer.Add(self.prev_button, pos = (10, 2), span = (0,1), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL)        
         self.second_sizer.Add(self.slider_label, pos = (10, 3), span = (0,2), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.LEFT, border = -15)
@@ -498,14 +580,37 @@ class ValidatePanel(wx.Panel):
         self.second_sizer_widgets.append(self.next_button)
         self.second_sizer_widgets.append(self.next10_button)
 
+
+        self.start_check_box.Bind(wx.EVT_CHECKBOX, lambda event, mark_type = 'start' : self.MarkFrame(event, mark_type))
+        self.second_sizer.Add(self.start_check_box, pos = (11, 1), span = (0,2), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 20)
+        self.second_sizer_widgets.append(self.start_check_box)
+
+        self.val_check_box.Bind(wx.EVT_CHECKBOX, lambda event, mark_type = 'slip' : self.MarkFrame(event, mark_type))
+        self.second_sizer.Add(self.val_check_box, pos = (11, 3), span = (0,2), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 20)
+        self.second_sizer_widgets.append(self.val_check_box)
+
+        self.end_check_box.Bind(wx.EVT_CHECKBOX, lambda event, mark_type = 'end' : self.MarkFrame(event, mark_type))
+        self.second_sizer.Add(self.end_check_box, pos = (11, 5), span = (0,2), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 20)
+        self.second_sizer_widgets.append(self.end_check_box)
+
+        self.to_start_button = wx.Button(self, id=wx.ID_ANY, label="< start of slip")
+        self.to_start_button.Bind(wx.EVT_BUTTON, lambda event, new_frame = 'start' : self.SwitchFrame(event, new_frame))
+        self.second_sizer.Add(self.to_start_button, pos = (12, 1), span = (0,2), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 25)
+        self.second_sizer_widgets.append(self.to_start_button)
+
+        self.to_end_button = wx.Button(self, id=wx.ID_ANY, label="end of slip >")
+        self.to_end_button.Bind(wx.EVT_BUTTON, lambda event, new_frame = 'end' : self.SwitchFrame(event, new_frame))
+        self.second_sizer.Add(self.to_end_button, pos = (12, 5), span = (0,2), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 25)
+        self.second_sizer_widgets.append(self.to_end_button)
+
         self.save_val_button = wx.Button(self, id=wx.ID_ANY, label="Save")
         self.save_val_button.Bind(wx.EVT_BUTTON, self.SaveValFunc)
-        self.second_sizer.Add(self.save_val_button, pos = (11, 3), span = (0, 1), flag = wx.TOP | wx.BOTTOM, border = 40)
+        self.second_sizer.Add(self.save_val_button, pos = (13, 3), span = (0, 1), flag = wx.TOP | wx.BOTTOM, border = 15)
         self.second_sizer_widgets.append(self.save_val_button)
 
         self.restart_button = wx.Button(self, id=wx.ID_ANY, label="Load new file")
         self.restart_button.Bind(wx.EVT_BUTTON, self.DisplayFirstPage)
-        self.second_sizer.Add(self.restart_button, pos = (11, 4), span = (0, 2), flag = wx.TOP | wx.BOTTOM, border = 40)
+        self.second_sizer.Add(self.restart_button, pos = (13, 4), span = (0, 2), flag = wx.TOP | wx.BOTTOM, border = 15)
         self.second_sizer_widgets.append(self.restart_button)
 
         # display location graphs
@@ -518,7 +623,7 @@ class ValidatePanel(wx.Panel):
         graph = ValidateFunctions.plot_labels(self.df, self.n_frame, self.method_selection, self.t_val, self.start_val, \
             self.end_val, (self.window_width-50) / 100, (self.window_height // 3) // 100, self.bodypart, 'y', self.likelihood_threshold)
         self.graph_canvas = FigureCanvas(self, -1, graph)
-        self.second_sizer.Add(self.graph_canvas, pos = (12, 0), span = (1, 7), flag = wx.TOP | wx.LEFT, border = 25) 
+        self.second_sizer.Add(self.graph_canvas, pos = (14, 0), span = (1, 7), flag = wx.TOP | wx.LEFT, border = 25) 
         self.second_sizer_widgets.append(self.graph_canvas)       
         self.Fit()
 
@@ -526,21 +631,24 @@ class ValidatePanel(wx.Panel):
         self.slider = wx.Slider(self, value=self.n_frame+1, minValue=1, maxValue=len(self.df),
             style=wx.SL_HORIZONTAL)
         self.slider.Bind(wx.EVT_SCROLL, self.OnSliderScroll)
-        self.second_sizer.Add(self.slider, pos=(13, 0), span = (2, 7), flag = wx.LEFT | wx.EXPAND | wx.TOP | wx.RIGHT, border = 25)
+        self.second_sizer.Add(self.slider, pos=(15, 0), span = (2, 7), flag = wx.LEFT | wx.EXPAND | wx.TOP | wx.RIGHT, border = 25)
         self.second_sizer_widgets.append(self.slider)
 
         self.likelihood_label = wx.StaticText(self, label = "Set likelihood threshold (data below threshold are labeled grey; between 0 and 1)")
-        self.second_sizer.Add(self.likelihood_label, pos= (15, 0), span = (1, 3),flag = wx.LEFT | wx.TOP, border = 25)
+        self.second_sizer.Add(self.likelihood_label, pos= (17, 0), span = (1, 3),flag = wx.LEFT | wx.TOP, border = 25)
         self.second_sizer_widgets.append(self.likelihood_label)
 
         self.likelihood_input = wx.TextCtrl(self, value = "0")
-        self.second_sizer.Add(self.likelihood_input, pos= (15, 3), flag = wx.LEFT | wx.TOP, border = 25)
+        self.second_sizer.Add(self.likelihood_input, pos= (17, 3), flag = wx.LEFT | wx.TOP, border = 25)
         self.second_sizer_widgets.append(self.likelihood_input)
 
         self.likelihood_button = wx.Button(self, id = wx.ID_ANY, label = "Update")
         self.likelihood_button.Bind(wx.EVT_BUTTON, self.OnLikelihood)
-        self.second_sizer.Add(self.likelihood_button, pos = (15, 4), flag = wx.LEFT | wx.TOP, border = 25)
+        self.second_sizer.Add(self.likelihood_button, pos = (17, 4), flag = wx.LEFT | wx.TOP, border = 25)
         self.second_sizer_widgets.append(self.likelihood_button)
+
+        ValidateFunctions.ControlButton(self)
+        ValidateFunctions.ControlPrediction(self)
 
         self.SetSizer(self.second_sizer)
         # self.Layout()

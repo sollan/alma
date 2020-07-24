@@ -72,7 +72,8 @@ def find_slips(pd_dataframe, bodypart, axis, panel = None, method = 'Baseline', 
         recommended for smooth / noiseless prediction
         '''
         t_peaks, properties = find_peaks(pd_dataframe[f'{bodypart} {axis}'], height=-10000, prominence=(45,100000))
-        h_peaks = properties["prominences"]
+        # h_peaks = properties["prominences"]
+        
 
     elif method == 'Baseline':
         '''
@@ -86,10 +87,11 @@ def find_slips(pd_dataframe, bodypart, axis, panel = None, method = 'Baseline', 
             else:
                 window = 10
         t_peaks = adjust_times(pd_dataframe[f'{bodypart} {axis}'], t_peaks, window)
-        h_peaks = []
-        base = np.mean(pd_dataframe[f'{bodypart} {axis}'])
-        for t in t_peaks:
-            h_peaks.append(pd_dataframe[f'{bodypart} {axis}'].iloc[t] - base)
+        # h_peaks = []
+        # base = np.mean(pd_dataframe[f'{bodypart} {axis}'])
+        # for t in t_peaks:
+            # h_peaks.append(pd_dataframe[f'{bodypart} {axis}'].iloc[t] - base)
+            # h_peaks.append(pd_dataframe[f'{bodypart} {axis}'].iloc[t])
 
     elif method == 'Threshold':
         '''
@@ -102,11 +104,13 @@ def find_slips(pd_dataframe, bodypart, axis, panel = None, method = 'Baseline', 
         t_peaks, properties = find_peaks(adjusted, prominence=(10,1000))
         h_peaks = []
         for t in t_peaks:
-            h_peaks.append(pd_dataframe[f'{bodypart} {axis}'].iloc[t] - threshold)
+            # h_peaks.append(pd_dataframe[f'{bodypart} {axis}'].iloc[t] - threshold)
+            h_peaks.append(pd_dataframe[f'{bodypart} {axis}'].iloc[t])
 
     n_peaks = len(t_peaks)
     start_times = properties['left_bases']
     end_times = properties['right_bases']
+    h_peaks = pd_dataframe[f'{bodypart} {axis}'].iloc[t_peaks]
             
     return n_peaks, list(h_peaks), list(t_peaks), list(start_times), list(end_times)
 
@@ -271,9 +275,9 @@ def find_neighbors(n_current_frame, t_pred):
 
 
 def find_closest_neighbors(n_current_frame, t_pred):
-    '''
-    t_pred is usually very short
-    '''
+    # t_pred is usually very short and validated lists 
+    # can often be unsorted
+
     prev = t_pred[0]
     next = t_pred[-1]
     for i, t in enumerate(t_pred):
@@ -282,13 +286,6 @@ def find_closest_neighbors(n_current_frame, t_pred):
             prev = t_pred[i-1]
             return prev, next
             break
-    # while t_pred.index(high) - t_pred.index(low) > 1:
-    #     mid = t_pred[(t_pred.index(high) + t_pred.index(low)) // 2]
-    #     if n_current_frame > mid:
-    #         return find_closest_neighbors(n_current_frame, t_pred, mid, high)
-    #     elif n_current_frame < mid:
-    #         return find_closest_neighbors(n_current_frame, t_pred, low, mid)
-    # return low, high
 
 
 def ControlButton(panel):
@@ -299,10 +296,14 @@ def ControlButton(panel):
     panel.next10_button.Enable()
     panel.prev_button.Enable()
     panel.next_button.Enable()
+    panel.to_start_button.Enable()
+    panel.to_end_button.Enable()
 
-    if panel.n_frame <= panel.t_pred[0]:
+    # if panel.n_frame <= panel.t_pred[0]:
+    if panel.n_frame <= panel.t_val[0]:
         panel.prev_pred_button.Disable()
-    elif panel.n_frame >= panel.t_pred[-1]:
+    # elif panel.n_frame >= panel.t_pred[-1]:
+    elif panel.n_frame <= panel.t_val[0]:
         panel.next_pred_button.Disable()
     
     if panel.n_frame < 10:
@@ -314,14 +315,27 @@ def ControlButton(panel):
         if panel.n_frame == len(panel.df):
             panel.next_button.Disable()
 
+    if panel.n_frame not in panel.t_val:
+        panel.to_start_button.Disable()
+        panel.to_end_button.Disable()
+
 
 def ControlPrediction(panel):
 
     if panel.n_frame in panel.t_val:
-        panel.checkbox.SetValue(True)
+        panel.val_check_box.SetValue(True)
     else:
-        panel.checkbox.SetValue(False)
+        panel.val_check_box.SetValue(False)
 
+    if panel.n_frame in panel.start_val:
+        panel.start_check_box.SetValue(True)
+    else:
+        panel.start_check_box.SetValue(False)
+
+    if panel.n_frame in panel.end_val:
+        panel.end_check_box.SetValue(True)
+    else:
+        panel.end_check_box.SetValue(False)
 
 
 def DisplayPlots(panel):

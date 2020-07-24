@@ -24,11 +24,6 @@ TEST = False
 # set to True: import default files to reduce clicks :)
 # default files are set in ValidateFunctions.test()
 
-# currently using default slip detecting algorithm ("baseline")
-# which overestimates
-# will be finetuned soon
-# default self.bodypart = 'HR'
-
 class ValidatePanel(wx.Panel):
 
 

@@ -17,6 +17,7 @@ warnings.filterwarnings("ignore", category=ResourceWarning)
     # prompt user to save before going to another panel
     # add option to display prediction vs validated slips
     # update button after reject
+    # --> only display validate button if method, bodypart and files are selected
     #################################
 
 TEST = False
@@ -246,14 +247,10 @@ class ValidatePanel(wx.Panel):
                 if self.n_frame not in self.start_val:
                     self.start_val.pop(index)
                     self.start_val.insert(index, self.n_frame)
-                    print(index, self.next_val, self.n_frame)
             else:
                 if self.n_frame in self.start_val:
                     self.start_val.pop(index)
                     self.start_val.insert(index, np.nan)
-
-            print(self.start_val, self.t_val, self.next_val)
-
             
         elif mark_type == "end":
             if self.n_frame in self.t_val:
@@ -265,14 +262,10 @@ class ValidatePanel(wx.Panel):
                 if self.n_frame not in self.end_val:
                     self.end_val.pop(index)
                     self.end_val.insert(index, self.n_frame)
-                    print(index, self.prev_val, self.n_frame)
             else:
                 if self.n_frame in self.end_val:
                     self.end_val.pop(index)
                     self.end_val.insert(index, np.nan)
-            print(self.end_val, self.t_val, self.prev_val)
-            print(index)
-
 
     def OnValidate(self, e):
 
@@ -365,7 +358,6 @@ class ValidatePanel(wx.Panel):
 
         ValidateFunctions.ControlButton(self)
         ValidateFunctions.DisplayPlots(self)
-        print(self.end_val)
 
         self.GetParent().Layout()
 

@@ -18,6 +18,7 @@ warnings.filterwarnings("ignore", category=ResourceWarning)
     # add option to display prediction vs validated slips
     # update button after reject
     # --> only display validate button if method, bodypart and files are selected
+    # --> fix next / prev pred after adding new slip (sort issue)
     #################################
 
 TEST = False

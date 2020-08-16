@@ -16,9 +16,15 @@ pip install -U -f https://extras.wxpython.org/wxPython4/extras/linux/gtk2/ubuntu
 
 (https://wxpython.org/blog/2017-08-17-builds-for-linux-with-pip/index.html)
 
-If libsdl didn't come with the linux distro (and you get an error when starting the app like ```ImportError: libSDL2-2.0.so.0: cannot open shared object file: No such file or directory```), do:
+If libsdl or libpng12 didn't come with your linux distro (and you get an error when starting the app like ```ImportError: libSDL2-2.0.so.0: cannot open shared object file: No such file or directory```), do the following accordingly:
 ```
 sudo apt-get install libsdl2-2.0
+```
+and
+```
+udo add-apt-repository ppa:linuxuprising/libpng12
+sudo apt update
+sudo apt install libpng12-0
 ```
 
 We will hopefully provide a package installer in the near future (for a more mature version).

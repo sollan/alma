@@ -9,10 +9,12 @@ pip install -r requirements.txt
 python ./slip_detector.py
 ```
 
-note: wxPython might not install if the gtk requirements are not met. Try 
+Note: wxPython might not install at first if the gtk requirements are not met. Try 
 ```
-pip install -U -f https://disq.us/url\?url\=https%3A%2F%2Fextras.wxpython.org%2FwxPython4%2Fextras%2Flinux%2Fgtk3%2Fubuntu-16.04%3A7Y8lRKcNXol5rqHY_l_IAI8iHs0\&cuid\=5202809 wxPython
+pip install -U -f https://extras.wxpython.org/wxPython4/extras/linux/gtk2/ubuntu-16.04/ wxPython
 ```
+
+(https://wxpython.org/blog/2017-08-17-builds-for-linux-with-pip/index.html)
 
 We will hopefully provide a package installer in the near future (for a more mature version).
 

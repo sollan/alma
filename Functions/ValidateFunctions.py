@@ -108,10 +108,8 @@ def find_slips(pd_dataframe, bodypart, axis, panel = None, method = 'Baseline', 
             h_peaks.append(pd_dataframe[f'{bodypart} {axis}'].iloc[t])
 
     n_peaks = len(t_peaks)
-    # start_times = properties['left_bases']
-    # end_times = properties['right_bases']
-    start_times = t_peaks
-    end_times = t_peaks
+    start_times = properties['left_bases']
+    end_times = properties['right_bases']
     h_peaks = pd_dataframe[f'{bodypart} {axis}'].iloc[t_peaks]
             
     return n_peaks, list(h_peaks), list(t_peaks), list(start_times), list(end_times)
@@ -242,12 +240,12 @@ def plot_labels(pd_dataframe, n_current_frame, method, t_pred, start_pred, end_p
         pd_dataframe[pd_dataframe[f'{bodypart} likelihood'] < likelihood_threshold][f'{bodypart} {axis}'], s = 1, c = 'lightgrey')
     axes.invert_yaxis()
 
-    # if method != 'Baseline':
-    #     # the find minimum step in "baseline" interferes with on- and offset judgment
-    #     if n_current_frame in t_pred:
-    #         index = t_pred.index(n_current_frame)
-    #         for i in range(start_pred[index], end_pred[index]):
-    #             axes.axvspan(i, i+1, facecolor='0.2', alpha=0.5)
+    if method != 'Baseline':
+        # the find minimum step in "baseline" interferes with on- and offset judgment
+        if n_current_frame in t_pred:
+            index = t_pred.index(n_current_frame)
+            for i in range(start_pred[index], end_pred[index]):
+                axes.axvspan(i, i+1, facecolor='0.2', alpha=0.5)
 
     return figure
 

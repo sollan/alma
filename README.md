@@ -8,6 +8,12 @@ An add-on for DeepLabCut-assisted behavioral analysis.
 pip install -r requirements.txt
 python ./slip_detector.py
 ```
+
+note: wxPython might not install if the gtk requirements are not met. Try 
+```
+pip install -U -f https://disq.us/url\?url\=https%3A%2F%2Fextras.wxpython.org%2FwxPython4%2Fextras%2Flinux%2Fgtk3%2Fubuntu-16.04%3A7Y8lRKcNXol5rqHY_l_IAI8iHs0\&cuid\=5202809 wxPython
+```
+
 We will hopefully provide a package installer in the near future (for a more mature version).
 
 

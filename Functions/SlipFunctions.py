@@ -48,17 +48,17 @@ def fix_column_names(pd_dataframe):
     return pd_dataframe, bodyparts
 
 
-def filter_predictions(pd_dataframe, bodypart, threshold):
+def filter_predictions(pd_dataframe, bodyparts, threshold):
     
-    if type(bodypart) is list and len(bodypart) > 1:
-        for bodypart in bodypart:
+    if type(bodyparts) is list and len(bodyparts) > 1:
+        for bodypart in bodyparts:
             pd_dataframe = pd_dataframe[pd_dataframe[bodypart + ' likelihood'] >= threshold]
     
-    elif type(bodypart) is list and len(bodypart) == 1:
-        pd_dataframe = pd_dataframe[pd_dataframe[bodypart[0] + ' likelihood'] >= threshold]
+    elif type(bodyparts) is list and len(bodyparts) == 1:
+        pd_dataframe = pd_dataframe[pd_dataframe[bodyparts[0] + ' likelihood'] >= threshold]
     
-    elif type(bodypart) is str:
-        pd_dataframe = pd_dataframe[pd_dataframe[bodypart + ' likelihood'] >= threshold]
+    elif type(bodyparts) is str:
+        pd_dataframe = pd_dataframe[pd_dataframe[bodyparts + ' likelihood'] >= threshold]
         
     # raise error if any bodypart name not identical as in csv
         
@@ -106,6 +106,12 @@ def find_slips(pd_dataframe, bodypart, axis, panel = None, method = 'Baseline', 
         for t in t_peaks:
             # h_peaks.append(pd_dataframe[f'{bodypart} {axis}'].iloc[t] - threshold)
             h_peaks.append(pd_dataframe[f'{bodypart} {axis}'].iloc[t])
+
+    else:
+        '''
+        to make sure t_peaks exists
+        '''
+        t_peaks = []
 
     n_peaks = len(t_peaks)
     # start_times = properties['left_bases']

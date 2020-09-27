@@ -1,6 +1,6 @@
 import wx
 from wx.lib.stattext import GenStaticText as StaticText
-from Functions import ValidateFunctions, ConfigFunctions
+from Functions import SlipFunctions, ConfigFunctions
 import os
 import yaml
 import matplotlib as mpl
@@ -23,9 +23,9 @@ warnings.filterwarnings("ignore", category=ResourceWarning)
 
 TEST = False
 # set to True: import default files to reduce clicks :)
-# default files are set in ValidateFunctions.test()
+# default files are set in SlipFunctions.test()
 
-class ValidatePanel(wx.Panel):
+class ValidateSlipPanel(wx.Panel):
 
 
     def __init__(self, parent):
@@ -42,7 +42,7 @@ class ValidatePanel(wx.Panel):
         
         self.first_sizer = wx.GridBagSizer(0, 0)
 
-        self.header = wx.StaticText(self, -1, "Validate")
+        self.header = wx.StaticText(self, -1, "Validate", size=(500,100))
         font = wx.Font(20,wx.MODERN,wx.NORMAL,wx.NORMAL)
         self.header.SetFont(font)
         self.first_sizer.Add(self.header, pos = (0, 0), span = (2, 5), flag = wx.LEFT|wx.TOP, border = 25)
@@ -53,16 +53,16 @@ class ValidatePanel(wx.Panel):
         self.FirstPage()
 
 
-    def ImportCSV(self, e):
+    def ImportBehavioralCSV(self, e):
         if not TEST:
             import_dialog = wx.FileDialog(self, 'Choose a file', self.dirname, '', 'CSV files (*.csv)|*.csv|All files(*.*)|*.*', wx.FD_OPEN)
 
             if import_dialog.ShowModal() == wx.ID_OK:
                 self.csv_dirname = import_dialog.GetDirectory()
                 self.filename = os.path.join(self.csv_dirname, import_dialog.GetFilename())
-                self.df, self.filename = ValidateFunctions.read_file(self.filename)
-                self.df, self.bodyparts = ValidateFunctions.fix_column_names(self.df)
-                # self.filtered_df = ValidateFunctions.filter_predictions(self.df, self.bodyparts[0], self.threshold)
+                self.df, self.filename = SlipFunctions.read_file(self.filename)
+                self.df, self.bodyparts = SlipFunctions.fix_column_names(self.df)
+                # self.filtered_df = SlipFunctions.filter_predictions(self.df, self.bodyparts[0], self.threshold)
         try: 
             if self.df is not None:
                 self.has_imported_file = True
@@ -105,7 +105,7 @@ class ValidatePanel(wx.Panel):
         for bodypart in self.selected_bodyparts:
 
             n_pred_temp, depth_pred_temp, t_pred_temp, start_pred_temp, end_pred_temp = \
-                ValidateFunctions.find_slips(self.df, bodypart, 'y', panel=self, method = self.method_selection)
+                SlipFunctions.find_slips(self.df, bodypart, 'y', panel=self, method = self.method_selection)
             n_pred += n_pred_temp
             depth_pred.extend(depth_pred_temp)
             t_pred.extend(t_pred_temp)
@@ -114,13 +114,13 @@ class ValidatePanel(wx.Panel):
             bodypart_list_pred.extend([bodypart for i in range(n_pred_temp)])
 
 
-        depth_pred = ValidateFunctions.sort_list(t_pred, depth_pred)
-        start_pred = ValidateFunctions.sort_list(t_pred, start_pred)
-        end_pred = ValidateFunctions.sort_list(t_pred, end_pred)
-        bodypart_list_pred = ValidateFunctions.sort_list(t_pred, bodypart_list_pred)
+        depth_pred = SlipFunctions.sort_list(t_pred, depth_pred)
+        start_pred = SlipFunctions.sort_list(t_pred, start_pred)
+        end_pred = SlipFunctions.sort_list(t_pred, end_pred)
+        bodypart_list_pred = SlipFunctions.sort_list(t_pred, bodypart_list_pred)
         t_pred = sorted(t_pred)
 
-        to_remove = ValidateFunctions.find_duplicates(t_pred)
+        to_remove = SlipFunctions.find_duplicates(t_pred)
         for ind in range(len(to_remove)-1, -1, -1):
             i = to_remove[ind]
             _,_,_,_,_ = t_pred.pop(i), depth_pred.pop(i), end_pred.pop(i), start_pred.pop(i), bodypart_list_pred.pop(i)
@@ -170,7 +170,7 @@ class ValidatePanel(wx.Panel):
             pathname = save_pred_dialog.GetPath()
 
             try:
-                ValidateFunctions.make_output(pathname, self.t_pred, self.depth_pred, self.start_pred, self.end_pred, self.bodypart_list_pred)
+                SlipFunctions.make_output(pathname, self.t_pred, self.depth_pred, self.start_pred, self.end_pred, self.bodypart_list_pred)
 
             except IOError:
                 wx.LogError(f"Cannot save current data in file {pathname}. Try another location or filename?")
@@ -214,10 +214,10 @@ class ValidatePanel(wx.Panel):
                     self.end_val.append(np.nan)
                     self.bodypart_list_val.append(np.nan)
 
-                    self.depth_val = ValidateFunctions.sort_list(self.t_val, self.depth_val)
-                    self.start_val = ValidateFunctions.sort_list(self.t_val, self.start_val)
-                    self.end_val = ValidateFunctions.sort_list(self.t_val, self.end_val)
-                    self.bodypart_list_val = ValidateFunctions.sort_list(self.t_val, self.bodypart_list_val)
+                    self.depth_val = SlipFunctions.sort_list(self.t_val, self.depth_val)
+                    self.start_val = SlipFunctions.sort_list(self.t_val, self.start_val)
+                    self.end_val = SlipFunctions.sort_list(self.t_val, self.end_val)
+                    self.bodypart_list_val = SlipFunctions.sort_list(self.t_val, self.bodypart_list_val)
                     self.t_val = sorted(self.t_val)
 
             else:
@@ -279,11 +279,11 @@ class ValidatePanel(wx.Panel):
         self.slider.SetValue(self.n_frame)
         self.slider_label.SetLabel(str(self.n_frame + 1))
 
-        self.prev_pred, self.next_pred = ValidateFunctions.find_neighbors(self.n_frame, self.t_pred)
-        self.prev_val, self.next_val = ValidateFunctions.find_neighbors(self.n_frame, self.t_val)
+        self.prev_pred, self.next_pred = SlipFunctions.find_neighbors(self.n_frame, self.t_pred)
+        self.prev_val, self.next_val = SlipFunctions.find_neighbors(self.n_frame, self.t_val)
 
-        ValidateFunctions.ControlButton(self)
-        ValidateFunctions.DisplayPlots(self)
+        SlipFunctions.ControlButton(self)
+        SlipFunctions.DisplayPlots(self)
 
         self.GetParent().Layout()
 
@@ -305,11 +305,11 @@ class ValidatePanel(wx.Panel):
         self.slider.SetValue(self.n_frame)
         self.slider_label.SetLabel(str(self.n_frame + 1))
 
-        self.prev_pred, self.next_pred = ValidateFunctions.find_neighbors(self.n_frame, self.t_pred)
-        self.prev_val, self.next_val = ValidateFunctions.find_neighbors(self.n_frame, self.t_val)
+        self.prev_pred, self.next_pred = SlipFunctions.find_neighbors(self.n_frame, self.t_pred)
+        self.prev_val, self.next_val = SlipFunctions.find_neighbors(self.n_frame, self.t_val)
 
-        ValidateFunctions.ControlButton(self)
-        ValidateFunctions.DisplayPlots(self)
+        SlipFunctions.ControlButton(self)
+        SlipFunctions.DisplayPlots(self)
 
         self.GetParent().Layout()
 
@@ -319,12 +319,12 @@ class ValidatePanel(wx.Panel):
         obj = e.GetEventObject()
         self.n_frame = obj.GetValue() - 1
 
-        self.prev_pred, self.next_pred = ValidateFunctions.find_neighbors(self.n_frame, self.t_pred)
-        self.prev_val, self.next_val = ValidateFunctions.find_neighbors(self.n_frame, self.t_val)
+        self.prev_pred, self.next_pred = SlipFunctions.find_neighbors(self.n_frame, self.t_pred)
+        self.prev_val, self.next_val = SlipFunctions.find_neighbors(self.n_frame, self.t_val)
         self.slider_label.SetLabel(str(self.n_frame + 1))
         
-        ValidateFunctions.ControlButton(self)
-        ValidateFunctions.DisplayPlots(self)
+        SlipFunctions.ControlButton(self)
+        SlipFunctions.DisplayPlots(self)
 
         self.GetParent().Layout()
 
@@ -349,11 +349,11 @@ class ValidatePanel(wx.Panel):
         self.slider.SetValue(self.n_frame)
         self.slider_label.SetLabel(str(self.n_frame + 1))
 
-        self.prev_pred, self.next_pred = ValidateFunctions.find_neighbors(self.n_frame, self.t_pred)
-        self.prev_val, self.next_val = ValidateFunctions.find_neighbors(self.n_frame, self.t_val)
+        self.prev_pred, self.next_pred = SlipFunctions.find_neighbors(self.n_frame, self.t_pred)
+        self.prev_val, self.next_val = SlipFunctions.find_neighbors(self.n_frame, self.t_val)
 
-        ValidateFunctions.ControlButton(self)
-        ValidateFunctions.DisplayPlots(self)
+        SlipFunctions.ControlButton(self)
+        SlipFunctions.DisplayPlots(self)
 
         self.GetParent().Layout()
 
@@ -370,7 +370,7 @@ class ValidatePanel(wx.Panel):
             pathname = save_pred_dialog.GetPath()
 
             try:
-                ValidateFunctions.make_output(pathname, self.t_val, self.depth_val, self.start_val, self.end_val, self.bodypart_list_val)
+                SlipFunctions.make_output(pathname, self.t_val, self.depth_val, self.start_val, self.end_val, self.bodypart_list_val)
 
             except IOError:
                 wx.LogError(f"Cannot save current data in file {pathname}. Try another location or filename?")
@@ -448,22 +448,15 @@ class ValidatePanel(wx.Panel):
         self.first_sizer_widgets.append(self.import_new_video_button)
         self.import_new_video_button.Hide()
 
-        ################################################################
-        # user input here
-
-        # self.bodypart = 'HR' # modify this to include user selection
-        # self.axis = 'y'
-        # self.threshold = 0.4 # modify this to include user selection
-
         self.save_pred_button.Bind(wx.EVT_BUTTON, self.SavePredFunc)
-        self.import_csv_button.Bind(wx.EVT_BUTTON, self.ImportCSV)
-        self.import_new_csv_button.Bind(wx.EVT_BUTTON, self.ImportCSV)
+        self.import_csv_button.Bind(wx.EVT_BUTTON, self.ImportBehavioralCSV)
+        self.import_new_csv_button.Bind(wx.EVT_BUTTON, self.ImportBehavioralCSV)
         self.import_video_button.Bind(wx.EVT_BUTTON, self.ImportVideo)
         self.validate_button.Bind(wx.EVT_BUTTON, self.DisplaySecondPage)
         self.import_new_video_button.Bind(wx.EVT_BUTTON, self.ImportVideo)
 
         if TEST is True:
-            self.filename, self.df, self.bodyparts, self.video, self.video_name = ValidateFunctions.test(TEST)
+            self.filename, self.df, self.bodyparts, self.video, self.video_name = SlipFunctions.test(TEST)
 
         self.SetSizer(self.first_sizer)
                 
@@ -508,7 +501,7 @@ class ValidatePanel(wx.Panel):
             self.n_pred, self.depth_pred[:], self.t_pred[:], self.start_pred[:], self.end_pred[:], self.bodypart_list_pred[:]
 
         # display frame from video
-        frame = ValidateFunctions.plot_frame(self.video, self.n_frame, 
+        frame = SlipFunctions.plot_frame(self.video, self.n_frame, 
             (self.window_width-50) / 200, (self.window_height // 3) // 100, int(self.frame_rate))
         self.frame_canvas = FigureCanvas(self, -1, frame)
         self.second_sizer.Add(self.frame_canvas, pos= (8, 0), span = (6, 0),flag = wx.LEFT, border = 25)
@@ -532,8 +525,8 @@ class ValidatePanel(wx.Panel):
         self.next_pred_button = wx.Button(self, id=wx.ID_ANY, label="next prediction ->")
         self.next_pred_button.Bind(wx.EVT_BUTTON, lambda event, new_frame = 'next_pred' : self.SwitchFrame(event, new_frame))
 
-        self.prev_pred, self.next_pred = ValidateFunctions.find_neighbors(self.n_frame, self.t_pred)
-        self.prev_val, self.next_val = ValidateFunctions.find_neighbors(self.n_frame, self.t_val)
+        self.prev_pred, self.next_pred = SlipFunctions.find_neighbors(self.n_frame, self.t_pred)
+        self.prev_val, self.next_val = SlipFunctions.find_neighbors(self.n_frame, self.t_val)
 
         self.second_sizer.Add(self.prev_pred_button, pos = (9, 1), span = (0,2), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL)
         self.second_sizer_widgets.append(self.prev_pred_button)
@@ -608,7 +601,7 @@ class ValidatePanel(wx.Panel):
         elif self.bodypart is None:
             self.bodypart = self.selected_bodyparts[0]
 
-        graph = ValidateFunctions.plot_labels(self.df, self.n_frame, self.method_selection, self.t_val, self.start_val, \
+        graph = SlipFunctions.plot_labels(self.df, self.n_frame, self.method_selection, self.t_val, self.start_val, \
             self.end_val, (self.window_width-50) / 100, (self.window_height // 3) // 100, self.bodypart, 'y', self.likelihood_threshold)
         self.graph_canvas = FigureCanvas(self, -1, graph)
         self.second_sizer.Add(self.graph_canvas, pos = (14, 0), span = (1, 7), flag = wx.TOP | wx.LEFT, border = 25) 
@@ -635,8 +628,8 @@ class ValidatePanel(wx.Panel):
         self.second_sizer.Add(self.likelihood_button, pos = (17, 4), flag = wx.LEFT | wx.TOP, border = 25)
         self.second_sizer_widgets.append(self.likelihood_button)
 
-        ValidateFunctions.ControlButton(self)
-        ValidateFunctions.ControlPrediction(self)
+        SlipFunctions.ControlButton(self)
+        SlipFunctions.ControlPrediction(self)
 
         self.SetSizer(self.second_sizer)
         # self.Layout()
@@ -692,7 +685,7 @@ class ValidatePanel(wx.Panel):
 
         self.likelihood_threshold = float(self.likelihood_input.GetValue())
 
-        graph = ValidateFunctions.plot_labels(self.df, self.n_frame, self.t_val, self.start_val, \
+        graph = SlipFunctions.plot_labels(self.df, self.n_frame, self.t_val, self.start_val, \
             self.end_val, (self.window_width-50) / 100, (self.window_height // 3) // 100, self.bodypart, 'y', self.likelihood_threshold)
         graph_canvas = FigureCanvas(self, -1, graph)
         self.second_sizer.Replace(self.graph_canvas, graph_canvas)

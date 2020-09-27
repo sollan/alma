@@ -1,5 +1,5 @@
 import wx
-from Panels import Start, Analyze, Validate
+from Panels import Start, AnalyzeSlip, AnalyzeStride, ValidateSlips
 
 
 class HomeFrame(wx.Frame):
@@ -17,14 +17,16 @@ class HomeFrame(wx.Frame):
         self.StartPanel = Start.StartPanel(self)
         self.StartPanel.Hide()
 
-        self.AnalyzePanel = Analyze.AnalyzePanel(self)
-        self.AnalyzePanel.Hide()
+        self.AnalyzeSlipPanel = AnalyzeSlip.AnalyzeSlipPanel(self)
+        self.AnalyzeSlipPanel.Hide()
         
-        self.ValidatePanel = Validate.ValidatePanel(self)
-        self.ValidatePanel.Hide()
+        self.ValidateSlipPanel = ValidateSlips.ValidateSlipPanel(self)
+        self.ValidateSlipPanel.Hide()
 
+        self.AnalyzeStridePanel = AnalyzeStride.AnalyzeStridePanel(self)
+        self.AnalyzeStridePanel.Hide()
 
-        self.current_panel = self.ValidatePanel
+        self.current_panel = self.AnalyzeStridePanel
         
 
         # configure UI organization
@@ -73,18 +75,24 @@ class HomeFrame(wx.Frame):
         ################################################################
         
         action_menu = wx.Menu()
-        analyze_item = action_menu.Append(-1, "&Analyze...\tCtrl-N",
+        analyze_slip_item = action_menu.Append(-1, "&Analyze slip data...\tCtrl-N",
                 "Predict slips based on csv")
-        validate_item = action_menu.Append(-1, "&Validate...\tCtrl-L",
+        validate_item = action_menu.Append(-1, "&Validate slip predictions...\tCtrl-L",
                 "Manually validate and correct detected slips")
+        analyze_stride_item = action_menu.Append(-1, "&Analyze kinematics / stride data...\tCtrl-K",
+                "Extract strides and kinematics parameters from csv")
+        # validate_stride_item = action_menu.Append(-1, "&Validate slip predictions...\tCtrl-L",
+        #         "Manually validate and correct detected slips")
 
         ################################################################
 
-        statistics_menu = wx.Menu()
-        t_test_item = statistics_menu.Append(-1, "&t-test...\tCtrl-T",
-                "Apply t-test to slip statistics")
-        anova_item = statistics_menu.Append(-1, "&ANOVA...\tCtrl-A",
-                "Apply ANOVA to slip statistics")
+        # statistics_menu = wx.Menu()
+        # statistics functions are not a priority
+
+        # t_test_item = statistics_menu.Append(-1, "&t-test...\tCtrl-T",
+        #         "Apply t-test to slip statistics")
+        # anova_item = statistics_menu.Append(-1, "&ANOVA...\tCtrl-A",
+        #         "Apply ANOVA to slip statistics")
 
         ################################################################
 
@@ -99,7 +107,7 @@ class HomeFrame(wx.Frame):
         menu_bar = wx.MenuBar()
         menu_bar.Append(file_menu, "&File")
         menu_bar.Append(action_menu, "&Action")
-        menu_bar.Append(statistics_menu, "&Statistics")
+        # menu_bar.Append(statistics_menu, "&Statistics")
         menu_bar.Append(help_menu, "&Help")
 
         self.SetMenuBar(menu_bar)
@@ -108,8 +116,9 @@ class HomeFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_start, start_item)
         self.Bind(wx.EVT_MENU, self.on_about, about_item)
         self.Bind(wx.EVT_MENU, self.on_quit, quit_item)
-        self.Bind(wx.EVT_MENU, self.on_analyze, analyze_item)
+        self.Bind(wx.EVT_MENU, self.on_analyze_slip, analyze_slip_item)
         self.Bind(wx.EVT_MENU, self.on_validate, validate_item)
+        self.Bind(wx.EVT_MENU, self.on_analyze_stride, analyze_stride_item)
 
     def on_start(self, event):
         
@@ -144,17 +153,15 @@ class HomeFrame(wx.Frame):
         self.Close(True)
 
 
-    def on_analyze(self, event):
+    def on_analyze_slip(self, event):
         
         self.current_panel.Hide()
 
-        self.main_sizer.Replace(self.current_panel, self.AnalyzePanel)
+        self.main_sizer.Replace(self.current_panel, self.AnalyzeSlipPanel)
         self.SetSizer(self.main_sizer)
 
-        self.current_panel = self.AnalyzePanel
+        self.current_panel = self.AnalyzeSlipPanel
         self.current_panel.Show()
-        
-        wx.MessageBox("This function is still under development. Thanks for your patience! :)")
 
         self.SetStatusText('Slip detector ready for new job')
         self.Layout()
@@ -174,20 +181,31 @@ class HomeFrame(wx.Frame):
         self.SetStatusText('Validating data')
         self.Layout()
         self.Refresh() # refresh to show slider in right proportion
-        
 
-    def on_t_test(self, event):
+    def on_analyze_stride(self, event):
 
-        wx.MessageBox("This function is still under development. Thanks for your patience! :)")
+        self.current_panel.Hide()
 
-        pass
+        self.main_sizer.Replace(self.current_panel, self.AnalyzeStridePanel)
+        self.SetSizer(self.main_sizer)
+
+        self.current_panel = self.AnalyzeStridePanel
+        self.current_panel.Show()
+
+        self.SetStatusText('Kinematics analyzer ready for new job')
+        self.Layout()
+        self.Refresh()
+
+    # add stats functions only if deemed necessary later
+
+    # def on_t_test(self, event):
+    #     wx.MessageBox("This function is still under development. Thanks for your patience! :)")
+    #     pass
 
 
-    def on_anova(self, event):
-
-        wx.MessageBox("This function is still under development. Thanks for your patience! :)")
-
-        pass
+    # def on_anova(self, event):
+    #     wx.MessageBox("This function is still under development. Thanks for your patience! :)")
+    #     pass
 
 
     def on_about(self, event):
@@ -201,7 +219,8 @@ class HomeFrame(wx.Frame):
 
     def on_help(self, event):
 
-        wx.MessageBox("This function is still under development. Thanks for your patience! :)")
+        # wx.MessageBox("This function is still under development. Thanks for your patience! :)")
+        wx.MessageBox("Please go to our GitHub Wiki for help or email us :)")
 
         pass
 

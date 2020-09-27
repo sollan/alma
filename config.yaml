@@ -1,3 +1,6 @@
 window_height: 1000
 window_width: 1200
 frame_rate: 119
+treadmill_speed: 8.09
+rolling_window: 15
+change_threshold: 3

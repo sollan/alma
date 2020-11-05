@@ -461,7 +461,7 @@ def extract_parameters(frame_rate, pixels_per_cm, pd_dataframe, stance_threshold
         hip_joint_flexions.append(hip_joint_flexion)
         hip_joint_amplitudes.append(hip_joint_amplitude)
         
-        drag, drag_percent = find_drag(smooth_toe_x, stance_dur_frame, stance_threshold, starts[i], ends[i])
+        drag, drag_percent = find_drag(smooth_toe_y, stance_dur_frame, stance_threshold, starts[i], ends[i])
         drag_ts.append(drag/frame_rate)
         drag_percentages.append(drag_percent)
 

@@ -54,20 +54,20 @@ def fix_column_names(pd_dataframe):
     return pd_dataframe, bodyparts
 
 
-def treadmill_correction(pd_dataframe, bodyparts, pixels_per_frame = 8.09):
+def treadmill_correction(pd_dataframe, bodyparts, treadmill_speed = 8.09):
 
     correction = np.arange(0, len(pd_dataframe), 1)
-    correction = correction * pixels_per_frame # should be determined manually
+    correction = correction * treadmill_speed # should be determined manually
 
     if type(bodyparts) is list and len(bodyparts) > 1:
         for bodypart in bodyparts:
-            pd_dataframe[f'{bodypart} x'] = pd_dataframe[f'{bodypart} x'] + correction
+            pd_dataframe[f'{bodypart} x'] = -(pd_dataframe[f'{bodypart} x'] - correction)
     
     elif type(bodyparts) is list and len(bodyparts) == 1:
-        pd_dataframe[f'{bodyparts[0]} x'] = pd_dataframe[f'{bodyparts[0]} x'] + correction
+        pd_dataframe[f'{bodyparts[0]} x'] = -(pd_dataframe[f'{bodyparts[0]} x'] - correction)
     
     elif type(bodyparts) is str:
-        pd_dataframe[f'{bodyparts} x'] = pd_dataframe[f'{bodyparts} x'] + correction
+        pd_dataframe[f'{bodyparts} x'] = -(pd_dataframe[f'{bodyparts} x'] - correction)
 
     return pd_dataframe
 

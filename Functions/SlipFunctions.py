@@ -186,7 +186,7 @@ def adjust_times(y, t_prediction, window):
             start = 0
         if end > len(y):
             end = len(y)
-        sublist = list(y[start:end])
+        sublist = list(y[int(start):int(end)])
         lowest_timepoint = start + sublist.index(np.max(sublist))
         # DLC and opencv indexing: 
         # lowest point has largest axis value
@@ -355,7 +355,7 @@ def DisplayPlots(panel):
 
     try:
         frame = plot_frame(panel.video, panel.n_frame, 
-        (panel.window_width-50) / 200, (panel.window_height // 3) // 100, int(panel.frame_rate))
+        (panel.window_width-60) // 200, (panel.window_height // 3) // 100, int(panel.frame_rate))
         frame_canvas  = FigureCanvas(panel, -1, frame)
         panel.frame_canvas.Hide()
         panel.second_sizer.Replace(panel.frame_canvas, frame_canvas)
@@ -364,7 +364,7 @@ def DisplayPlots(panel):
         panel.frame_canvas.Show()
 
         graph = plot_labels(panel.df, panel.n_frame, panel.method_selection, panel.t_pred, panel.start_pred, 
-            panel.end_pred, (panel.window_width-50) / 100, (panel.window_height // 3) // 100, panel.bodypart, 'y', panel.likelihood_threshold)
+            panel.end_pred, (panel.window_width-60) // 100, (panel.window_height // 3) // 100, panel.bodypart, 'y', panel.likelihood_threshold)
         graph_canvas = FigureCanvas(panel, -1, graph)
         panel.graph_canvas.Hide()
         panel.second_sizer.Replace(panel.graph_canvas, graph_canvas)

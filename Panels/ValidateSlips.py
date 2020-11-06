@@ -48,8 +48,8 @@ class ValidateSlipPanel(wx.Panel):
         self.first_sizer.Add(self.header, pos = (0, 0), span = (2, 5), flag = wx.LEFT|wx.TOP, border = 25)
 
         self.instructions = wx.StaticText(self, -1, "Load the csv output from DeepLabCut and validate behavioral predictions manually.")
-        self.first_sizer.Add(self.instructions, pos = (2, 0), span = (1, 3), flag = wx.LEFT|wx.TOP, border=25)
-
+        self.first_sizer.Add(self.instructions, pos = (2, 0), span = (1, 3), flag = wx.LEFT|wx.TOP|wx.BOTTOM, border=25)
+        self.first_sizer_widgets.append(self.instructions)
         self.FirstPage()
 
 

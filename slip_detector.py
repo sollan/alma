@@ -172,10 +172,10 @@ class HomeFrame(wx.Frame):
 
         self.current_panel.Hide()
 
-        self.main_sizer.Replace(self.current_panel, self.ValidatePanel)
+        self.main_sizer.Replace(self.current_panel, self.ValidateSlipPanel)
         self.SetSizer(self.main_sizer)
 
-        self.current_panel = self.ValidatePanel
+        self.current_panel = self.ValidateSlipPanel
         self.current_panel.Show()
 
         self.SetStatusText('Validating data')

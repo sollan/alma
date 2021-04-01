@@ -114,12 +114,12 @@ def find_strides(pd_dataframe, bodypart, method = 'Rate of change', rolling_wind
 #         print(is_stance, filtered_bodypart_x_change)
         for i in range(1, len(is_stance)):
             if is_stance[i] != is_stance[i-1]: # change of stance / swing status
-                if is_stance[i] and pd_dataframe[f'{bodypart} y'].iloc[i] >= threshold: 
+                # if is_stance[i] and pd_dataframe[f'{bodypart} y'].iloc[i] >= threshold: 
                 # from "not stance" to "stance", and y loc also lower than threshold (opencv reverses axis)
                 # i.e., "touching" treadmill
-                    start_times.append(i)
-                elif is_stance[i] and pd_dataframe[f'{bodypart} y'].iloc[i] < threshold: 
-                    is_stance[i] = False
+            	start_times.append(i)
+                # elif is_stance[i] and pd_dataframe[f'{bodypart} y'].iloc[i] < threshold: 
+                    # is_stance[i] = False
                     
         for i in range(1,len(start_times)):
             end_times.append(start_times[i]-1)

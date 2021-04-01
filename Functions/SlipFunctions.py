@@ -48,50 +48,68 @@ def fix_column_names(pd_dataframe):
     return pd_dataframe, bodyparts
 
 
-def filter_predictions(pd_dataframe, bodyparts, threshold):
-    
-    if type(bodyparts) is list and len(bodyparts) > 1:
-        for bodypart in bodyparts:
-            pd_dataframe = pd_dataframe[pd_dataframe[bodypart + ' likelihood'] >= threshold]
-    
-    elif type(bodyparts) is list and len(bodyparts) == 1:
-        pd_dataframe = pd_dataframe[pd_dataframe[bodyparts[0] + ' likelihood'] >= threshold]
-    
-    elif type(bodyparts) is str:
-        pd_dataframe = pd_dataframe[pd_dataframe[bodyparts + ' likelihood'] >= threshold]
-        
-    # raise error if any bodypart name not identical as in csv
-        
-    return pd_dataframe
+def filter_predictions(t_peaks, properties, pd_dataframe, bodypart, likelihood_threshold = 0.1):
+    '''
+    discard found peaks if the DLC prediction at a certain timepoint is below the set likelihood threshold
+    '''
+    ind_valid_peaks = np.where(pd_dataframe.iloc[list(t_peaks)][f'{bodypart} likelihood']>=likelihood_threshold)
+    t_peaks = t_peaks[ind_valid_peaks]
+    for item in properties:
+        # a dictionary containing prominence, start, end etc.
+        properties[item] = properties[item][ind_valid_peaks]
+    return t_peaks, properties
 
 
-def find_slips(pd_dataframe, bodypart, axis, panel = None, method = 'Baseline', window = None, threshold = None, **kwargs): 
+def find_slips(pd_dataframe, bodypart, axis, panel = None, method = 'Baseline', likelihood_threshold = 0.1, window = None, threshold = None, **kwargs): 
         
     if method == 'Deviation':
         '''
         recommended for smooth / noiseless prediction
         '''
         t_peaks, properties = find_peaks(pd_dataframe[f'{bodypart} {axis}'], height=-10000, prominence=(45,100000))
+#         print('start filter')
+        t_peaks, properties = filter_predictions(t_peaks, properties, pd_dataframe, bodypart, likelihood_threshold)
         # h_peaks = properties["prominences"]
+        start_times = properties['left_bases']
+        end_times = properties['right_bases']
+        h_peaks = ((np.array(pd_dataframe[f'{bodypart} y'][t_peaks]) - \
+            np.array(pd_dataframe[f'{bodypart} y'][properties['left_bases']])) + \
+           (np.array(pd_dataframe[f'{bodypart} y'][t_peaks]) - \
+            np.array(pd_dataframe[f'{bodypart} y'][properties['right_bases']]))) / 2
         
 
     elif method == 'Baseline':
         '''
         recommended for prediction with much jittering / noise
         '''
-        baseline = baseline_als(pd_dataframe[f'{bodypart} {axis}'], 10**2, 0.1)
+        index = np.array(pd_dataframe[pd_dataframe[f'{bodypart} likelihood']>=likelihood_threshold].index)
+        baseline = baseline_als(pd_dataframe[f'{bodypart} {axis}']\
+                                [pd_dataframe[f'{bodypart} likelihood']>=likelihood_threshold], 10**2, 0.1)
         t_peaks, properties = find_peaks(baseline, prominence=(10,100000))
+        t_peaks = index[t_peaks]
+        properties['left_bases'] = index[properties['left_bases']]
+        properties['right_bases'] = index[properties['right_bases']]
         if window is None:
             if panel is not None:
                 window = panel.frame_rate // 5
             else:
                 window = 10
         t_peaks = adjust_times(pd_dataframe[f'{bodypart} {axis}'], t_peaks, window)
-        # h_peaks = []
+        h_peaks = ((np.array(pd_dataframe[f'{bodypart} y'][t_peaks]) - \
+                    np.array(pd_dataframe[f'{bodypart} y'][properties['left_bases']])) + \
+                   (np.array(pd_dataframe[f'{bodypart} y'][t_peaks]) - \
+                    np.array(pd_dataframe[f'{bodypart} y'][properties['right_bases']]))) / 2
+        
+        start_times = properties['left_bases']
+        end_times = properties['right_bases']
         # base = np.mean(pd_dataframe[f'{bodypart} {axis}'])
         # for t in t_peaks:
             # h_peaks.append(pd_dataframe[f'{bodypart} {axis}'].iloc[t] - base)
             # h_peaks.append(pd_dataframe[f'{bodypart} {axis}'].iloc[t])
+#         h_peaks = ((np.array(pd_dataframe[f'{bodypart} y'][t_peaks]) - \
+#                     np.array(pd_dataframe[f'{bodypart} y'][properties['left_bases']])) + \
+#                    (np.array(pd_dataframe[f'{bodypart} y'][t_peaks]) - \
+#                     np.array(pd_dataframe[f'{bodypart} y'][properties['right_bases']]))) / 2
 
     elif method == 'Threshold':
         '''
@@ -102,26 +120,36 @@ def find_slips(pd_dataframe, bodypart, axis, panel = None, method = 'Baseline', 
             threshold = np.mean(pd_dataframe[f'{bodypart} {axis}']) + np.std(pd_dataframe[f'{bodypart} {axis}'])
         adjusted = fit_threshold(pd_dataframe[f'{bodypart} {axis}'], threshold)
         t_peaks, properties = find_peaks(adjusted, prominence=(10,1000))
+        t_peaks, properties = filter_predictions(t_peaks, properties, pd_dataframe, bodypart, likelihood_threshold)
         h_peaks = []
-        for t in t_peaks:
-            # h_peaks.append(pd_dataframe[f'{bodypart} {axis}'].iloc[t] - threshold)
-            h_peaks.append(pd_dataframe[f'{bodypart} {axis}'].iloc[t])
+        start_times = properties['left_bases']
+        end_times = properties['right_bases']
+#         for t in t_peaks:
+#             # h_peaks.append(pd_dataframe[f'{bodypart} {axis}'].iloc[t] - threshold)
+#             h_peaks.append(pd_dataframe[f'{bodypart} {axis}'].iloc[t])
 
     else:
         '''
         to make sure t_peaks exists
         '''
         t_peaks = []
+        h_peaks = []
+        start_times = []
+        end_times = []
 
     n_peaks = len(t_peaks)
-    # start_times = properties['left_bases']
-    # end_times = properties['right_bases']
-    start_times = t_peaks
-    end_times = t_peaks
     h_peaks = pd_dataframe[f'{bodypart} {axis}'].iloc[t_peaks]
-            
     return n_peaks, list(h_peaks), list(t_peaks), list(start_times), list(end_times)
 
+
+def calculate_depths(pd_dataframe, bodypart, starts, ends, t_peaks):
+    
+    depth = ((np.array(pd_dataframe[f'{bodypart} y'][t_peaks]) - \
+              np.array(pd_dataframe[f'{bodypart} y'][starts])) + \
+             (np.array(pd_dataframe[f'{bodypart} y'][t_peaks]) - \
+              np.array(pd_dataframe[f'{bodypart} y'][ends]))) / 2
+    
+    return depth
 
 def sort_list(list1, list2):
     '''
@@ -195,8 +223,11 @@ def adjust_times(y, t_prediction, window):
     return t_prediction
 
 
-def make_output(pathname, t_slips, depth_slips, start_slips, end_slips, bodyparts):
-
+def make_output(pathname, pd_dataframe, t_slips, depth_slips, start_slips, end_slips, bodyparts):
+    
+    for i, bodypart in enumerate(bodyparts):
+        depth_slips[i] = calculate_depths(pd_dataframe, bodypart, start_slips[i], end_slips[i], t_slips[i])
+    
     df_output = pd.DataFrame({'time': t_slips,
                             'depth': depth_slips,
                             'start': start_slips,

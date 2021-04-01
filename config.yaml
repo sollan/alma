@@ -8,3 +8,4 @@ pixels_per_cm: 60.939
 stance_threshold: 547
 treadmill_y: 547
 lowpass_filter_cutoff: 6
+likelihood_threshold: 0.1

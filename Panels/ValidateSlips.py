@@ -34,7 +34,7 @@ class ValidateSlipPanel(wx.Panel):
 
         # load parameters to set dimension of frames and graphs
         configs = ConfigFunctions.load_config('./config.yaml')
-        self.window_width, self.window_height, self.frame_rate = configs['window_width'], configs['window_height'], configs['frame_rate']
+        self.window_width, self.window_height, self.frame_rate, self.likelihood_threshold = configs['window_width'], configs['window_height'], configs['frame_rate'], configs['likelihood_threshold']
         self.first_sizer_widgets = []
         self.second_sizer_widgets = []
         self.has_imported_file = False
@@ -62,7 +62,6 @@ class ValidateSlipPanel(wx.Panel):
                 self.filename = os.path.join(self.csv_dirname, import_dialog.GetFilename())
                 self.df, self.filename = SlipFunctions.read_file(self.filename)
                 self.df, self.bodyparts = SlipFunctions.fix_column_names(self.df)
-                # self.filtered_df = SlipFunctions.filter_predictions(self.df, self.bodyparts[0], self.threshold)
         try: 
             if self.df is not None:
                 self.has_imported_file = True
@@ -103,9 +102,9 @@ class ValidateSlipPanel(wx.Panel):
         n_pred, depth_pred, t_pred, start_pred, end_pred, bodypart_list_pred = 0,[],[],[],[],[]
 
         for bodypart in self.selected_bodyparts:
-
+            
             n_pred_temp, depth_pred_temp, t_pred_temp, start_pred_temp, end_pred_temp = \
-                SlipFunctions.find_slips(self.df, bodypart, 'y', panel=self, method = self.method_selection)
+                SlipFunctions.find_slips(self.df, bodypart, 'y', panel=self, method = self.method_selection, likelihood_threshold = self.likelihood_threshold)
             n_pred += n_pred_temp
             depth_pred.extend(depth_pred_temp)
             t_pred.extend(t_pred_temp)
@@ -170,7 +169,7 @@ class ValidateSlipPanel(wx.Panel):
             pathname = save_pred_dialog.GetPath()
 
             try:
-                SlipFunctions.make_output(pathname, self.t_pred, self.depth_pred, self.start_pred, self.end_pred, self.bodypart_list_pred)
+                SlipFunctions.make_output(pathname, self.df, self.t_pred, self.depth_pred, self.start_pred, self.end_pred, self.bodypart_list_pred)
 
             except IOError:
                 wx.LogError(f"Cannot save current data in file {pathname}. Try another location or filename?")
@@ -370,7 +369,7 @@ class ValidateSlipPanel(wx.Panel):
             pathname = save_pred_dialog.GetPath()
 
             try:
-                SlipFunctions.make_output(pathname, self.t_val, self.depth_val, self.start_val, self.end_val, self.bodypart_list_val)
+                SlipFunctions.make_output(pathname, self.df, self.t_val, self.depth_val, self.start_val, self.end_val, self.bodypart_list_val)
 
             except IOError:
                 wx.LogError(f"Cannot save current data in file {pathname}. Try another location or filename?")

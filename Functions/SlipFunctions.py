@@ -414,6 +414,13 @@ def find_closest_neighbors(n_current_frame, t_pred):
             return prev, next
             break
 
+def find_confirmed_neighbors(n_current_frame, t_val, confirmed):
+    t_val_confirmed = []
+    for i, t in enumerate(t_val):
+        if confirmed[i] == 1:
+            t_val_confirmed.append(t)
+    return find_neighbors(n_current_frame, t_val_confirmed)
+
 
 def ControlButton(panel):
     

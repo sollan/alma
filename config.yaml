@@ -9,3 +9,4 @@ stance_threshold: 547
 treadmill_y: 547
 lowpass_filter_cutoff: 6
 likelihood_threshold: 0.1
+depth_threshold: 0.8

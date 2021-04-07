@@ -34,7 +34,7 @@ class ValidateSlipPanel(wx.Panel):
 
         # load parameters to set dimension of frames and graphs
         configs = ConfigFunctions.load_config('./config.yaml')
-        self.window_width, self.window_height, self.frame_rate, self.likelihood_threshold = configs['window_width'], configs['window_height'], configs['frame_rate'], configs['likelihood_threshold']
+        self.window_width, self.window_height, self.frame_rate, self.likelihood_threshold, self.depth_threshold = configs['window_width'], configs['window_height'], configs['frame_rate'], configs['likelihood_threshold'], configs['depth_threshold']
         self.first_sizer_widgets = []
         self.second_sizer_widgets = []
         self.has_imported_file = False
@@ -104,12 +104,12 @@ class ValidateSlipPanel(wx.Panel):
         for bodypart in self.selected_bodyparts:
             
             n_pred_temp, depth_pred_temp, t_pred_temp, start_pred_temp, end_pred_temp = \
-                SlipFunctions.find_slips(self.df, bodypart, 'y', panel=self, method = self.method_selection, likelihood_threshold = self.likelihood_threshold)
+                SlipFunctions.find_slips(self.df, bodypart, 'y', panel=self, method = self.method_selection, likelihood_threshold = self.likelihood_threshold, depth_threshold = self.depth_threshold)
             n_pred += n_pred_temp
             depth_pred.extend(depth_pred_temp)
             t_pred.extend(t_pred_temp)
             start_pred.extend(start_pred_temp)
-            end_pred.extend(t_pred_temp)
+            end_pred.extend(end_pred_temp)
             bodypart_list_pred.extend([bodypart for i in range(n_pred_temp)])
 
 
@@ -126,7 +126,8 @@ class ValidateSlipPanel(wx.Panel):
             n_pred -= 1
 
         self.n_pred, self.depth_pred, self.t_pred, self.start_pred, self.end_pred, self.bodypart_list_pred = n_pred, depth_pred, t_pred, start_pred, end_pred, bodypart_list_pred
-        self.pred_text.SetLabel(f"\nThe algorithm predicted {self.n_pred} slips with an average depth of {np.mean(self.depth_pred):.2f} pixels.\n")
+        
+        self.pred_text.SetLabel(f"\nThe algorithm predicted {self.n_pred} slips {np.mean(self.depth_pred):.2f} pixels deep on average.\n")
 
         self.save_pred_button.Show()
         self.import_new_csv_button.Show()
@@ -169,7 +170,7 @@ class ValidateSlipPanel(wx.Panel):
             pathname = save_pred_dialog.GetPath()
 
             try:
-                SlipFunctions.make_output(pathname, self.df, self.t_pred, self.depth_pred, self.start_pred, self.end_pred, self.bodypart_list_pred)
+                SlipFunctions.make_output(pathname, self.df, self.t_pred, self.depth_pred, self.start_pred, self.end_pred, self.bodypart_list_pred, self.frame_rate)
 
             except IOError:
                 wx.LogError(f"Cannot save current data in file {pathname}. Try another location or filename?")
@@ -369,7 +370,7 @@ class ValidateSlipPanel(wx.Panel):
             pathname = save_pred_dialog.GetPath()
 
             try:
-                SlipFunctions.make_output(pathname, self.df, self.t_val, self.depth_val, self.start_val, self.end_val, self.bodypart_list_val)
+                SlipFunctions.make_output(pathname, self.df, self.t_val, self.depth_val, self.start_val, self.end_val, self.bodypart_list_val, self.frame_rate)
 
             except IOError:
                 wx.LogError(f"Cannot save current data in file {pathname}. Try another location or filename?")

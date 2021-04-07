@@ -117,6 +117,7 @@ def find_slips(pd_dataframe, bodypart, axis, panel = None, method = 'Baseline', 
         e.g. location of ladder in frame
         '''
         if threshold is None:  
+            
             threshold = np.mean(pd_dataframe[f'{bodypart} {axis}']) + np.std(pd_dataframe[f'{bodypart} {axis}'])
         adjusted = fit_threshold(pd_dataframe[f'{bodypart} {axis}'], threshold)
         t_peaks, properties = find_peaks(adjusted, prominence=(10,1000))
@@ -261,8 +262,8 @@ def plot_frame(video_file, n_frame, width, height, frame_rate, baseline = 0):
         return figure
         
     except cv2.error:
-
         print(f'Frame {n_frame} cannot be displayed! (cv2 error)')
+        # plot_frame(video_file, n_frame+2, width, height, frame_rate, baseline)
 
 
 def plot_labels(pd_dataframe, n_current_frame, method, t_pred, start_pred, end_pred, width, height, bodypart, axis, likelihood_threshold = 0):

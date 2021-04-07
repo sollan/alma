@@ -180,13 +180,6 @@ def make_output(pathname, start_times, end_times, durations):
     df_output.to_csv(pathname, index = False)
 
 
-# def load_video(filename):
-
-#     vidcap = cv2.VideoCapture(filename)
-#     return vidcap
-
-
-
 
 '''
 Functions to calculate kinematic parameters

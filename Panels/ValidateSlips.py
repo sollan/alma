@@ -462,7 +462,6 @@ class ValidateSlipPanel(wx.Panel):
         self.GetParent().Layout()
 
 
-
     def SecondPage(self):
 
         for widget in self.first_sizer_widgets:
@@ -500,9 +499,12 @@ class ValidateSlipPanel(wx.Panel):
             self.n_pred, self.depth_pred[:], self.t_pred[:], self.start_pred[:], self.end_pred[:], self.bodypart_list_pred[:]
 
         # display frame from video
+        
         frame = SlipFunctions.plot_frame(self.video, self.n_frame, 
             (self.window_width-50) / 200, (self.window_height // 3) // 100, int(self.frame_rate))
         self.frame_canvas = FigureCanvas(self, -1, frame)
+
+
         self.second_sizer.Add(self.frame_canvas, pos= (8, 0), span = (6, 0),flag = wx.LEFT, border = 25)
         self.second_sizer_widgets.append(self.frame_canvas)
         self.Fit()
@@ -588,7 +590,7 @@ class ValidateSlipPanel(wx.Panel):
         self.second_sizer.Add(self.save_val_button, pos = (13, 3), span = (0, 1), flag = wx.TOP | wx.BOTTOM, border = 15)
         self.second_sizer_widgets.append(self.save_val_button)
 
-        self.restart_button = wx.Button(self, id=wx.ID_ANY, label="Load new file")
+        self.restart_button = wx.Button(self, id=wx.ID_ANY, label="Analyze new file")
         self.restart_button.Bind(wx.EVT_BUTTON, self.DisplayFirstPage)
         self.second_sizer.Add(self.restart_button, pos = (13, 4), span = (0, 2), flag = wx.TOP | wx.BOTTOM, border = 15)
         self.second_sizer_widgets.append(self.restart_button)
@@ -644,13 +646,23 @@ class ValidateSlipPanel(wx.Panel):
                 # widget has already been destroyed
                 pass
 
-
         self.first_sizer_widgets = []
+        self.second_sizer_widgets = []
+        self.has_imported_file = False
+        self.dirname = os.getcwd()
+        
         self.first_sizer = wx.GridBagSizer(0, 0)
 
+        self.header = wx.StaticText(self, -1, "Validate", size=(500,100))
+        font = wx.Font(20,wx.MODERN,wx.NORMAL,wx.NORMAL)
+        self.header.SetFont(font)
         self.first_sizer.Add(self.header, pos = (0, 0), span = (2, 5), flag = wx.LEFT|wx.TOP, border = 25)
-        self.first_sizer.Add(self.instructions, pos = (2, 0), span = (1, 3), flag = wx.LEFT|wx.TOP, border=25)
+
+        self.instructions = wx.StaticText(self, -1, "Load the csv output from DeepLabCut and validate behavioral predictions manually.")
+        self.first_sizer.Add(self.instructions, pos = (2, 0), span = (1, 3), flag = wx.LEFT|wx.TOP|wx.BOTTOM, border=25)
+        self.first_sizer_widgets.append(self.instructions)
         self.FirstPage()
+
         self.GetParent().Layout()
 
     def DisplaySecondPage(self, e):

@@ -246,19 +246,55 @@ def adjust_times(y, t_prediction, window):
     return t_prediction
 
 
-def make_output(pathname, pd_dataframe, t_slips, depth_slips, start_slips, end_slips, bodyparts, frame_rate):
+def make_output(pathname, pd_dataframe, t_slips, depth_slips, start_slips, end_slips, bodyparts, frame_rate, confirmed = [], confirmed_only = False):
     duration = []
 
-    for i, bodypart in enumerate(bodyparts):
-        depth_slips[i] = calculate_depths(pd_dataframe, bodypart, start_slips[i], end_slips[i], t_slips[i])
-        duration.append(round((end_slips[i] - start_slips[i]) / frame_rate), 3)
-    
-    df_output = pd.DataFrame({'time (frame)': t_slips,
-                            'depth (pixel)': depth_slips,
-                            'start (frame)': start_slips,
-                            'end (frame)': end_slips,
-                            'duration (s)': duration,
-                            'bodypart': bodyparts})
+    if confirmed_only:
+        ts = []
+        depths = []
+        starts = []
+        ends = []
+        bds = []
+        for i, bodypart in enumerate(bodyparts):
+            if confirmed[i] == 1:
+                ts.append(t_slips[i])
+                bds.append(bodyparts[i])
+                try:
+                    depths.append(calculate_depths(pd_dataframe, bodypart, start_slips[i], end_slips[i], t_slips[i]))
+                except TypeError:
+                    # missing start and end?
+                    depths.append(np.nan)
+                try:
+                    duration.append(round((end_slips[i] - start_slips[i]) / frame_rate, 3))
+                except TypeError:
+                    duration.append(np.nan)
+                try: 
+                    starts.append(start_slips[i])
+                except TypeError:
+                    starts.append(np.nan)
+                try:
+                    ends.append(end_slips[i])
+                except TypeError:
+                    ends.append(np.nan)
+
+        df_output = pd.DataFrame({'time (frame)': ts,
+                                'depth (pixel)': depths,
+                                'start (frame)': starts,
+                                'end (frame)': ends,
+                                'duration (s)': duration,
+                                'bodypart': bds})
+
+    else:
+        for i, bodypart in enumerate(bodyparts):
+            depth_slips[i] = calculate_depths(pd_dataframe, bodypart, start_slips[i], end_slips[i], t_slips[i])
+            duration.append(round((end_slips[i] - start_slips[i]) / frame_rate, 3))
+        
+        df_output = pd.DataFrame({'time (frame)': t_slips,
+                                'depth (pixel)': depth_slips,
+                                'start (frame)': start_slips,
+                                'end (frame)': end_slips,
+                                'duration (s)': duration,
+                                'bodypart': bodyparts})
 
     df_output.to_csv(pathname, index = False)
 
@@ -291,7 +327,7 @@ def plot_frame(video_file, n_frame, width, height, frame_rate, baseline = 0):
         # plot_frame(video_file, n_frame+2, width, height, frame_rate, baseline)
 
 
-def plot_labels(pd_dataframe, n_current_frame, method, t_pred, start_pred, end_pred, width, height, bodypart, axis, likelihood_threshold = 0):
+def plot_labels(pd_dataframe, n_current_frame, method, t_pred, start_pred, end_pred, width, height, bodypart, bodypart_list, selected_bodyparts, axis, likelihood_threshold, confirmed):
     
     figure = mpl.figure.Figure(figsize=(width, height))
     axes = figure.add_subplot(111)
@@ -299,11 +335,37 @@ def plot_labels(pd_dataframe, n_current_frame, method, t_pred, start_pred, end_p
     # figure.tight_layout()
     # low_likelihood = np.array(pd_dataframe[pd_dataframe[bodyparts + ' likelihood'] < likelihood_threshold]['bodyparts coords'])
     axes.xaxis.set_label_position('top') 
+
+    for bp in selected_bodyparts:
+        axes.scatter(pd_dataframe['bodyparts coords'], pd_dataframe[f'{bp} {axis}'], s = 0.1, color = 'steelblue')
+
     axes.scatter(pd_dataframe['bodyparts coords'], pd_dataframe[f'{bodypart} {axis}'], s = 1)
     axes.scatter(pd_dataframe['bodyparts coords'].iloc[n_current_frame], pd_dataframe[f'{bodypart} {axis}'].iloc[n_current_frame], marker = 'x', c = 'r')
+
+    if n_current_frame in t_pred:
+        index = t_pred.index(n_current_frame)
+        try:
+            if bodypart_list[index] == bodypart:
+                axes.scatter(start_pred[index], pd_dataframe[f'{bodypart} {axis}'].iloc[start_pred[index]], s = 2, color = 'r')
+                axes.scatter(end_pred[index], pd_dataframe[f'{bodypart} {axis}'].iloc[end_pred[index]], s = 2, color = 'r')
+                axes.annotate('Start', (start_pred[index], pd_dataframe[f'{bodypart} {axis}'].iloc[start_pred[index]]))
+                axes.annotate('End', (end_pred[index], pd_dataframe[f'{bodypart} {axis}'].iloc[end_pred[index]]))
+        except TypeError:
+            # user hasn't selected start and end time for added slips!
+            pass
+
     axes.scatter(pd_dataframe[pd_dataframe[f'{bodypart} likelihood'] < likelihood_threshold]['bodyparts coords'], \
-        pd_dataframe[pd_dataframe[f'{bodypart} likelihood'] < likelihood_threshold][f'{bodypart} {axis}'], s = 1, c = 'lightgrey')
+        pd_dataframe[pd_dataframe[f'{bodypart} likelihood'] < likelihood_threshold][f'{bodypart} {axis}'], s = 1, c = '0.7')
     axes.invert_yaxis()
+    for i, t in enumerate(t_pred):
+        bp = bodypart_list[i]
+        if bp == np.nan:
+            bp = bodypart
+        if confirmed[i]: 
+            c = 'g'
+        else:
+            c = 'r'
+        axes.annotate(str(i+1), (t, pd_dataframe[f'{bp} {axis}'][t]), color = c, weight = 'bold')
 
     # if method != 'Baseline':
     #     # the find minimum step in "baseline" interferes with on- and offset judgment
@@ -383,12 +445,20 @@ def ControlButton(panel):
     if panel.n_frame not in panel.t_val:
         panel.to_start_button.Disable()
         panel.to_end_button.Disable()
+    else:
+        index = panel.t_val.index(panel.n_frame)
+        if panel.start_val[index] is np.nan:
+            panel.to_start_button.Disable()
+        if panel.end_val[index] is np.nan:
+            
+            panel.to_end_button.Disable()
 
 
 def ControlPrediction(panel):
 
     if panel.n_frame in panel.t_val:
-        panel.val_check_box.SetValue(True)
+        index = panel.t_val.index(panel.n_frame)
+        panel.val_check_box.SetValue(panel.confirmed[index])
     else:
         panel.val_check_box.SetValue(False)
 
@@ -403,13 +473,12 @@ def ControlPrediction(panel):
         panel.end_check_box.SetValue(False)
 
 
-def DisplayPlots(panel):
+def DisplayPlots(panel, set_bodypart = True):
 
-    if panel.n_frame in panel.t_pred:
-        panel.bodypart = panel.bodypart_list_pred[panel.t_pred.index(panel.n_frame)]
-    else:
-        pass
-
+    if panel.n_frame in panel.t_val and set_bodypart:
+        panel.bodypart = panel.bodypart_list_val[panel.t_val.index(panel.n_frame)]
+        panel.bodypart_to_plot.SetValue(panel.bodypart)
+        
     try:
         frame = plot_frame(panel.video, panel.n_frame, 
         (panel.window_width-60) // 200, (panel.window_height // 3) // 100, int(panel.frame_rate))
@@ -420,8 +489,8 @@ def DisplayPlots(panel):
         panel.second_sizer_widgets.append(panel.frame_canvas)  
         panel.frame_canvas.Show()
 
-        graph = plot_labels(panel.df, panel.n_frame, panel.method_selection, panel.t_pred, panel.start_pred, 
-            panel.end_pred, (panel.window_width-60) // 100, (panel.window_height // 3) // 100, panel.bodypart, 'y', panel.likelihood_threshold)
+        graph = plot_labels(panel.df, panel.n_frame, panel.method_selection, panel.t_val, panel.start_val, 
+            panel.end_val, (panel.window_width-60) // 100, (panel.window_height // 3) // 100, panel.bodypart, panel.bodypart_list_val, panel.selected_bodyparts, 'y', panel.likelihood_threshold, panel.confirmed)
         graph_canvas = FigureCanvas(panel, -1, graph)
         panel.graph_canvas.Hide()
         panel.second_sizer.Replace(panel.graph_canvas, graph_canvas)

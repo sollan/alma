@@ -126,7 +126,8 @@ class ValidateSlipPanel(wx.Panel):
             n_pred -= 1
 
         self.n_pred, self.depth_pred, self.t_pred, self.start_pred, self.end_pred, self.bodypart_list_pred = n_pred, depth_pred, t_pred, start_pred, end_pred, bodypart_list_pred
-        
+        self.confirmed = [0]*self.n_pred
+        # print(self.confirmed)
         self.pred_text.SetLabel(f"\nThe algorithm predicted {self.n_pred} slips {np.mean(self.depth_pred):.2f} pixels deep on average.\n")
 
         self.save_pred_button.Show()
@@ -176,35 +177,37 @@ class ValidateSlipPanel(wx.Panel):
                 wx.LogError(f"Cannot save current data in file {pathname}. Try another location or filename?")
                 
 
-    def MarkSlip(self, e):
+    # def MarkSlip(self, e):
 
-        sender = e.GetEventObject()
-        isChecked = sender.GetValue()
+    #     sender = e.GetEventObject()
+    #     isChecked = sender.GetValue()
 
-        if isChecked:
-            if self.n_frame not in self.t_val:
-                self.n_val += 1
-                self.t_val.append(self.n_frame)
-                self.depth_val.append(np.nan)
-                self.start_val.append(np.nan)
-                self.end_val.append(np.nan)
-                self.bodypart_list_val.append(np.nan)
-        else:
-            if self.n_frame in self.t_val:
-                self.n_val -= 1
-                index = self.t_val.index(self.n_frame)
-                self.depth_val.pop(index)
-                self.t_val.pop(index)
-                self.start_val.pop(index)
-                self.end_val.pop(index)
-                self.bodypart_list_val.pop(index)
+    #     if isChecked:
+    #         if self.n_frame not in self.t_val:
+    #             self.n_val += 1
+    #             self.t_val.append(self.n_frame)
+    #             self.depth_val.append(np.nan)
+    #             self.start_val.append(np.nan)
+    #             self.end_val.append(np.nan)
+    #             self.bodypart_list_val.append(np.nan)
+    #             self.confirmed.append(1)
+    #     else:
+    #         if self.n_frame in self.t_val:
+    #             self.n_val -= 1
+    #             index = self.t_val.index(self.n_frame)
+    #             self.depth_val.pop(index)
+    #             self.t_val.pop(index)
+    #             self.start_val.pop(index)
+    #             self.end_val.pop(index)
+    #             self.bodypart_list_val.pop(index)
+    #             self.confirmed.pop(index)
 
     def MarkFrame(self, e, mark_type):
 
         sender = e.GetEventObject()
         isChecked = sender.GetValue()
 
-        if mark_type == "slip": 
+        if mark_type == "confirmed": 
             if isChecked:
                 if self.n_frame not in self.t_val:
                     self.n_val += 1
@@ -212,23 +215,35 @@ class ValidateSlipPanel(wx.Panel):
                     self.depth_val.append(np.nan)
                     self.start_val.append(np.nan)
                     self.end_val.append(np.nan)
-                    self.bodypart_list_val.append(np.nan)
+                    self.bodypart_list_val.append(self.bodypart_to_plot.GetValue())
+                    self.confirmed.append(1)
 
                     self.depth_val = SlipFunctions.sort_list(self.t_val, self.depth_val)
                     self.start_val = SlipFunctions.sort_list(self.t_val, self.start_val)
                     self.end_val = SlipFunctions.sort_list(self.t_val, self.end_val)
                     self.bodypart_list_val = SlipFunctions.sort_list(self.t_val, self.bodypart_list_val)
+                    self.confirmed = SlipFunctions.sort_list(self.t_val, self.confirmed)
                     self.t_val = sorted(self.t_val)
+                else:
+                    index = self.t_val.index(self.n_frame)
+                    self.confirmed[index] = 1
+                
+                SlipFunctions.ControlButton(self)
+                SlipFunctions.DisplayPlots(self)
+
+                self.GetParent().Layout()
 
             else:
                 if self.n_frame in self.t_val:
                     self.n_val -= 1
                     index = self.t_val.index(self.n_frame)
-                    self.depth_val.pop(index)
-                    self.t_val.pop(index)
-                    self.start_val.pop(index)
-                    self.end_val.pop(index)
-                    self.bodypart_list_val.pop(index)
+                    # self.depth_val.pop(index)
+                    # self.t_val.pop(index)
+                    # self.start_val.pop(index)
+                    # self.end_val.pop(index)
+                    # self.bodypart_list_val.pop(index)
+                    # self.confirmed.pop(index)
+                    self.confirmed[index] = 0
 
         # assuming there is always an existing next/prev prediction
         # that matches the frame to be labelled as start/end of slip
@@ -273,14 +288,27 @@ class ValidateSlipPanel(wx.Panel):
             self.depth_val.append(np.nan)
             self.start_val.append(np.nan)
             self.end_val.append(np.nan)
-            self.bodypart_list_val.append(np.nan)
+            self.bodypart_list_val.append(self.bodypart)
+            self.confirmed.append(1)
 
-        self.n_frame = self.next_pred
-        self.slider.SetValue(self.n_frame)
-        self.slider_label.SetLabel(str(self.n_frame + 1))
+            self.depth_val = SlipFunctions.sort_list(self.t_val, self.depth_val)
+            self.start_val = SlipFunctions.sort_list(self.t_val, self.start_val)
+            self.end_val = SlipFunctions.sort_list(self.t_val, self.end_val)
+            self.bodypart_list_val = SlipFunctions.sort_list(self.t_val, self.bodypart_list_val)
+            self.confirmed = SlipFunctions.sort_list(self.t_val, self.confirmed)
+            self.t_val = sorted(self.t_val)
 
-        self.prev_pred, self.next_pred = SlipFunctions.find_neighbors(self.n_frame, self.t_pred)
-        self.prev_val, self.next_val = SlipFunctions.find_neighbors(self.n_frame, self.t_val)
+        else:
+            index = self.t_val.index(self.n_frame)
+            self.confirmed[index] = 1
+            # print(self.confirmed)
+
+            self.n_frame = self.next_pred
+            self.slider.SetValue(self.n_frame)
+            self.slider_label.SetLabel(str(self.n_frame + 1))
+
+            self.prev_pred, self.next_pred = SlipFunctions.find_neighbors(self.n_frame, self.t_pred)
+            self.prev_val, self.next_val = SlipFunctions.find_neighbors(self.n_frame, self.t_val)
 
         SlipFunctions.ControlButton(self)
         SlipFunctions.DisplayPlots(self)
@@ -295,11 +323,13 @@ class ValidateSlipPanel(wx.Panel):
         if self.n_frame in self.t_val:
             self.n_val -= 1
             index = self.t_val.index(self.n_frame)
-            self.depth_val.pop(index)
-            self.t_val.pop(index)
-            self.start_val.pop(index)
-            self.end_val.pop(index)
-            self.bodypart_list_val.pop(index)
+            # self.depth_val.pop(index)
+            # self.t_val.pop(index)
+            # self.start_val.pop(index)
+            # self.end_val.pop(index)
+            # self.bodypart_list_val.pop(index)
+            self.confirmed[index] = 0
+
 
         self.n_frame = self.next_pred
         self.slider.SetValue(self.n_frame)
@@ -370,7 +400,7 @@ class ValidateSlipPanel(wx.Panel):
             pathname = save_pred_dialog.GetPath()
 
             try:
-                SlipFunctions.make_output(pathname, self.df, self.t_val, self.depth_val, self.start_val, self.end_val, self.bodypart_list_val, self.frame_rate)
+                SlipFunctions.make_output(pathname, self.df, self.t_val, self.depth_val, self.start_val, self.end_val, self.bodypart_list_val, self.frame_rate, self.confirmed, True)
 
             except IOError:
                 wx.LogError(f"Cannot save current data in file {pathname}. Try another location or filename?")
@@ -458,7 +488,9 @@ class ValidateSlipPanel(wx.Panel):
         if TEST is True:
             self.filename, self.df, self.bodyparts, self.video, self.video_name = SlipFunctions.test(TEST)
 
+        self.Fit()
         self.SetSizer(self.first_sizer)
+        
                 
         self.GetParent().Layout()
 
@@ -478,12 +510,12 @@ class ValidateSlipPanel(wx.Panel):
 
         # initialize checkboxes (related to n_frame and plotting)
         self.start_check_box = wx.CheckBox(self, label="Start of slip")
-        self.val_check_box = wx.CheckBox(self, label="Slip")
+        self.val_check_box = wx.CheckBox(self, label="Confirmed")
         self.end_check_box = wx.CheckBox(self, label="End of slip")
 
         if self.n_pred is not None:
             self.n_frame = self.t_pred[0]
-            # self.val_check_box.SetValue(True)
+            self.val_check_box.SetValue(self.confirmed[0])
         else:
             self.n_frame = 0
             # self.val_check_box.SetValue(False)
@@ -508,7 +540,7 @@ class ValidateSlipPanel(wx.Panel):
 
         self.second_sizer.Add(self.frame_canvas, pos= (8, 0), span = (6, 0),flag = wx.LEFT, border = 25)
         self.second_sizer_widgets.append(self.frame_canvas)
-        self.Fit()
+        
 
         self.validate_button = wx.Button(self, id=wx.ID_ANY, label="Confirm")
         self.validate_button.Bind(wx.EVT_BUTTON, self.OnValidate)
@@ -568,7 +600,7 @@ class ValidateSlipPanel(wx.Panel):
         self.second_sizer.Add(self.start_check_box, pos = (11, 1), span = (0,2), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 20)
         self.second_sizer_widgets.append(self.start_check_box)
 
-        self.val_check_box.Bind(wx.EVT_CHECKBOX, lambda event, mark_type = 'slip' : self.MarkFrame(event, mark_type))
+        self.val_check_box.Bind(wx.EVT_CHECKBOX, lambda event, mark_type = 'confirmed' : self.MarkFrame(event, mark_type))
         self.second_sizer.Add(self.val_check_box, pos = (11, 3), span = (0,2), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 20)
         self.second_sizer_widgets.append(self.val_check_box)
 
@@ -581,10 +613,16 @@ class ValidateSlipPanel(wx.Panel):
         self.second_sizer.Add(self.to_start_button, pos = (12, 1), span = (0,2), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 25)
         self.second_sizer_widgets.append(self.to_start_button)
 
+        self.bodypart_to_plot = wx.ComboBox(self, choices = self.selected_bodyparts)
+        self.second_sizer.Add(self.bodypart_to_plot, pos= (12, 3) , flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 25)
+        self.second_sizer_widgets.append(self.bodypart_to_plot)
+        self.bodypart_to_plot.Bind(wx.EVT_COMBOBOX, self.OnBodypartPlot)
+
         self.to_end_button = wx.Button(self, id=wx.ID_ANY, label="end of slip >")
         self.to_end_button.Bind(wx.EVT_BUTTON, lambda event, new_frame = 'end' : self.SwitchFrame(event, new_frame))
         self.second_sizer.Add(self.to_end_button, pos = (12, 5), span = (0,2), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 25)
         self.second_sizer_widgets.append(self.to_end_button)
+
 
         self.save_val_button = wx.Button(self, id=wx.ID_ANY, label="Save")
         self.save_val_button.Bind(wx.EVT_BUTTON, self.SaveValFunc)
@@ -597,18 +635,16 @@ class ValidateSlipPanel(wx.Panel):
         self.second_sizer_widgets.append(self.restart_button)
 
         # display location graphs
-
         if self.n_frame in self.t_pred:
             self.bodypart = self.bodypart_list_pred[self.t_pred.index(self.n_frame)]
         elif self.bodypart is None:
             self.bodypart = self.selected_bodyparts[0]
 
         graph = SlipFunctions.plot_labels(self.df, self.n_frame, self.method_selection, self.t_val, self.start_val, \
-            self.end_val, (self.window_width-50) / 100, (self.window_height // 3) // 100, self.bodypart, 'y', self.likelihood_threshold)
+            self.end_val, (self.window_width-50) / 100, (self.window_height // 3) // 100, self.bodypart, self.bodypart_list_val, self.selected_bodyparts, 'y', self.likelihood_threshold, self.confirmed)
         self.graph_canvas = FigureCanvas(self, -1, graph)
         self.second_sizer.Add(self.graph_canvas, pos = (14, 0), span = (1, 7), flag = wx.TOP | wx.LEFT, border = 25) 
         self.second_sizer_widgets.append(self.graph_canvas)       
-        self.Fit()
 
         # display slider
         self.slider = wx.Slider(self, value=self.n_frame+1, minValue=1, maxValue=len(self.df),
@@ -630,11 +666,35 @@ class ValidateSlipPanel(wx.Panel):
         self.second_sizer.Add(self.likelihood_button, pos = (17, 4), flag = wx.LEFT | wx.TOP, border = 25)
         self.second_sizer_widgets.append(self.likelihood_button)
 
+        self.Fit()
         SlipFunctions.ControlButton(self)
         SlipFunctions.ControlPrediction(self)
 
         self.SetSizer(self.second_sizer)
         # self.Layout()
+        self.GetParent().Layout()
+
+
+    def OnBodypartPlot(self, e):
+
+        self.bodypart = self.bodypart_to_plot.GetValue()
+        if self.n_frame in self.t_val:
+            index = self.t_val.index(self.n_frame)
+            self.bodypart_list_val[index] = self.bodypart
+        
+        graph = SlipFunctions.plot_labels(self.df, self.n_frame, self.method_selection, self.t_val, self.start_val, \
+            self.end_val, (self.window_width-50) / 100, (self.window_height // 3) // 100, self.bodypart, self.bodypart_list_val, self.selected_bodyparts, 'y', self.likelihood_threshold, self.confirmed)
+
+        graph_canvas = FigureCanvas(self, -1, graph)
+        self.second_sizer.Replace(self.graph_canvas, graph_canvas)
+        self.second_sizer_widgets.remove(self.graph_canvas) 
+        self.graph_canvas = graph_canvas
+        self.second_sizer_widgets.append(self.graph_canvas)
+        self.Fit()
+        
+        SlipFunctions.ControlButton(self)
+        SlipFunctions.DisplayPlots(self, set_bodypart=False)
+
         self.GetParent().Layout()
 
     def DisplayFirstPage(self, e):
@@ -662,13 +722,21 @@ class ValidateSlipPanel(wx.Panel):
         self.instructions = wx.StaticText(self, -1, "Load the csv output from DeepLabCut and validate behavioral predictions manually.")
         self.first_sizer.Add(self.instructions, pos = (2, 0), span = (1, 3), flag = wx.LEFT|wx.TOP|wx.BOTTOM, border=25)
         self.first_sizer_widgets.append(self.instructions)
-        self.FirstPage()
+        self.SetSizer(self.first_sizer)
 
+        self.FirstPage()
+        self.Fit()
         self.GetParent().Layout()
+
 
     def DisplaySecondPage(self, e):
 
         self.SecondPage()
+        SlipFunctions.ControlButton(self)
+        SlipFunctions.DisplayPlots(self)
+
+        self.GetParent().Layout()
+        
 
     def OnMethod(self, e):
 
@@ -697,13 +765,17 @@ class ValidateSlipPanel(wx.Panel):
 
         self.likelihood_threshold = float(self.likelihood_input.GetValue())
 
-        graph = SlipFunctions.plot_labels(self.df, self.n_frame, self.t_val, self.start_val, \
-            self.end_val, (self.window_width-50) / 100, (self.window_height // 3) // 100, self.bodypart, 'y', self.likelihood_threshold)
+        graph = SlipFunctions.plot_labels(self.df, self.n_frame, self.method_selection, self.t_val, self.start_val, \
+            self.end_val, (self.window_width-50) / 100, (self.window_height // 3) // 100, self.bodypart, self.bodypart_list_val, self.selected_bodyparts, 'y', self.likelihood_threshold, self.confirmed)
+
         graph_canvas = FigureCanvas(self, -1, graph)
         self.second_sizer.Replace(self.graph_canvas, graph_canvas)
         self.second_sizer_widgets.remove(self.graph_canvas) 
         self.graph_canvas = graph_canvas
         self.second_sizer_widgets.append(self.graph_canvas)
         self.Fit()
+        
+        SlipFunctions.ControlButton(self)
+        SlipFunctions.DisplayPlots(self)
 
         self.GetParent().Layout()

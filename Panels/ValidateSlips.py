@@ -250,7 +250,7 @@ class ValidateSlipPanel(wx.Panel):
         # that matches the frame to be labelled as start/end of slip
         elif mark_type == "start":
             _, self.next_val_confirmed = SlipFunctions.find_confirmed_neighbors(self.n_frame, self.t_val, self.confirmed)
-            
+
             if self.n_frame in self.t_val:
                 index = self.t_val.index(self.n_frame)
             elif self.next_val_confirmed != 0:
@@ -763,7 +763,7 @@ class ValidateSlipPanel(wx.Panel):
         except:
             # awaiting bodypart selection
             self.pred_text.SetLabel(f"\n{self.pred_text_extra}No slips detected! Try selecting a different bodypart or method?\n")
-            print(sys.exc_info())
+            # print(sys.exc_info())
             pass
 
     def OnBodypart(self, e):

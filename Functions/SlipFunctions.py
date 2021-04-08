@@ -51,11 +51,26 @@ def fix_column_names(pd_dataframe):
 def filter_predictions(t_peaks, properties, pd_dataframe, bodypart, likelihood_threshold = 0.1, depth_threshold = 0.8):
     '''
     discard found peaks if the DLC prediction at a certain timepoint is below the set likelihood threshold
-    '''
+    '''    
+    for i, t in enumerate(properties['left_bases']):
+        if pd_dataframe.iloc[t][f'{bodypart} likelihood']<likelihood_threshold:
+            properties['left_bases'][i] = t_peaks[i] - 10
+    for i, t in enumerate(properties['right_bases']):
+        if pd_dataframe.iloc[t][f'{bodypart} likelihood']<likelihood_threshold:
+            properties['right_bases'][i] = t_peaks[i] + 10
+    for i, t in enumerate(properties['left_bases']):
+        if pd_dataframe.iloc[t][f'{bodypart} likelihood']<likelihood_threshold:
+            properties['left_bases'][i] = t_peaks[i] - 10
+    for i, t in enumerate(properties['right_bases']):
+        if pd_dataframe.iloc[t][f'{bodypart} likelihood']<likelihood_threshold:
+            properties['right_bases'][i] = t_peaks[i] + 10
+
     result = np.where(pd_dataframe.iloc[list(t_peaks)][f'{bodypart} likelihood']>=likelihood_threshold)
     ind_valid_peaks = []
     result = np.array(result[0])
     ind_valid_peaks.append(result[0])
+
+
     for i in range(1, len(result)):
         prev_mid = t_peaks[result[i-1]]
         curr_mid = t_peaks[result[i]]
@@ -93,6 +108,9 @@ def filter_predictions(t_peaks, properties, pd_dataframe, bodypart, likelihood_t
     for item in properties:
         # a dictionary containing prominence, start, end etc.
         properties[item] = properties[item][ind_valid_peaks]
+
+
+
     return t_peaks, properties
 
 

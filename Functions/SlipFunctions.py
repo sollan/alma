@@ -102,13 +102,8 @@ def find_slips(pd_dataframe, bodypart, axis, panel = None, method = 'Baseline', 
         '''
         recommended for smooth / noiseless prediction
         '''
-        index = np.array(pd_dataframe[pd_dataframe[f'{bodypart} likelihood']>=likelihood_threshold].index)
-        t_peaks, properties = find_peaks(pd_dataframe[f'{bodypart} {axis}']\
-                                [pd_dataframe[f'{bodypart} likelihood']>=likelihood_threshold], height=-10000, prominence=(45,100000))
+        t_peaks, properties = find_peaks(pd_dataframe[f'{bodypart} {axis}'], height=-10000, prominence=(45,100000))
 #         print('start filter')
-        t_peaks = index[t_peaks]
-        properties['left_bases'] = index[properties['left_bases']]
-        properties['right_bases'] = index[properties['right_bases']]
         t_peaks, properties = filter_predictions(t_peaks, properties, pd_dataframe, bodypart, likelihood_threshold, depth_threshold)
         # h_peaks = properties["prominences"]
         start_times = properties['left_bases']

@@ -54,16 +54,16 @@ def filter_predictions(t_peaks, properties, pd_dataframe, bodypart, likelihood_t
     '''    
     for i, t in enumerate(properties['left_bases']):
         if pd_dataframe.iloc[t][f'{bodypart} likelihood']<likelihood_threshold:
-            properties['left_bases'][i] = t_peaks[i] - 10
+            properties['left_bases'][i] = t_peaks[i] - 1
     for i, t in enumerate(properties['right_bases']):
         if pd_dataframe.iloc[t][f'{bodypart} likelihood']<likelihood_threshold:
-            properties['right_bases'][i] = t_peaks[i] + 10
+            properties['right_bases'][i] = t_peaks[i] + 1
     for i, t in enumerate(properties['left_bases']):
         if pd_dataframe.iloc[t][f'{bodypart} likelihood']<likelihood_threshold:
-            properties['left_bases'][i] = t_peaks[i] - 10
+            properties['left_bases'][i] = t_peaks[i] - 1
     for i, t in enumerate(properties['right_bases']):
         if pd_dataframe.iloc[t][f'{bodypart} likelihood']<likelihood_threshold:
-            properties['right_bases'][i] = t_peaks[i] + 10
+            properties['right_bases'][i] = t_peaks[i] + 1
 
     result = np.where(pd_dataframe.iloc[list(t_peaks)][f'{bodypart} likelihood']>=likelihood_threshold)
     ind_valid_peaks = []

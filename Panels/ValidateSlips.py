@@ -67,7 +67,7 @@ class ValidateSlipPanel(wx.Panel):
             if self.df is not None:
                 self.has_imported_file = True
                 self.import_csv_text.SetLabel(f"File imported! \n\n{self.filename}\n")
-                self.GetParent().Layout()
+                # self.GetParent().Layout()
 
                 self.method_label.Show()
 
@@ -93,6 +93,7 @@ class ValidateSlipPanel(wx.Panel):
 
         except AttributeError:
             # user cancelled file import in pop up
+            print(sys.exc_info())
             pass
 
 
@@ -103,7 +104,6 @@ class ValidateSlipPanel(wx.Panel):
         n_pred, depth_pred, t_pred, start_pred, end_pred, bodypart_list_pred = 0,[],[],[],[],[]
 
         for bodypart in self.selected_bodyparts:
-            
             n_pred_temp, depth_pred_temp, t_pred_temp, start_pred_temp, end_pred_temp = \
                 SlipFunctions.find_slips(self.df, bodypart, 'y', panel=self, method = self.method_selection, likelihood_threshold = self.likelihood_threshold, depth_threshold = self.depth_threshold, threshold = self.threshold)
             n_pred += n_pred_temp
@@ -498,7 +498,6 @@ class ValidateSlipPanel(wx.Panel):
         self.Fit()
         self.SetSizer(self.first_sizer)
         
-                
         self.GetParent().Layout()
 
 
@@ -534,7 +533,7 @@ class ValidateSlipPanel(wx.Panel):
         #     self.end_check_box.SetValue(True)
 
         # initialize validation results
-        self.likelihood_threshold = 0
+        # self.likelihood_threshold = 0
         self.n_val, self.depth_val, self.t_val, self.start_val, self.end_val, self.bodypart_list_val = \
             self.n_pred, self.depth_pred[:], self.t_pred[:], self.start_pred[:], self.end_pred[:], self.bodypart_list_pred[:]
 
@@ -543,7 +542,6 @@ class ValidateSlipPanel(wx.Panel):
         frame = SlipFunctions.plot_frame(self.video, self.n_frame, 
             (self.window_width-50) / 200, (self.window_height // 3) // 100, int(self.frame_rate))
         self.frame_canvas = FigureCanvas(self, -1, frame)
-
 
         self.second_sizer.Add(self.frame_canvas, pos= (8, 0), span = (6, 0),flag = wx.LEFT, border = 25)
         self.second_sizer_widgets.append(self.frame_canvas)
@@ -664,7 +662,7 @@ class ValidateSlipPanel(wx.Panel):
         self.second_sizer.Add(self.likelihood_label, pos= (17, 0), span = (1, 3),flag = wx.LEFT | wx.TOP, border = 25)
         self.second_sizer_widgets.append(self.likelihood_label)
 
-        self.likelihood_input = wx.TextCtrl(self, value = "0")
+        self.likelihood_input = wx.TextCtrl(self, value = str(self.likelihood_threshold))
         self.second_sizer.Add(self.likelihood_input, pos= (17, 3), flag = wx.LEFT | wx.TOP, border = 25)
         self.second_sizer_widgets.append(self.likelihood_input)
 
@@ -717,6 +715,13 @@ class ValidateSlipPanel(wx.Panel):
         self.first_sizer_widgets = []
         self.second_sizer_widgets = []
         self.has_imported_file = False
+        self.video = None
+        self.df = None
+        self.filename = None
+        self.bodyparts = None
+        self.n_pred, self.depth_pred, self.t_pred, self.start_pred, self.end_pred, self.bodypart_list_pred = 0,[],[],[],[],[]
+        self.n_val, self.depth_val, self.t_val, self.start_val, self.end_val, self.bodypart_list_val = 0,[],[],[],[],[]
+
         self.dirname = os.getcwd()
         
         self.first_sizer = wx.GridBagSizer(0, 0)

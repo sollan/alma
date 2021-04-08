@@ -252,8 +252,10 @@ class ValidateSlipPanel(wx.Panel):
             _, self.next_val_confirmed = SlipFunctions.find_confirmed_neighbors(self.n_frame, self.t_val, self.confirmed)
             if self.n_frame in self.t_val:
                 index = self.t_val.index(self.n_frame)
-            else:
+            elif self.next_val_confirmed != 0:
                 index = self.t_val.index(self.next_val_confirmed)
+            else:
+                index = self.t_val.index(self.next_val)
             
             if isChecked:
                 if self.n_frame not in self.start_val:
@@ -268,9 +270,11 @@ class ValidateSlipPanel(wx.Panel):
             self.prev_val_confirmed, _ = SlipFunctions.find_confirmed_neighbors(self.n_frame, self.t_val, self.confirmed)
             if self.n_frame in self.t_val:
                 index = self.t_val.index(self.n_frame)
-            else:
+            elif self.prev_val_confirmed != 0:
                 index = self.t_val.index(self.prev_val_confirmed)
-
+            else:
+                index = self.t_val.index(self.prev_val)
+            
             if isChecked:
                 if self.n_frame not in self.end_val:
                     self.end_val.pop(index)

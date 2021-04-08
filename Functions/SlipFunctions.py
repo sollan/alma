@@ -96,7 +96,7 @@ def filter_predictions(t_peaks, properties, pd_dataframe, bodypart, likelihood_t
     return t_peaks, properties
 
 
-def find_slips(pd_dataframe, bodypart, axis, panel = None, method = 'Baseline', likelihood_threshold = 0.1, depth_threshold = 0.8, window = None, threshold = None, **kwargs): 
+def find_slips(pd_dataframe, bodypart, axis, panel = None, method = 'Baseline', likelihood_threshold = 0.1, depth_threshold = 0.8, window = '', threshold = '', **kwargs): 
         
     if method == 'Deviation':
         '''
@@ -122,7 +122,7 @@ def find_slips(pd_dataframe, bodypart, axis, panel = None, method = 'Baseline', 
         properties['left_bases'] = index[properties['left_bases']]
         properties['right_bases'] = index[properties['right_bases']]
         t_peaks, properties = filter_predictions(t_peaks, properties, pd_dataframe, bodypart, likelihood_threshold, depth_threshold)
-        if window is None:
+        if window == '':
             if panel is not None:
                 window = panel.frame_rate // 5
             else:
@@ -137,8 +137,7 @@ def find_slips(pd_dataframe, bodypart, axis, panel = None, method = 'Baseline', 
         when there is a clear cut off pixel value for the entire video, 
         e.g. location of ladder in frame
         '''
-        if threshold is None:  
-            
+        if threshold == '':  
             threshold = np.mean(pd_dataframe[f'{bodypart} {axis}']) + np.std(pd_dataframe[f'{bodypart} {axis}'])
         adjusted = fit_threshold(pd_dataframe[f'{bodypart} {axis}'], threshold)
         t_peaks, properties = find_peaks(adjusted, prominence=(10,1000))

@@ -1,7 +1,7 @@
 import wx
 from wx.lib.stattext import GenStaticText as StaticText
 from Functions import SlipFunctions, ConfigFunctions
-import os
+import os, sys
 import yaml
 import matplotlib as mpl
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
@@ -34,7 +34,8 @@ class ValidateSlipPanel(wx.Panel):
 
         # load parameters to set dimension of frames and graphs
         configs = ConfigFunctions.load_config('./config.yaml')
-        self.window_width, self.window_height, self.frame_rate, self.likelihood_threshold, self.depth_threshold = configs['window_width'], configs['window_height'], configs['frame_rate'], configs['likelihood_threshold'], configs['depth_threshold']
+        self.window_width, self.window_height, self.frame_rate, self.likelihood_threshold, self.depth_threshold, self.threshold = \
+            configs['window_width'], configs['window_height'], configs['frame_rate'], configs['likelihood_threshold'], configs['depth_threshold'], configs['threshold']
         self.first_sizer_widgets = []
         self.second_sizer_widgets = []
         self.has_imported_file = False
@@ -104,7 +105,7 @@ class ValidateSlipPanel(wx.Panel):
         for bodypart in self.selected_bodyparts:
             
             n_pred_temp, depth_pred_temp, t_pred_temp, start_pred_temp, end_pred_temp = \
-                SlipFunctions.find_slips(self.df, bodypart, 'y', panel=self, method = self.method_selection, likelihood_threshold = self.likelihood_threshold, depth_threshold = self.depth_threshold)
+                SlipFunctions.find_slips(self.df, bodypart, 'y', panel=self, method = self.method_selection, likelihood_threshold = self.likelihood_threshold, depth_threshold = self.depth_threshold, threshold = self.threshold)
             n_pred += n_pred_temp
             depth_pred.extend(depth_pred_temp)
             t_pred.extend(t_pred_temp)
@@ -743,23 +744,39 @@ class ValidateSlipPanel(wx.Panel):
 
         self.selected_bodyparts = [self.bodyparts[i] for i in list(self.bodypart_choices.GetCheckedItems())]
         self.method_selection = self.method_choices.GetValue()
+        if self.method_selection == 'Threshold': 
+            if self.threshold == '':
+                self.pred_text_extra = 'Using automatic threshold (mean + 1 SD of y coordinate for each bodypart). \n'
+            else:
+                self.pred_text_extra = f'Current threshold: {self.threshold} px. \n'
+        else:
+            self.pred_text_extra = ''
+
         try:
             self.MakePrediction(self)
             self.GetParent().Layout()
-        except RuntimeWarning:
+        except:
             # awaiting bodypart selection
-            self.pred_text.SetLabel("\n\n")
+            self.pred_text.SetLabel(f"\n{self.pred_text_extra}No slips detected! Try selecting a different bodypart or method?\n")
             pass
 
     def OnBodypart(self, e):
+        
+        if self.method_selection == 'Threshold': 
+            if self.threshold == '':
+                self.pred_text_extra = 'Using automatic threshold (mean + 1 SD of y coordinate for each bodypart). \n'
+            else:
+                self.pred_text_extra = f'Current threshold: {self.threshold} px. \n'
+        else:
+            self.pred_text_extra = ''
 
         self.selected_bodyparts = [self.bodyparts[i] for i in list(self.bodypart_choices.GetCheckedItems())]
         try:
             self.MakePrediction(self)
             self.GetParent().Layout()
         except:
-            # awaiting bodypart selection
-            self.pred_text.SetLabel("\n\n")
+            # awaiting method selection
+            self.pred_text.SetLabel(f"\n{self.pred_text_extra}No slips detected! Try selecting a different bodypart or method?\n")
             pass
 
     def OnLikelihood(self, e):

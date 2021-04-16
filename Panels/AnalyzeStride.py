@@ -196,7 +196,7 @@ class AnalyzeStridePanel(wx.Panel):
                 self.has_input_path = True
                 self.has_imported_file = False
                 self.import_csv_text.SetLabel(
-                    f"Loaded \n\n{len(self.files)} csv files found in {self.input_path}.\n")
+                    f"Loaded {len(self.files)} csv files found in {self.input_path}.\n")
                 self.GetParent().Layout()
 
                 configs = ConfigFunctions.load_config('./config.yaml')
@@ -410,7 +410,8 @@ class AnalyzeStridePanel(wx.Panel):
             self, 'Choose a folder to save parameter extraction results', self.dirname, style=wx.DD_DEFAULT_STYLE)
         if export_dialog.ShowModal() == wx.ID_OK:
             self.output_path = export_dialog.GetPath()
-            self.extract_parameters_text.SetLabel(f"Saving to {self.output_path}")
+            self.extract_parameters_text.SetLabel(f"Saving to {self.output_path}. You can now start parameter extraction. \n\n"
+            + "Parameter extraction can take a few minutes per file (depending on your computer processors). Please be patient.")
         else:
             self.output_path = ''
         export_dialog.Destroy()
@@ -431,10 +432,11 @@ class AnalyzeStridePanel(wx.Panel):
         
         for i, file in enumerate(self.files):
             
-            self.extract_parameters_text.SetLabel("This might take a while (depending on your computer processor). Please be patient.")
+            # self.extract_parameters_text.SetLabel("This might take a while (depending on your computer processor). Please be patient.")
+            # self.GetParent().Layout()
 
             self.GetParent().SetStatusText(f"Extracting parameters for file {i+1} out of {len(self.files)}...")
-
+            self.GetParent().Layout()
             self.filename = os.path.join(self.input_path, file)
             self.df, self.filename = KinematicsFunctions.read_file(self.filename)
             self.df, _ = KinematicsFunctions.fix_column_names(self.df)
@@ -469,7 +471,8 @@ class AnalyzeStridePanel(wx.Panel):
 
         if export_dialog.ShowModal() == wx.ID_OK:
             self.output_path = export_dialog.GetPath()
-            self.extract_parameters_text.SetLabel(f"Saving to {self.output_path}")
+            self.extract_parameters_text.SetLabel(f"Saving to {self.output_path}. You can now start parameter extraction. \n\n"
+            + "Parameter extraction can take a few minutes per file (depending on your computer processors). Please be patient.")
             self.GetParent().SetStatusText("Ready to extract parameters!")
 
             self.extract_parameters_button = wx.Button(
@@ -488,9 +491,13 @@ class AnalyzeStridePanel(wx.Panel):
 
 
     def ExtractParameters(self, e):
+        
+        # self.extract_parameters_text.SetLabel("This might take a while (depending on your computer processor). Please be patient.")
+        # self.GetParent().Layout()
 
         self.GetParent().SetStatusText(
             f"\nWorking hard to extract 44 kinematic parameters for {self.filename}...\n")
+
         self.GetParent().Layout()
         
         if self.method_selection == 'Semi-automated':

@@ -1,5 +1,6 @@
 from ast import parse
 import pandas as pd
+import scipy
 from scipy.signal import peak_widths, find_peaks, butter, filtfilt
 from scipy.spatial.distance import euclidean
 import numpy as np
@@ -7,6 +8,8 @@ import matplotlib as mpl
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 import math
 import fastdtw
+import statistics as stat
+from sklearn.mixture import GaussianMixture
 import cv2
 import wx
 
@@ -72,104 +75,123 @@ def treadmill_correction(pd_dataframe, bodyparts, treadmill_speed = 8.09):
     return pd_dataframe
 
 
-def find_strides(pd_dataframe, bodypart, method = 'Rate of change', rolling_window = None, 
-                 change_threshold = 0, treadmill_speed = None, frame_rate = 119.88, threshold = 540, **kwargs):
+# def find_strides(pd_dataframe, bodypart, method = 'Rate of change', rolling_window = None, 
+#                  change_threshold = 0, treadmill_speed = None, frame_rate = 119.88, threshold = 540, **kwargs):
 
-    start_times = []
-    end_times = []
-    durations = []
+#     start_times = []
+#     end_times = []
+#     durations = []
 
-    if method == "Rate of change":
+#     if method == "Rate of change":
+# #         axis = 'x'
+
+# #         mean_bodypart_x = pd_dataframe[f'{bodypart} {axis}'].rolling(rolling_window).mean() if rolling_window is not None else pd_dataframe[f'{bodypart} {axis}']
+# #         mean_bodypart_x_change = np.diff(mean_bodypart_x)
+
+# #         is_stance = [i <= change_threshold for i in mean_bodypart_x_change]
+
+# #         if not is_stance[0]:
+# #             start_times.append(0)
+
+# #         for i in range(1, len(is_stance)):
+# #             if is_stance[i] != is_stance[i-1]: # change of stance / swing status
+# #                 if not is_stance[i]: # from stance to not stance
+# #                     end_times.append(i-1)
+# #                     start_times.append(i)
+# #                 # else: # from not stance to stance
+# #                     # end_times.append(i)
+# #                     # pass
+# #         if is_stance[-1]:
+# #             end_times.append(len(is_stance))
 #         axis = 'x'
 
-#         mean_bodypart_x = pd_dataframe[f'{bodypart} {axis}'].rolling(rolling_window).mean() if rolling_window is not None else pd_dataframe[f'{bodypart} {axis}']
-#         mean_bodypart_x_change = np.diff(mean_bodypart_x)
-
-#         is_stance = [i <= change_threshold for i in mean_bodypart_x_change]
-
-#         if not is_stance[0]:
-#             start_times.append(0)
-
+# #         mean_bodypart_x = pd_dataframe[f'{bodypart} {axis}'].rolling(rolling_window).mean() if rolling_window is not None else pd_dataframe[f'{bodypart} {axis}']
+#         fc = 6  # Cut-off frequency of the filter
+#         w = fc / (frame_rate / 2) # Normalize the frequency
+#         b, a = butter(5, w, 'low')
+#         filtered_bodypart_x = filtfilt(b, a, pd_dataframe[f'{bodypart} x'])
+#         filtered_bodypart_x_change = np.diff(filtered_bodypart_x)
+#         # movement direction: x loc decreasing; treadmill direction: x loc increasing
+#         # x loc change > 0 -> treadmill movement dominates (limb is stable)
+#         is_stance = [i >= change_threshold for i in filtered_bodypart_x_change]
+# #         print(is_stance, filtered_bodypart_x_change)
 #         for i in range(1, len(is_stance)):
 #             if is_stance[i] != is_stance[i-1]: # change of stance / swing status
-#                 if not is_stance[i]: # from stance to not stance
-#                     end_times.append(i-1)
-#                     start_times.append(i)
-#                 # else: # from not stance to stance
-#                     # end_times.append(i)
-#                     # pass
-#         if is_stance[-1]:
-#             end_times.append(len(is_stance))
-        axis = 'x'
-
-#         mean_bodypart_x = pd_dataframe[f'{bodypart} {axis}'].rolling(rolling_window).mean() if rolling_window is not None else pd_dataframe[f'{bodypart} {axis}']
-        fc = 6  # Cut-off frequency of the filter
-        w = fc / (frame_rate / 2) # Normalize the frequency
-        b, a = butter(5, w, 'low')
-        filtered_bodypart_x = filtfilt(b, a, pd_dataframe[f'{bodypart} x'])
-        filtered_bodypart_x_change = np.diff(filtered_bodypart_x)
-        # movement direction: x loc decreasing; treadmill direction: x loc increasing
-        # x loc change > 0 -> treadmill movement dominates (limb is stable)
-        is_stance = [i >= change_threshold for i in filtered_bodypart_x_change]
-#         print(is_stance, filtered_bodypart_x_change)
-        for i in range(1, len(is_stance)):
-            if is_stance[i] != is_stance[i-1]: # change of stance / swing status
-                # if is_stance[i] and pd_dataframe[f'{bodypart} y'].iloc[i] >= threshold: 
-                # from "not stance" to "stance", and y loc also lower than threshold (opencv reverses axis)
-                # i.e., "touching" treadmill
-            	start_times.append(i)
-                # elif is_stance[i] and pd_dataframe[f'{bodypart} y'].iloc[i] < threshold: 
-                    # is_stance[i] = False
+#                 # if is_stance[i] and pd_dataframe[f'{bodypart} y'].iloc[i] >= threshold: 
+#                 # from "not stance" to "stance", and y loc also lower than threshold (opencv reverses axis)
+#                 # i.e., "touching" treadmill
+#             	start_times.append(i)
+#                 # elif is_stance[i] and pd_dataframe[f'{bodypart} y'].iloc[i] < threshold: 
+#                     # is_stance[i] = False
                     
-        for i in range(1,len(start_times)):
-            end_times.append(start_times[i]-1)
+#         for i in range(1,len(start_times)):
+#             end_times.append(start_times[i]-1)
             
-        end_times.append(len(is_stance))
+#         end_times.append(len(is_stance))
         
 
-    elif method == 'Threshold':
-        '''
-        when there is a clear cut off pixel value for the entire video, 
-        e.g. location of treadmill in frame
-        '''
-        axis = 'y'
+#     elif method == 'Threshold':
+#         '''
+#         when there is a clear cut off pixel value for the entire video, 
+#         e.g. location of treadmill in frame
+#         '''
+#         axis = 'y'
 
-        if threshold is None:  
-            threshold = np.percentile(pd_dataframe[f'{bodypart} {axis}'], 50)
-        # print(threshold)
-        # pd_dataframe[f'{bodypart} {axis}'] = pd_dataframe[f'{bodypart} {axis}'].rolling(rolling_window).mean() if rolling_window is not None else pd_dataframe[f'{bodypart} {axis}']
+#         if threshold is None:  
+#             threshold = np.percentile(pd_dataframe[f'{bodypart} {axis}'], 50)
+#         # print(threshold)
+#         # pd_dataframe[f'{bodypart} {axis}'] = pd_dataframe[f'{bodypart} {axis}'].rolling(rolling_window).mean() if rolling_window is not None else pd_dataframe[f'{bodypart} {axis}']
 
-        # y axis loc larger than threshold == limb touching treadmill == end of stride        
-        on_treadmill = [i >= threshold for i in pd_dataframe[f'{bodypart} {axis}']]
-        # print(on_treadmill)
-#         if not on_treadmill[0]:
-#             start_times.append(0)
+#         # y axis loc larger than threshold == limb touching treadmill == end of stride        
+#         on_treadmill = [i >= threshold for i in pd_dataframe[f'{bodypart} {axis}']]
+#         # print(on_treadmill)
+# #         if not on_treadmill[0]:
+# #             start_times.append(0)
+# #         for i in range(1, len(on_treadmill)):
+# #             if on_treadmill[i] != on_treadmill[i-1]: # change of stance / swing status
+# #                 if not on_treadmill[i]: # from not stance to stance
+# #                     # end_times.append(i)
+# #                     # pass
+# #                 # else: # from stance to not stance
+# #                     end_times.append(i-1)
+# #                     start_times.append(i)
+# #         if on_treadmill[-1]:
+# #             end_times.append(len(on_treadmill))
+
 #         for i in range(1, len(on_treadmill)):
 #             if on_treadmill[i] != on_treadmill[i-1]: # change of stance / swing status
-#                 if not on_treadmill[i]: # from not stance to stance
-#                     # end_times.append(i)
-#                     # pass
-#                 # else: # from stance to not stance
-#                     end_times.append(i-1)
+#                 if on_treadmill[i]: # from stance to not stance
 #                     start_times.append(i)
-#         if on_treadmill[-1]:
-#             end_times.append(len(on_treadmill))
-
-        for i in range(1, len(on_treadmill)):
-            if on_treadmill[i] != on_treadmill[i-1]: # change of stance / swing status
-                if on_treadmill[i]: # from stance to not stance
-                    start_times.append(i)
                     
-        for i in range(1,len(start_times)):
-            end_times.append(start_times[i]-1)
+#         for i in range(1,len(start_times)):
+#             end_times.append(start_times[i]-1)
             
-        end_times.append(len(on_treadmill))
-        print(start_times, end_times)
-    durations = np.array(end_times) - np.array(start_times)
-    # print(start_times, end_times, durations)
-    return list(start_times), list(end_times), list(durations)
+#         end_times.append(len(on_treadmill))
+#         print(start_times, end_times)
+#     durations = np.array(end_times) - np.array(start_times)
+#     # print(start_times, end_times, durations)
+#     return list(start_times), list(end_times), list(durations)
 
 
+def estimate_speed(pd_dataframe, bodypart, cm_speed, px_to_cm_speed_ratio, frame_rate):
+
+    x_change = np.diff(pd_dataframe[f'{bodypart} x'][pd_dataframe[f'{bodypart} likelihood']>0.5])
+    x_change_filt = x_change[(x_change < np.mean(x_change) + 1*np.std(x_change)) & (x_change > np.mean(x_change) - 1*np.std(x_change))]
+
+    px_speed, _ = scipy.stats.norm.fit(x_change_filt[x_change_filt>0])
+
+    if cm_speed is None: 
+        cm_speed = px_speed / px_to_cm_speed_ratio
+    else:
+        px_to_cm_speed_ratio = px_speed / cm_speed
+
+    # use a dictionary here!
+    pixels_per_cm = 1 / (cm_speed / px_speed / frame_rate)
+    # print(f'Estimated pixel speed: {px_speed} pixels per frame.\n Estimated length conversion: {pixels_per_cm} pixels per cm.')
+    # print(f'Estimated px to cm speed ratio: {px_to_cm_speed_ratio} pixels per cm.')
+
+    return cm_speed, px_speed, pixels_per_cm, px_to_cm_speed_ratio
+ 
 
 def make_output(pathname, start_times, end_times, durations):
 
@@ -226,7 +248,7 @@ def find_swing_stance(elevation_angle_change, start, end):
         stance_dur = np.where(np.diff(np.sign(elevation_angle_change[start:end])) > 0)[0][0]
     except IndexError:
         # might be a false stride or only drag
-        print(f'No swing phase found in this step cycle! Marking full cycle as stance. (Stride starting at frame {start})')
+        # print(f'No swing phase found in this step cycle! Marking full cycle as stance. (Stride starting at frame {start})')
         stance_dur = end-start
 
     return stance_dur, (end-start-stance_dur)/(end-start), stance_dur/(end-start)
@@ -247,9 +269,12 @@ def find_drag(toe_y, stance_dur, threshold, start, end):
 
 
 def find_euclidean_speed(x, y, frame_rate):
+    '''
+    calculate speed in pixel/s
+    '''
     loc_changes = []
     for i in range(1, len(x)):
-        loc_changes.append(np.sqrt((x[i] - x[i-1])**2 + (y[i] - y[i-1])**2) / frame_rate)
+        loc_changes.append(np.sqrt((x[i] - x[i-1])**2 + (y[i] - y[i-1])**2) * frame_rate)
     return loc_changes
 
 
@@ -264,6 +289,7 @@ def parse_stride_lists(x, starts, ends, first_stride, n):
     returns a list of strides
     '''
     return [x[starts[i]:ends[i]] for i in range(first_stride, first_stride+n)]
+
 
 
 def pairwise_dtw(iterable):
@@ -283,16 +309,17 @@ def pairwise_dtw(iterable):
     return dtw_result
 
 
-def extract_parameters(frame_rate, pixels_per_cm, pd_dataframe, stance_threshold, treadmill_y, cutoff_f, starts, ends):
+def extract_parameters(frame_rate, pd_dataframe, cutoff_f, bodypart, cm_speed = None, px_to_cm_speed_ratio = 0.4806):
     '''
-    stance_threshold: y-axis threshold, above which--in reality below 
-    which (bottom pixels have large y axis values in opencv)--the motion 
-    is considered stance
+    pd_dataframe: contains raw coordinates (not adjusted for treadmill movement, unfiltered)
+    bodypart: which bodypart to use for stride estimation
 
-    treadmill_y: y axis level of the treadmill (or the runway) height, for 
-    step height calculation only
     '''
-    # edit find_drag to make use of treadmill_y_level if provided
+    
+    starts = []
+    ends = []
+    durations = []
+        
     cycle_dur_secs = []
     cycle_dur_frames = []
     cycle_vs = []
@@ -326,6 +353,11 @@ def extract_parameters(frame_rate, pixels_per_cm, pd_dataframe, stance_threshold
     knee_joint_amplitudes = []
     hip_joint_amplitudes = []
     
+    mtp_joint_sds = []
+    ankle_joint_sds = []
+    knee_joint_sds = []
+    hip_joint_sds = []
+    
     drag_ts = []
     drag_percentages = []
 
@@ -342,14 +374,36 @@ def extract_parameters(frame_rate, pixels_per_cm, pd_dataframe, stance_threshold
     dtw_y_plane_10_sds = []
     dtw_xy_plane_10_means = []
     dtw_xy_plane_10_sds = []
+    
+    x_change = np.diff(pd_dataframe[f'{bodypart} x'][pd_dataframe[f'{bodypart} likelihood']>0.5])
+    x_change_filt = x_change[(x_change < np.mean(x_change) + 1*np.std(x_change)) & (x_change > np.mean(x_change) - 1*np.std(x_change))]
 
+    px_speed, std = scipy.stats.norm.fit(x_change_filt[x_change_filt>0])
+
+    if cm_speed is None: 
+        cm_speed = px_speed / px_to_cm_speed_ratio
+
+    # use a dictionary here!
+    pixels_per_cm = 1 / (cm_speed / px_speed / frame_rate)
+    # print(f'Estimated pixel speed: {px_speed} pixels per frame.\n Estimated length conversion: {pixels_per_cm} pixels per cm.')
+
+    correction = np.arange(0, len(pd_dataframe), 1)
+    correction = correction * px_speed
+
+    toe_x = -(pd_dataframe['toe x'] - correction)
+    mtp_x = -(pd_dataframe['mtp x'] - correction)
+    ankle_x = -(pd_dataframe['ankle x'] - correction)
+    knee_x = -(pd_dataframe['knee x'] - correction)
+    hip_x = -(pd_dataframe['hip x'] - correction)
+    crest_x = -(pd_dataframe['iliac crest x'] - correction)
+    
     # should use a dictionary here
-    smooth_toe_x = butterworth_filter(pd_dataframe['toe x'], frame_rate, cutoff_f)
-    smooth_mtp_x = butterworth_filter(pd_dataframe['mtp x'], frame_rate, cutoff_f)
-    smooth_ankle_x = butterworth_filter(pd_dataframe['ankle x'], frame_rate, cutoff_f)
-    smooth_knee_x = butterworth_filter(pd_dataframe['knee x'], frame_rate, cutoff_f)
-    smooth_hip_x = butterworth_filter(pd_dataframe['hip x'], frame_rate, cutoff_f)
-    smooth_crest_x = butterworth_filter(pd_dataframe['iliac crest x'], frame_rate, cutoff_f)
+    smooth_toe_x = butterworth_filter(toe_x, frame_rate, cutoff_f)
+    smooth_mtp_x = butterworth_filter(mtp_x, frame_rate, cutoff_f)
+    smooth_ankle_x = butterworth_filter(ankle_x, frame_rate, cutoff_f)
+    smooth_knee_x = butterworth_filter(knee_x, frame_rate, cutoff_f)
+    smooth_hip_x = butterworth_filter(hip_x, frame_rate, cutoff_f)
+    smooth_crest_x = butterworth_filter(crest_x, frame_rate, cutoff_f)
 
     smooth_toe_y = butterworth_filter(pd_dataframe['toe y'], frame_rate, cutoff_f)
     smooth_mtp_y = butterworth_filter(pd_dataframe['mtp y'], frame_rate, cutoff_f)
@@ -389,114 +443,269 @@ def extract_parameters(frame_rate, pixels_per_cm, pd_dataframe, stance_threshold
 
     velocities = find_euclidean_speed(smooth_toe_x, smooth_toe_y, frame_rate)
     
-    for i in range(len(starts)):
+    # print(f'Absolute value (ignoring direction) of median of x coord change: {np.abs(stat.median(x_change))}')
+    # print(f'Percentage of data where absolute x coord change is less than 2px/frame: {len(np.where(np.abs(x_change) < 2)[0])/len(x_change)}')
+
+    # does gait appear normal? -> multimodal distribution from swing (body movement) and stance (treadmill)
+    if np.abs(stat.median(x_change)) < 0.5 and len(np.where(np.abs(x_change) < 2)[0])/len(x_change) > 0.68:
         
-        cycle_dur_frame = ends[i] - starts[i]
-        cycle_dur_secs.append(cycle_dur_frame / frame_rate)
-        cycle_dur_frames.append(cycle_dur_frame)
-
-        stride_len = find_stride_len(smooth_toe_x, starts[i], ends[i])
-        stride_lens.append(stride_len/pixels_per_cm)
+        # bodypart x coordinate rate of change does not meet assumption of multimodal distribution
+        # instead it is centered around 0
+        # step cycle cannot be detected properly
         
-        cycle_v = stride_len / cycle_dur_frame / frame_rate
-        cycle_vs.append(cycle_v / pixels_per_cm)
-        # or use averaged v from euclidean distance between every two frames? 
-        # (that would consider the whole trail travelled, not just the distance between start and destination)
-
-        stance_dur_frame, swing_perc, stance_perc = find_swing_stance(elevation_angle_change, starts[i], ends[i])
-        stance_dur_secs.append(stance_dur_frame / frame_rate)
-        swing_dur_secs.append((cycle_dur_frame - stance_dur_frame) / frame_rate)
+        normal_gait = 0
+        print('Too much dragging? Please check raw data.')
+        print(f'Median of selected bodypart x coordinate change per frame: {stat.median(x_change)}')                           
+        print('Calculating a subset of parameters independent of step cycles...')
         
-        swing_percentages.append(swing_perc)
-        stance_percentages.append(stance_perc)
+        starts.append(np.nan)
+        ends.append(np.nan)
+        durations.append(np.nan)
+        cycle_dur_secs.append(np.nan)
+        cycle_dur_frames.append(np.nan)
+        stride_lens.append(np.nan)
+        cycle_vs.append(np.nan)
+        stance_dur_secs.append(np.nan)
+        swing_dur_secs.append(np.nan)
+        swing_percentages.append(np.nan)
+        stance_percentages.append(np.nan)
+        limb_len_means.append(np.mean(limb_lens) / pixels_per_cm)
+        limb_len_maxs.append(np.nan)
+        limb_len_mins.append(np.nan)
+        limb_len_sds.append(np.std(limb_lens) / pixels_per_cm)
+        step_heights.append(0) 
+        max_v_during_swings.append(np.nan)
+
+        mtp_joint_extensions.append(np.nan)
+        mtp_joint_flexions.append(np.nan)
+        mtp_joint_amplitudes.append(np.mean(angles_toe_mtp_ankle))
+
+        ankle_joint_extensions.append(np.nan)
+        ankle_joint_flexions.append(np.nan)
+        ankle_joint_amplitudes.append(np.mean(angles_mtp_ankle_knee))
+
+        knee_joint_extensions.append(np.nan)
+        knee_joint_flexions.append(np.nan)
+        knee_joint_amplitudes.append(np.mean(angles_ankle_knee_hip))
+
+        hip_joint_extensions.append(np.nan)
+        hip_joint_flexions.append(np.nan)
+        hip_joint_amplitudes.append(np.mean(angles_knee_hip_crest))
+
+        mtp_joint_sds.append(np.std(angles_toe_mtp_ankle))
+        ankle_joint_sds.append(np.std(angles_mtp_ankle_knee))
+        knee_joint_sds.append(np.std(angles_ankle_knee_hip))
+        hip_joint_sds.append(np.std(angles_knee_hip_crest))
+
+        drag_ts.append(np.nan)
+        drag_percentages.append(1)
+        dtw_x_plane_5_means.append(np.nan)
+        dtw_x_plane_5_sds.append(np.nan)
+        dtw_y_plane_5_means.append(np.nan)
+        dtw_y_plane_5_sds.append(np.nan)
+        dtw_xy_plane_5_means.append(np.nan)
+        dtw_xy_plane_5_sds.append(np.nan)
+        dtw_x_plane_10_means.append(np.nan)
+        dtw_x_plane_10_sds.append(np.nan)
+        dtw_y_plane_10_means.append(np.nan)
+        dtw_y_plane_10_sds.append(np.nan)
+        dtw_xy_plane_10_means.append(np.nan)
+        dtw_xy_plane_10_sds.append(np.nan)
+
+    else:
         
-        limb_len_means.append(np.mean(limb_lens[starts[i] : ends[i]]) / pixels_per_cm)
-        limb_len_maxs.append(max(limb_lens[starts[i] : ends[i]]) / pixels_per_cm)
-        limb_len_mins.append(min(limb_lens[starts[i] : ends[i]]) / pixels_per_cm)
-        limb_len_sds.append(np.std(limb_lens[starts[i] : ends[i]]) / pixels_per_cm)
-
-        step_heights.append((treadmill_y - min(smooth_toe_y[starts[i]:ends[i]])) / pixels_per_cm) 
-
-        # max step height (opencv reverses y axis, therefore the MIN())
-        if stance_dur_frame == cycle_dur_frame:
-            max_v_during_swings.append(0)
-        else:
-            max_v_during_swings.append(max(velocities[(starts[i]+stance_dur_frame):ends[i]]) / pixels_per_cm)
+        starts = []
+        ends = []
         
-        mtp_joint_extension = max(angles_toe_mtp_ankle[starts[i] : ends[i]])
-        ankle_joint_extension = max(angles_mtp_ankle_knee[starts[i] : ends[i]])
-        knee_joint_extension = max(angles_ankle_knee_hip[starts[i] : ends[i]])
-        hip_joint_extension = max(angles_knee_hip_crest[starts[i] : ends[i]])
+        filtered_bodypart_x = butterworth_filter(pd_dataframe[f'{bodypart} x'], frame_rate, 5)
+        filtered_bodypart_x_change = np.diff(filtered_bodypart_x)
+
+        # movement direction: x loc decreasing; treadmill direction: x loc increasing
+        # x loc change > 0 -> treadmill movement dominates (limb is stable)
+        is_stance = [i >= 0 for i in filtered_bodypart_x_change]
+        for i in range(1, len(is_stance)):
+            if is_stance[i] != is_stance[i-1]:
+                if is_stance[i]:
+                    starts.append(i)
+        for i in range(1,len(starts)):
+            ends.append(starts[i]-1)
+        ends.append(len(is_stance))
+        # print(f'Detected {len(ends)} strides. Calculating parameters...')
+
+        y = pd_dataframe['toe y'][pd_dataframe['toe likelihood'] > 0.5]
+        y_filt = y[(y < np.mean(y) + 1*np.std(y)) & (y > np.mean(y) - 1*np.std(y))]
+        n, b = np.histogram(y_filt, bins=100, density=True)
+        # fit 2 Gaussians to the pdf of toe y coord
+        gm = GaussianMixture(n_components=2, random_state=0).fit(np.array(b).reshape(-1,1))
+        # the Gaussian with larger mean corresponds to y coord during stance phase
+        # use this mean as threshold to detect dragging during swing phase
+        stance_threshold = max(gm.means_)
+        # use this plus SD (i.e., lower in space) as treadmill y coord, to calculate step height
+        treadmill_y = float(max(gm.means_) + np.sqrt(gm.covariances_[np.where(gm.means_ == max(gm.means_))]))
+
+        starts_included = []
+        ends_included = []
         
-        mtp_joint_flexion = min(angles_toe_mtp_ankle[starts[i] : ends[i]])
-        ankle_joint_flexion = min(angles_mtp_ankle_knee[starts[i] : ends[i]])
-        knee_joint_flexion = min(angles_ankle_knee_hip[starts[i] : ends[i]])
-        hip_joint_flexion = min(angles_knee_hip_crest[starts[i] : ends[i]])
-        
-        mtp_joint_amplitude = mtp_joint_extension - mtp_joint_flexion
-        ankle_joint_amplitude = ankle_joint_extension - ankle_joint_flexion
-        knee_joint_amplitude = knee_joint_extension - knee_joint_flexion
-        hip_joint_amplitude = hip_joint_extension - hip_joint_flexion
-        
-        mtp_joint_extensions.append(mtp_joint_extension)
-        mtp_joint_flexions.append(mtp_joint_flexion)
-        mtp_joint_amplitudes.append(mtp_joint_amplitude)
+        for i in range(len(starts)):
+            
+            stride_len = find_stride_len(smooth_toe_x, starts[i], ends[i]) # in pixel
+            stride_len_cm = stride_len / pixels_per_cm
+            limb_len_max = max(limb_lens[starts[i] : ends[i]]) / pixels_per_cm
+            cycle_dur_frame = ends[i] - starts[i]
+            cycle_v = stride_len / cycle_dur_frame * frame_rate # (px / frames) * (frames/s) = px/s
 
-        ankle_joint_extensions.append(ankle_joint_extension)
-        ankle_joint_flexions.append(ankle_joint_flexion)
-        ankle_joint_amplitudes.append(ankle_joint_amplitude)
-        
-        knee_joint_extensions.append(knee_joint_extension)
-        knee_joint_flexions.append(knee_joint_flexion)
-        knee_joint_amplitudes.append(knee_joint_amplitude)
-        
-        hip_joint_extensions.append(hip_joint_extension)
-        hip_joint_flexions.append(hip_joint_flexion)
-        hip_joint_amplitudes.append(hip_joint_amplitude)
-        
-        drag, drag_percent = find_drag(smooth_toe_y, stance_dur_frame, stance_threshold, starts[i], ends[i])
-        drag_ts.append(drag/frame_rate)
-        drag_percentages.append(drag_percent)
-
-        if i <= len(starts)-5:
-            toe_xs = parse_stride_lists(smooth_toe_x, starts, ends, i, 5)
-            pairwise_dtw_res_x_5 = pairwise_dtw(toe_xs)
-            dtw_x_plane_5_mean = np.mean(pairwise_dtw_res_x_5)
-            dtw_x_plane_5_sd = np.std(pairwise_dtw_res_x_5)
-
-            toe_ys = parse_stride_lists(smooth_toe_y, starts, ends, i, 5)
-            pairwise_dtw_res_y_5 = pairwise_dtw(toe_ys)
-            dtw_y_plane_5_mean = np.mean(pairwise_dtw_res_y_5)
-            dtw_y_plane_5_sd = np.std(pairwise_dtw_res_y_5)
-
-            toe_xys = [np.append(toe_xs[j], toe_ys[j]).reshape(2,-1).T for j in range(5)]
-            pairwise_dtw_res_xy_5 = pairwise_dtw(toe_xys)
-            dtw_xy_plane_5_mean = np.mean(pairwise_dtw_res_xy_5)
-            dtw_xy_plane_5_sd = np.std(pairwise_dtw_res_xy_5)
-
-            if i <= len(starts)-10:
-                toe_xs = parse_stride_lists(smooth_toe_x, starts, ends, i, 10)
-                pairwise_dtw_res_x_10 = pairwise_dtw(toe_xs)
-                dtw_x_plane_10_mean = np.mean(pairwise_dtw_res_x_10)
-                dtw_x_plane_10_sd = np.std(pairwise_dtw_res_x_10)
-
-                toe_ys = parse_stride_lists(smooth_toe_y, starts, ends, i, 10)
-                pairwise_dtw_res_y_10 = pairwise_dtw(toe_ys)
-                dtw_y_plane_10_mean = np.mean(pairwise_dtw_res_y_10)
-                dtw_y_plane_10_sd = np.std(pairwise_dtw_res_y_10)
-
-                toe_xys = [np.append(toe_xs[j], toe_ys[j]).reshape(2,-1).T for j in range(10)]
-                pairwise_dtw_res_xy_10 = pairwise_dtw(toe_xys)
-                dtw_xy_plane_10_mean = np.mean(pairwise_dtw_res_xy_10)
-                dtw_xy_plane_10_sd = np.std(pairwise_dtw_res_xy_10)
-
-                dtw_x_plane_10_means.append(dtw_x_plane_10_mean)
-                dtw_x_plane_10_sds.append(dtw_x_plane_10_sd)
-                dtw_y_plane_10_means.append(dtw_y_plane_10_mean)
-                dtw_y_plane_10_sds.append(dtw_y_plane_10_sd)
-                dtw_xy_plane_10_means.append(dtw_xy_plane_10_mean)
-                dtw_xy_plane_10_sds.append(dtw_xy_plane_10_sd)
+            stance_dur_frame, swing_perc, stance_perc = find_swing_stance(elevation_angle_change, starts[i], ends[i])
+            swing_dur_sec = (cycle_dur_frame - stance_dur_frame) / frame_rate
+                
+            if swing_dur_sec and stance_dur_frame > 0:
+                # min: image y axis starts from top
+                step_height = -(min(smooth_toe_y[starts[i]+stance_dur_frame:ends[i]]) - \
+                                max(smooth_toe_y[starts[i]:starts[i]+stance_dur_frame])) / pixels_per_cm
+            elif swing_dur_sec and stance_dur_frame == 0:
+                step_height = -(min(smooth_toe_y[starts[i]+stance_dur_frame:ends[i]]) - \
+                                smooth_toe_y[starts[i]]) / pixels_per_cm
             else:
+                # no swing phase!
+                step_height = 0
+                
+        
+            # does extracted stride seem accurate? (e.g., due to mislabeled bodypart position)
+            # extreme limb length
+            # extreme stride length
+            # single frame "cycle" duration
+            # extreme step height
+            if limb_len_max < 15 and stride_len_cm < 8 and stride_len > 0 and \
+                cycle_dur_frame > 1 and step_height < 1.5 and step_height > 0:
+                
+                starts_included.append(starts[i])
+                ends_included.append(ends[i])
+                
+                limb_len_means.append(np.mean(limb_lens[starts[i] : ends[i]]) / pixels_per_cm)
+                limb_len_maxs.append(limb_len_max)
+                limb_len_mins.append(min(limb_lens[starts[i] : ends[i]]) / pixels_per_cm)
+                limb_len_sds.append(np.std(limb_lens[starts[i] : ends[i]]) / pixels_per_cm)
+
+                cycle_dur_secs.append(cycle_dur_frame / frame_rate)
+                cycle_dur_frames.append(cycle_dur_frame)
+
+                stride_lens.append(stride_len_cm)
+                
+                step_heights.append(step_height)
+
+                cycle_vs.append(cycle_v / pixels_per_cm) # (px/s) / (px/cm) = cm/s
+                # or use averaged v from euclidean distance between every two frames? 
+                # (that would consider the entire trajectory of a stride, including vertical movement / lift,
+                # not just the distance between start and end point)
+
+                stance_dur_secs.append(stance_dur_frame / frame_rate)
+                swing_dur_secs.append(swing_dur_sec)
+                swing_percentages.append(swing_perc)
+                stance_percentages.append(stance_perc)
+                
+                if stance_dur_frame == cycle_dur_frame:
+                    max_v_during_swings.append(np.nan)
+                else:
+                    max_v_during_swings.append(max(velocities[starts[i]:ends[i]]) / pixels_per_cm)
+
+                mtp_joint_extension = max(angles_toe_mtp_ankle[starts[i] : ends[i]])
+                ankle_joint_extension = max(angles_mtp_ankle_knee[starts[i] : ends[i]])
+                knee_joint_extension = max(angles_ankle_knee_hip[starts[i] : ends[i]])
+                hip_joint_extension = max(angles_knee_hip_crest[starts[i] : ends[i]])
+
+                mtp_joint_flexion = min(angles_toe_mtp_ankle[starts[i] : ends[i]])
+                ankle_joint_flexion = min(angles_mtp_ankle_knee[starts[i] : ends[i]])
+                knee_joint_flexion = min(angles_ankle_knee_hip[starts[i] : ends[i]])
+                hip_joint_flexion = min(angles_knee_hip_crest[starts[i] : ends[i]])
+
+                mtp_joint_amplitude = mtp_joint_extension - mtp_joint_flexion
+                ankle_joint_amplitude = ankle_joint_extension - ankle_joint_flexion
+                knee_joint_amplitude = knee_joint_extension - knee_joint_flexion
+                hip_joint_amplitude = hip_joint_extension - hip_joint_flexion
+
+                mtp_joint_sds.append(np.std(angles_toe_mtp_ankle[starts[i] : ends[i]]))
+                ankle_joint_sds.append(np.std(angles_mtp_ankle_knee[starts[i] : ends[i]]))
+                knee_joint_sds.append(np.std(angles_ankle_knee_hip[starts[i] : ends[i]]))
+                hip_joint_sds.append(np.std(angles_knee_hip_crest[starts[i] : ends[i]]))
+
+                mtp_joint_extensions.append(mtp_joint_extension)
+                mtp_joint_flexions.append(mtp_joint_flexion)
+                mtp_joint_amplitudes.append(mtp_joint_amplitude)
+
+                ankle_joint_extensions.append(ankle_joint_extension)
+                ankle_joint_flexions.append(ankle_joint_flexion)
+                ankle_joint_amplitudes.append(ankle_joint_amplitude)
+
+                knee_joint_extensions.append(knee_joint_extension)
+                knee_joint_flexions.append(knee_joint_flexion)
+                knee_joint_amplitudes.append(knee_joint_amplitude)
+
+                hip_joint_extensions.append(hip_joint_extension)
+                hip_joint_flexions.append(hip_joint_flexion)
+                hip_joint_amplitudes.append(hip_joint_amplitude)
+
+                drag, drag_percent = find_drag(smooth_toe_y, stance_dur_frame, treadmill_y, starts[i], ends[i])
+                drag_ts.append(drag/frame_rate)
+                if swing_dur_sec and stance_dur_frame > 0:
+                    drag_percentages.append((drag/frame_rate) / swing_dur_sec)    
+                elif swing_dur_sec and stance_dur_frame == 0:
+                    drag_percentages.append(np.nan)
+                else:
+                    # no swing phase detected!
+                    drag_percentages.append(1)
+                
+            else:
+                
+                cycle_dur_secs.append(np.nan)
+                cycle_dur_frames.append(np.nan)
+                stride_lens.append(np.nan)
+                cycle_vs.append(np.nan)
+                stance_dur_secs.append(np.nan)
+                swing_dur_secs.append(np.nan)
+                swing_percentages.append(np.nan)
+                stance_percentages.append(np.nan)
+                limb_len_means.append(np.nan)
+                limb_len_maxs.append(np.nan)
+                limb_len_mins.append(np.nan)
+                limb_len_sds.append(np.nan)
+                step_heights.append(np.nan) 
+                max_v_during_swings.append(np.nan)
+                mtp_joint_extensions.append(np.nan)
+                mtp_joint_flexions.append(np.nan)
+                mtp_joint_amplitudes.append(np.nan)
+                ankle_joint_extensions.append(np.nan)
+                ankle_joint_flexions.append(np.nan)
+                ankle_joint_amplitudes.append(np.nan)
+                knee_joint_extensions.append(np.nan)
+                knee_joint_flexions.append(np.nan)
+                knee_joint_amplitudes.append(np.nan)
+                hip_joint_extensions.append(np.nan)
+                hip_joint_flexions.append(np.nan)
+                hip_joint_amplitudes.append(np.nan)
+                mtp_joint_sds.append(np.nan)
+                ankle_joint_sds.append(np.nan)
+                knee_joint_sds.append(np.nan)
+                hip_joint_sds.append(np.nan)
+                drag_ts.append(np.nan)
+                drag_percentages.append(np.nan)
+            
+        starts_included = np.array(starts_included)
+        ends_included = np.array(ends_included)
+        
+        # print('Calculating windowed dynamic time warping results from valid step cycles...')
+        
+        for i in range(len(starts)):
+            
+            # if (i+1)%50 == 0:
+            #     print(f'--> Completed {i+1}th stride')
+            
+            if starts[i] not in starts_included:
+                
+                dtw_x_plane_5_means.append(np.nan)
+                dtw_x_plane_5_sds.append(np.nan)
+                dtw_y_plane_5_means.append(np.nan)
+                dtw_y_plane_5_sds.append(np.nan)
+                dtw_xy_plane_5_means.append(np.nan)
+                dtw_xy_plane_5_sds.append(np.nan)
                 dtw_x_plane_10_means.append(np.nan)
                 dtw_x_plane_10_sds.append(np.nan)
                 dtw_y_plane_10_means.append(np.nan)
@@ -504,110 +713,175 @@ def extract_parameters(frame_rate, pixels_per_cm, pd_dataframe, stance_threshold
                 dtw_xy_plane_10_means.append(np.nan)
                 dtw_xy_plane_10_sds.append(np.nan)
                 
-            dtw_x_plane_5_means.append(dtw_x_plane_5_mean)
-            dtw_x_plane_5_sds.append(dtw_x_plane_5_sd)
-            dtw_y_plane_5_means.append(dtw_y_plane_5_mean)
-            dtw_y_plane_5_sds.append(dtw_y_plane_5_sd)
-            dtw_xy_plane_5_means.append(dtw_xy_plane_5_mean)
-            dtw_xy_plane_5_sds.append(dtw_xy_plane_5_sd)
-        else:
-            dtw_x_plane_5_means.append(np.nan)
-            dtw_x_plane_5_sds.append(np.nan)
-            dtw_y_plane_5_means.append(np.nan)
-            dtw_y_plane_5_sds.append(np.nan)
-            dtw_xy_plane_5_means.append(np.nan)
-            dtw_xy_plane_5_sds.append(np.nan)
-            dtw_x_plane_10_means.append(np.nan)
-            dtw_x_plane_10_sds.append(np.nan)
-            dtw_y_plane_10_means.append(np.nan)
-            dtw_y_plane_10_sds.append(np.nan)
-            dtw_xy_plane_10_means.append(np.nan)
-            dtw_xy_plane_10_sds.append(np.nan)
-        
-    return pd.DataFrame(data=np.array([cycle_dur_secs,
-            cycle_dur_frames,
-            cycle_vs,
-            stride_lens, 
-            stance_dur_secs, 
-            swing_dur_secs,
-            swing_percentages, 
-            stance_percentages, 
-            limb_len_means,
-            limb_len_maxs,
-            limb_len_mins,
-            limb_len_sds,
-            step_heights,
-            max_v_during_swings,
-            mtp_joint_extensions,
-            mtp_joint_flexions,
-            mtp_joint_amplitudes,
-            ankle_joint_extensions,
-            ankle_joint_flexions,
-            ankle_joint_amplitudes,
-            knee_joint_extensions,
-            knee_joint_flexions,
-            knee_joint_amplitudes,
-            hip_joint_extensions,
-            hip_joint_flexions,
-            hip_joint_amplitudes,            
-            drag_ts, 
-            drag_percentages,
-            dtw_x_plane_5_means,
-            dtw_x_plane_5_sds,
-            dtw_y_plane_5_means,
-            dtw_y_plane_5_sds,
-            dtw_xy_plane_5_means,
-            dtw_xy_plane_5_sds,
-            dtw_x_plane_10_means,
-            dtw_x_plane_10_sds,
-            dtw_y_plane_10_means,
-            dtw_y_plane_10_sds,
-            dtw_xy_plane_10_means,
-            dtw_xy_plane_10_sds            
-            ]).T, 
-                        columns=[
-                            'cycle duration (s)',
-                            'cycle duration (no. frames)',
-                            'cycle velocity (cm/s)',
-                            'stride length (cm)', 
-                            'stance duration (s)', 
-                            'swing duration (s)',
-                            'swing percentage (%)', 
-                            'stance percentage (%)', 
-                            'mean toe-to-crest distance (cm)',
-                            'max toe-to-crest distance (cm)',
-                            'min toe-to-crest distance (cm)',
-                            'toe-to-crest distance SD (cm)',
-                            'step height (cm)',
-                            'max velocity during swing (cm/s)',
-                            'mtp joint extension (deg)',
-                            'mtp joint flexion (deg)',
-                            'mtp joint amplitude (deg)',
-                            'ankle joint extension (deg)',
-                            'ankle joint flexion (deg)',
-                            'ankle joint amplitude (deg)',
-                            'knee joint extension (deg)',
-                            'knee joint flexion (deg)',
-                            'knee joint amplitude (deg)',
-                            'hip joint extension (deg)',
-                            'hip joint flexion (deg)',
-                            'hip joint amplitude (deg)',            
-                            'drag duration (s)', 
-                            'drag percentage (%)',
-                            'DTW distance x plane 5 frames mean',
-                            'DTW distance x plane 5 frames SD',
-                            'DTW distance y plane 5 frames mean',
-                            'DTW distance y plane 5 frames SD',
-                            'DTW distance xy plane 5 frames mean',
-                            'DTW distance xy plane 5 frames SD',
-                            'DTW distance x plane 10 frames mean',
-                            'DTW distance x plane 10 frames SD',
-                            'DTW distance y plane 10 frames mean',
-                            'DTW distance y plane 10 frames SD',
-                            'DTW distance xy plane 10 frames mean',
-                            'DTW distance xy plane 10 frames SD',
-                        ])
+            else:
+                included_index = int(np.where(starts[i] == starts_included)[0])                
+                
+                if included_index <= len(starts_included)-5:
+                    
+                    toe_xs = parse_stride_lists(smooth_toe_x, starts_included, ends_included, included_index, 5)
+                    pairwise_dtw_res_x_5 = pairwise_dtw(toe_xs)
+                    dtw_x_plane_5_mean = np.mean(pairwise_dtw_res_x_5)
+                    dtw_x_plane_5_sd = np.std(pairwise_dtw_res_x_5)
 
+                    toe_ys = parse_stride_lists(smooth_toe_y, starts_included, ends_included, included_index, 5)
+                    pairwise_dtw_res_y_5 = pairwise_dtw(toe_ys)
+                    dtw_y_plane_5_mean = np.mean(pairwise_dtw_res_y_5)
+                    dtw_y_plane_5_sd = np.std(pairwise_dtw_res_y_5)
+
+                    toe_xys = [np.append(toe_xs[j], toe_ys[j]).reshape(2,-1).T for j in range(5)]
+                    pairwise_dtw_res_xy_5 = pairwise_dtw(toe_xys)
+                    dtw_xy_plane_5_mean = np.mean(pairwise_dtw_res_xy_5)
+                    dtw_xy_plane_5_sd = np.std(pairwise_dtw_res_xy_5)
+
+                    if included_index <= len(starts_included)-10:
+                        toe_xs = parse_stride_lists(smooth_toe_x, starts_included, ends_included, included_index, 10)
+                        pairwise_dtw_res_x_10 = pairwise_dtw(toe_xs)
+                        dtw_x_plane_10_mean = np.mean(pairwise_dtw_res_x_10)
+                        dtw_x_plane_10_sd = np.std(pairwise_dtw_res_x_10)
+
+                        toe_ys = parse_stride_lists(smooth_toe_y, starts_included, ends_included, included_index, 10)
+                        pairwise_dtw_res_y_10 = pairwise_dtw(toe_ys)
+                        dtw_y_plane_10_mean = np.mean(pairwise_dtw_res_y_10)
+                        dtw_y_plane_10_sd = np.std(pairwise_dtw_res_y_10)
+
+                        toe_xys = [np.append(toe_xs[j], toe_ys[j]).reshape(2,-1).T for j in range(10)]
+                        pairwise_dtw_res_xy_10 = pairwise_dtw(toe_xys)
+                        dtw_xy_plane_10_mean = np.mean(pairwise_dtw_res_xy_10)
+                        dtw_xy_plane_10_sd = np.std(pairwise_dtw_res_xy_10)
+
+                        dtw_x_plane_10_means.append(dtw_x_plane_10_mean)
+                        dtw_x_plane_10_sds.append(dtw_x_plane_10_sd)
+                        dtw_y_plane_10_means.append(dtw_y_plane_10_mean)
+                        dtw_y_plane_10_sds.append(dtw_y_plane_10_sd)
+                        dtw_xy_plane_10_means.append(dtw_xy_plane_10_mean)
+                        dtw_xy_plane_10_sds.append(dtw_xy_plane_10_sd)
+                    else:
+                        dtw_x_plane_10_means.append(np.nan)
+                        dtw_x_plane_10_sds.append(np.nan)
+                        dtw_y_plane_10_means.append(np.nan)
+                        dtw_y_plane_10_sds.append(np.nan)
+                        dtw_xy_plane_10_means.append(np.nan)
+                        dtw_xy_plane_10_sds.append(np.nan)
+
+                    dtw_x_plane_5_means.append(dtw_x_plane_5_mean)
+                    dtw_x_plane_5_sds.append(dtw_x_plane_5_sd)
+                    dtw_y_plane_5_means.append(dtw_y_plane_5_mean)
+                    dtw_y_plane_5_sds.append(dtw_y_plane_5_sd)
+                    dtw_xy_plane_5_means.append(dtw_xy_plane_5_mean)
+                    dtw_xy_plane_5_sds.append(dtw_xy_plane_5_sd)
+                    
+                else:
+                    
+                    dtw_x_plane_5_means.append(np.nan)
+                    dtw_x_plane_5_sds.append(np.nan)
+                    dtw_y_plane_5_means.append(np.nan)
+                    dtw_y_plane_5_sds.append(np.nan)
+                    dtw_xy_plane_5_means.append(np.nan)
+                    dtw_xy_plane_5_sds.append(np.nan)
+                    dtw_x_plane_10_means.append(np.nan)
+                    dtw_x_plane_10_sds.append(np.nan)
+                    dtw_y_plane_10_means.append(np.nan)
+                    dtw_y_plane_10_sds.append(np.nan)
+                    dtw_xy_plane_10_means.append(np.nan)
+                    dtw_xy_plane_10_sds.append(np.nan)
+                
+    
+    return pd.DataFrame(data=np.array([
+                            starts,
+                            ends,
+                            cycle_dur_secs,
+                            cycle_dur_frames,
+                            cycle_vs,
+                            stride_lens, 
+                            stance_dur_secs, 
+                            swing_dur_secs,
+                            swing_percentages, 
+                            stance_percentages, 
+                            limb_len_means,
+                            limb_len_maxs,
+                            limb_len_mins,
+                            limb_len_sds,
+                            step_heights,
+                            max_v_during_swings,
+                            mtp_joint_extensions,
+                            mtp_joint_flexions,
+                            mtp_joint_amplitudes,
+                            mtp_joint_sds,
+                            ankle_joint_extensions,
+                            ankle_joint_flexions,
+                            ankle_joint_amplitudes,
+                            ankle_joint_sds,
+                            knee_joint_extensions,
+                            knee_joint_flexions,
+                            knee_joint_amplitudes,
+                            knee_joint_sds,
+                            hip_joint_extensions,
+                            hip_joint_flexions,
+                            hip_joint_amplitudes,   
+                            hip_joint_sds,
+                            drag_ts, 
+                            drag_percentages,
+                            dtw_x_plane_5_means,
+                            dtw_x_plane_5_sds,
+                            dtw_y_plane_5_means,
+                            dtw_y_plane_5_sds,
+                            dtw_xy_plane_5_means,
+                            dtw_xy_plane_5_sds,
+                            dtw_x_plane_10_means,
+                            dtw_x_plane_10_sds,
+                            dtw_y_plane_10_means,
+                            dtw_y_plane_10_sds,
+                            dtw_xy_plane_10_means,
+                            dtw_xy_plane_10_sds        
+                            ]).T, 
+                            columns=[
+                                'stride_start (frame)',
+                                'stride_end (frame)',
+                                'cycle duration (s)',
+                                'cycle duration (no. frames)',
+                                'cycle velocity (cm/s)',
+                                'stride length (cm)', 
+                                'stance duration (s)', 
+                                'swing duration (s)',
+                                'swing percentage (%)', 
+                                'stance percentage (%)', 
+                                'mean toe-to-crest distance (cm)',
+                                'max toe-to-crest distance (cm)',
+                                'min toe-to-crest distance (cm)',
+                                'toe-to-crest distance SD (cm)',
+                                'step height (cm)',
+                                'max velocity during swing (cm/s)',
+                                'mtp joint extension (deg)',
+                                'mtp joint flexion (deg)',
+                                'mtp joint amplitude (deg)',
+                                'mtp joint SD (deg)',
+                                'ankle joint extension (deg)',
+                                'ankle joint flexion (deg)',
+                                'ankle joint amplitude (deg)',
+                                'ankle joint SD (deg)',
+                                'knee joint extension (deg)',
+                                'knee joint flexion (deg)',
+                                'knee joint amplitude (deg)',
+                                'knee joint SD (deg)',
+                                'hip joint extension (deg)',
+                                'hip joint flexion (deg)',
+                                'hip joint amplitude (deg)', 
+                                'hip joint SD (deg)', 
+                                'drag duration (s)', 
+                                'drag percentage (%)',
+                                'DTW distance x plane 5 strides mean',
+                                'DTW distance x plane 5 strides SD',
+                                'DTW distance y plane 5 strides mean',
+                                'DTW distance y plane 5 strides SD',
+                                'DTW distance xy plane 5 strides mean',
+                                'DTW distance xy plane 5 strides SD',
+                                'DTW distance x plane 10 strides mean',
+                                'DTW distance x plane 10 strides SD',
+                                'DTW distance y plane 10 strides mean',
+                                'DTW distance y plane 10 strides SD',
+                                'DTW distance xy plane 10 strides mean',
+                                'DTW distance xy plane 10 strides SD',
+                                ])
 
 def make_parameters_output(pathname, parameters):
     parameters.to_csv(pathname)

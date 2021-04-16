@@ -11,3 +11,5 @@ lowpass_filter_cutoff: 6
 likelihood_threshold: 0.1
 depth_threshold: 0.8
 threshold: ''
+cm_speed: ''
+px_to_cm_speed_ratio: 0.4806

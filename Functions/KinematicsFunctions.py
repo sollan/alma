@@ -453,7 +453,7 @@ def extract_parameters(frame_rate, pd_dataframe, cutoff_f, bodypart, cm_speed = 
         # instead it is centered around 0
         # step cycle cannot be detected properly
         
-        normal_gait = 0
+        # normal_gait = 0
         print('Too much dragging? Please check raw data.')
         print(f'Median of selected bodypart x coordinate change per frame: {stat.median(x_change)}')                           
         print('Calculating a subset of parameters independent of step cycles...')
@@ -478,24 +478,24 @@ def extract_parameters(frame_rate, pd_dataframe, cutoff_f, bodypart, cm_speed = 
 
         mtp_joint_extensions.append(np.nan)
         mtp_joint_flexions.append(np.nan)
-        mtp_joint_amplitudes.append(np.mean(angles_toe_mtp_ankle))
+        mtp_joint_amplitudes.append(np.nan)
 
         ankle_joint_extensions.append(np.nan)
         ankle_joint_flexions.append(np.nan)
-        ankle_joint_amplitudes.append(np.mean(angles_mtp_ankle_knee))
+        ankle_joint_amplitudes.append(np.nan)
 
         knee_joint_extensions.append(np.nan)
         knee_joint_flexions.append(np.nan)
-        knee_joint_amplitudes.append(np.mean(angles_ankle_knee_hip))
+        knee_joint_amplitudes.append(np.nan)
 
         hip_joint_extensions.append(np.nan)
         hip_joint_flexions.append(np.nan)
-        hip_joint_amplitudes.append(np.mean(angles_knee_hip_crest))
+        hip_joint_amplitudes.append(np.nan)
 
-        mtp_joint_sds.append(np.std(angles_toe_mtp_ankle))
-        ankle_joint_sds.append(np.std(angles_mtp_ankle_knee))
-        knee_joint_sds.append(np.std(angles_ankle_knee_hip))
-        hip_joint_sds.append(np.std(angles_knee_hip_crest))
+        mtp_joint_sds.append(np.nan)
+        ankle_joint_sds.append(np.nan)
+        knee_joint_sds.append(np.nan)
+        hip_joint_sds.append(np.nan)
 
         drag_ts.append(np.nan)
         drag_percentages.append(1)

@@ -10,8 +10,7 @@ import math
 import fastdtw
 import statistics as stat
 from sklearn.mixture import GaussianMixture
-import cv2
-import wx
+import os
 
 
 
@@ -884,4 +883,28 @@ def extract_parameters(frame_rate, pd_dataframe, cutoff_f, bodypart, cm_speed = 
                                 ])
 
 def make_parameters_output(pathname, parameters):
+
     parameters.to_csv(pathname)
+
+
+def make_averaged_output(pathname):
+
+    files = []
+    for file in os.listdir(pathname):
+        if file.endswith('.csv') and file.startswith('parameters_'):
+            files.append(file)
+
+    dfs = []
+    for i, file in enumerate(files):
+        
+        input_name = file.split('parameters_')[1].split('.')[0]
+        
+        path = os.path.join(pathname, file)
+        df = pd.read_csv(path)
+        df['id'] = input_name
+        
+        dfs.append(df)
+        
+    res = pd.concat(dfs).groupby('id').mean()
+    res = res.drop(['Unnamed: 0','stride_start (frame)','stride_end (frame)'], axis=1, errors='ignore')
+    res.to_csv(os.path.join(pathname, 'averaged_results.csv'))

@@ -456,6 +456,8 @@ class AnalyzeStridePanel(wx.Panel):
                     cm_speed = self.est_cm_speed, px_to_cm_speed_ratio = self.px_to_cm_speed_ratio)
 
             KinematicsFunctions.make_parameters_output(os.path.join(self.output_path, f'parameters_{file}'), parameters)
+        
+        KinematicsFunctions.make_averaged_output(self.output_path)
 
         self.GetParent().SetStatusText(
             f"\nKinematic parameters have been extracted and saved to {self.output_path}!\n")

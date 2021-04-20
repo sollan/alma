@@ -905,6 +905,6 @@ def make_averaged_output(pathname):
         
         dfs.append(df)
         
-    res = pd.concat(dfs).groupby('id').mean()
+    res = pd.concat(dfs).groupby('id').agg(['mean','std'])
     res = res.drop(['Unnamed: 0','stride_start (frame)','stride_end (frame)'], axis=1, errors='ignore')
     res.to_csv(os.path.join(pathname, 'averaged_results.csv'))

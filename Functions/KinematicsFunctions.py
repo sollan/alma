@@ -277,7 +277,7 @@ def find_euclidean_speed(x, y, frame_rate):
     return loc_changes
 
 
-def parse_stride_lists(x, starts, ends, first_stride, n):
+def parse_stride_lists(x, starts, ends, first_stride, n, adjust = False):
     '''
     reshapes a continuous time series of bodypart location x into a list of n strides, 
     each starting at starts[n] and ending at ends[n], with the first stride in the new list
@@ -287,7 +287,12 @@ def parse_stride_lists(x, starts, ends, first_stride, n):
     n: number of strides to extract from x
     returns a list of strides
     '''
-    return [x[starts[i]:ends[i]] for i in range(first_stride, first_stride+n)]
+    results = [x[starts[i]:ends[i]+1] for i in range(first_stride, first_stride+n)]
+    if adjust:
+        for n_sublist in range(len(results)):
+            centers = [results[n_sublist][0]]*len(results[n_sublist])
+            results[n_sublist] = [a - b for a, b in zip(results[n_sublist], centers)]
+    return results
 
 
 
@@ -398,7 +403,6 @@ def extract_parameters(frame_rate, pd_dataframe, cutoff_f, bodypart, cm_speed = 
     
     # should use a dictionary here
     smooth_toe_x = butterworth_filter(toe_x, frame_rate, cutoff_f)
-    smooth_toe_x_unadjusted = butterworth_filter(pd_dataframe['toe x'], frame_rate, cutoff_f) # for DTW
     smooth_mtp_x = butterworth_filter(mtp_x, frame_rate, cutoff_f)
     smooth_ankle_x = butterworth_filter(ankle_x, frame_rate, cutoff_f)
     smooth_knee_x = butterworth_filter(knee_x, frame_rate, cutoff_f)
@@ -718,12 +722,12 @@ def extract_parameters(frame_rate, pd_dataframe, cutoff_f, bodypart, cm_speed = 
                 
                 if included_index <= len(starts_included)-5:
                     
-                    toe_xs = parse_stride_lists(smooth_toe_x_unadjusted, starts_included, ends_included, included_index, 5)
+                    toe_xs = parse_stride_lists(smooth_toe_x, starts_included, ends_included, included_index, 5, True)
                     pairwise_dtw_res_x_5 = pairwise_dtw(toe_xs)
                     dtw_x_plane_5_mean = np.mean(pairwise_dtw_res_x_5)
                     dtw_x_plane_5_sd = np.std(pairwise_dtw_res_x_5)
 
-                    toe_ys = parse_stride_lists(smooth_toe_y, starts_included, ends_included, included_index, 5)
+                    toe_ys = parse_stride_lists(smooth_toe_y, starts_included, ends_included, included_index, 5, True)
                     pairwise_dtw_res_y_5 = pairwise_dtw(toe_ys)
                     dtw_y_plane_5_mean = np.mean(pairwise_dtw_res_y_5)
                     dtw_y_plane_5_sd = np.std(pairwise_dtw_res_y_5)
@@ -734,12 +738,12 @@ def extract_parameters(frame_rate, pd_dataframe, cutoff_f, bodypart, cm_speed = 
                     dtw_xy_plane_5_sd = np.std(pairwise_dtw_res_xy_5)
 
                     if included_index <= len(starts_included)-10:
-                        toe_xs = parse_stride_lists(smooth_toe_x_unadjusted, starts_included, ends_included, included_index, 10)
+                        toe_xs = parse_stride_lists(smooth_toe_x, starts_included, ends_included, included_index, 10, True)
                         pairwise_dtw_res_x_10 = pairwise_dtw(toe_xs)
                         dtw_x_plane_10_mean = np.mean(pairwise_dtw_res_x_10)
                         dtw_x_plane_10_sd = np.std(pairwise_dtw_res_x_10)
 
-                        toe_ys = parse_stride_lists(smooth_toe_y, starts_included, ends_included, included_index, 10)
+                        toe_ys = parse_stride_lists(smooth_toe_y, starts_included, ends_included, included_index, 10, True)
                         pairwise_dtw_res_y_10 = pairwise_dtw(toe_ys)
                         dtw_y_plane_10_mean = np.mean(pairwise_dtw_res_y_10)
                         dtw_y_plane_10_sd = np.std(pairwise_dtw_res_y_10)

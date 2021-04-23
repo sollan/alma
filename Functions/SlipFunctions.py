@@ -322,9 +322,22 @@ def load_video(filename):
     return vidcap
 
 
-def plot_frame(video_file, n_frame, width, height, frame_rate):
+def plot_frame(video_file, n_frame, width, height, frame_rate, pd_dataframe, bodypart):
 
     try: 
+        x_loc = pd_dataframe[f'{bodypart} x'].iloc[n_frame]
+        y_loc = pd_dataframe[f'{bodypart} y'].iloc[n_frame]
+
+        # update this with image dimension
+        if x_loc < 200:
+            x_loc += 200
+        if y_loc < 100:
+            y_loc += 100
+        if x_loc > 1800:
+            x_loc -= 200
+        if y_loc > 550:
+            y_loc -= 100
+
         figure = mpl.figure.Figure(figsize=(width, height), tight_layout = True)
         axes = figure.add_subplot(111)
         axes.margins(x = 0)
@@ -336,6 +349,8 @@ def plot_frame(video_file, n_frame, width, height, frame_rate):
 
         axes.imshow(image)
         axes.title.set_text(f'frame {n_frame} ({n_frame/frame_rate:.1f} s)')
+        axes.set_xlim(x_loc - 200, x_loc + 200)
+        axes.set_ylim(y_loc + 100, y_loc - 100)
 
         return figure
         
@@ -505,7 +520,7 @@ def DisplayPlots(panel, set_bodypart = True):
         
     try:
         frame = plot_frame(panel.video, panel.n_frame, 
-        (panel.window_width-60) // 200, (panel.window_height // 3) // 100, int(panel.frame_rate))
+        6,3, int(panel.frame_rate), panel.df, panel.bodypart)
         frame_canvas  = FigureCanvas(panel, -1, frame)
         panel.frame_canvas.Hide()
         panel.second_sizer.Replace(panel.frame_canvas, frame_canvas)

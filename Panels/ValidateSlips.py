@@ -524,23 +524,18 @@ class ValidateSlipPanel(wx.Panel):
             self.val_check_box.SetValue(self.confirmed[0])
         else:
             self.n_frame = 0
-            # self.val_check_box.SetValue(False)
-
-        # if self.n_frame in self.start_pred:
-        #     self.start_check_box.SetValue(True)
-        
-        # if self.n_frame in self.end_pred:
-        #     self.end_check_box.SetValue(True)
-
-        # initialize validation results
-        # self.likelihood_threshold = 0
         self.n_val, self.depth_val, self.t_val, self.start_val, self.end_val, self.bodypart_list_val = \
             self.n_pred, self.depth_pred[:], self.t_pred[:], self.start_pred[:], self.end_pred[:], self.bodypart_list_pred[:]
+
+        if self.n_frame in self.t_pred:
+            self.bodypart = self.bodypart_list_pred[self.t_pred.index(self.n_frame)]
+        elif self.bodypart is None:
+            self.bodypart = self.selected_bodyparts[0]
 
         # display frame from video
         
         frame = SlipFunctions.plot_frame(self.video, self.n_frame, 
-            (self.window_width-50) / 200, (self.window_height // 3) // 100, int(self.frame_rate))
+            8, 4, int(self.frame_rate), self.df, self.bodypart)
         self.frame_canvas = FigureCanvas(self, -1, frame)
 
         self.second_sizer.Add(self.frame_canvas, pos= (8, 0), span = (6, 0),flag = wx.LEFT, border = 25)
@@ -640,13 +635,10 @@ class ValidateSlipPanel(wx.Panel):
         self.second_sizer_widgets.append(self.restart_button)
 
         # display location graphs
-        if self.n_frame in self.t_pred:
-            self.bodypart = self.bodypart_list_pred[self.t_pred.index(self.n_frame)]
-        elif self.bodypart is None:
-            self.bodypart = self.selected_bodyparts[0]
+
 
         graph = SlipFunctions.plot_labels(self.df, self.n_frame, self.method_selection, self.t_val, self.start_val, \
-            self.end_val, (self.window_width-50) / 100, (self.window_height // 3) // 100, self.bodypart, self.bodypart_list_val, self.selected_bodyparts, 'y', self.likelihood_threshold, self.confirmed)
+            self.end_val, (self.window_width-50) / 100, self.window_height / 100, self.bodypart, self.bodypart_list_val, self.selected_bodyparts, 'y', self.likelihood_threshold, self.confirmed)
         self.graph_canvas = FigureCanvas(self, -1, graph)
         self.second_sizer.Add(self.graph_canvas, pos = (14, 0), span = (1, 7), flag = wx.TOP | wx.LEFT, border = 25) 
         self.second_sizer_widgets.append(self.graph_canvas)       
@@ -686,10 +678,17 @@ class ValidateSlipPanel(wx.Panel):
         if self.n_frame in self.t_val:
             index = self.t_val.index(self.n_frame)
             self.bodypart_list_val[index] = self.bodypart
+
+        frame = SlipFunctions.plot_frame(self.video, self.n_frame, 
+            (self.window_width-50) / 300 * 2, self.window_height / 100, int(self.frame_rate), self.df, self.bodypart)
+        frame_canvas = FigureCanvas(self, -1, frame)
+        self.second_sizer.Replace(self.frame_canvas, frame_canvas)        
+        self.second_sizer_widgets.remove(self.frame_canvas) 
+        self.frame_canvas = frame_canvas
+        self.second_sizer_widgets.append(self.frame_canvas)
         
         graph = SlipFunctions.plot_labels(self.df, self.n_frame, self.method_selection, self.t_val, self.start_val, \
             self.end_val, (self.window_width-50) / 100, (self.window_height // 3) // 100, self.bodypart, self.bodypart_list_val, self.selected_bodyparts, 'y', self.likelihood_threshold, self.confirmed)
-
         graph_canvas = FigureCanvas(self, -1, graph)
         self.second_sizer.Replace(self.graph_canvas, graph_canvas)
         self.second_sizer_widgets.remove(self.graph_canvas) 

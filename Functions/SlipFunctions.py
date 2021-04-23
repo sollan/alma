@@ -335,15 +335,14 @@ def plot_frame(video_file, n_frame, width, height, frame_rate, pd_dataframe, bod
         vidcap.set(1, n_frame)
         _, frame = vidcap.read()
         image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        print(np.array(image).shape)
+        # print(np.array(image).shape)
         y_max = np.array(image).shape[0]
         x_max = np.array(image).shape[1]
 
-        print(x_max, y_max)
+        # print(x_max, y_max)
         x_loc = pd_dataframe[f'{bodypart} x'].iloc[n_frame]
         y_loc = pd_dataframe[f'{bodypart} y'].iloc[n_frame]
 
-        # update this with image dimension
         if x_loc <= 100:
             axes.set_xlim(0, 200)
         elif x_loc >= x_max-100:
@@ -404,9 +403,11 @@ def plot_labels(pd_dataframe, n_current_frame, method, t_pred, start_pred, end_p
             bp = bodypart
         if confirmed[i]: 
             c = 'g'
+            axes.annotate(str(i+1), (t, pd_dataframe[f'{bp} {axis}'][t]), color = c)
         else:
-            c = 'r'
-        axes.annotate(str(i+1), (t, pd_dataframe[f'{bp} {axis}'][t]), color = c)
+            pass
+            # c = 'r'
+            # axes.annotate(str(i+1), (t, pd_dataframe[f'{bp} {axis}'][t]), color = c)
 
     # if method != 'Baseline':
     #     # the find minimum step in "baseline" interferes with on- and offset judgment

@@ -325,18 +325,7 @@ def load_video(filename):
 def plot_frame(video_file, n_frame, width, height, frame_rate, pd_dataframe, bodypart):
 
     try: 
-        x_loc = pd_dataframe[f'{bodypart} x'].iloc[n_frame]
-        y_loc = pd_dataframe[f'{bodypart} y'].iloc[n_frame]
 
-        # update this with image dimension
-        if x_loc < 200:
-            x_loc += 200
-        if y_loc < 100:
-            y_loc += 100
-        if x_loc > 1800:
-            x_loc -= 200
-        if y_loc > 550:
-            y_loc -= 100
 
         figure = mpl.figure.Figure(figsize=(width, height), tight_layout = True)
         axes = figure.add_subplot(111)
@@ -346,11 +335,31 @@ def plot_frame(video_file, n_frame, width, height, frame_rate, pd_dataframe, bod
         vidcap.set(1, n_frame)
         _, frame = vidcap.read()
         image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        print(np.array(image).shape)
+        y_max = np.array(image).shape[0]
+        x_max = np.array(image).shape[1]
+
+        print(x_max, y_max)
+        x_loc = pd_dataframe[f'{bodypart} x'].iloc[n_frame]
+        y_loc = pd_dataframe[f'{bodypart} y'].iloc[n_frame]
+
+        # update this with image dimension
+        if x_loc <= 100:
+            axes.set_xlim(0, 200)
+        elif x_loc >= x_max-100:
+            axes.set_xlim(x_max-200, x_max)
+        else:
+            axes.set_xlim(x_loc-100, x_loc+100)
+
+        if y_loc <= 50:
+            axes.set_ylim(100, 0)
+        elif y_loc >= y_max-50:
+            axes.set_ylim(y_max, y_max-100)
+        else:
+            axes.set_ylim(y_loc+50, y_loc-50)
 
         axes.imshow(image)
         axes.title.set_text(f'frame {n_frame} ({n_frame/frame_rate:.1f} s)')
-        axes.set_xlim(x_loc - 200, x_loc + 200)
-        axes.set_ylim(y_loc + 100, y_loc - 100)
 
         return figure
         
@@ -378,8 +387,8 @@ def plot_labels(pd_dataframe, n_current_frame, method, t_pred, start_pred, end_p
         index = t_pred.index(n_current_frame)
         try:
             if bodypart_list[index] == bodypart:
-                axes.scatter(start_pred[index], pd_dataframe[f'{bodypart} {axis}'].iloc[start_pred[index]], s = 2, color = 'r')
-                axes.scatter(end_pred[index], pd_dataframe[f'{bodypart} {axis}'].iloc[end_pred[index]], s = 2, color = 'r')
+                axes.scatter(start_pred[index], pd_dataframe[f'{bodypart} {axis}'].iloc[start_pred[index]], s = 5, color = 'r')
+                axes.scatter(end_pred[index], pd_dataframe[f'{bodypart} {axis}'].iloc[end_pred[index]], s = 5, color = 'r')
                 axes.annotate('Start', (start_pred[index], pd_dataframe[f'{bodypart} {axis}'].iloc[start_pred[index]]))
                 axes.annotate('End', (end_pred[index], pd_dataframe[f'{bodypart} {axis}'].iloc[end_pred[index]]))
         except TypeError:
@@ -397,7 +406,7 @@ def plot_labels(pd_dataframe, n_current_frame, method, t_pred, start_pred, end_p
             c = 'g'
         else:
             c = 'r'
-        axes.annotate(str(i+1), (t, pd_dataframe[f'{bp} {axis}'][t]), color = c, weight = 'bold')
+        axes.annotate(str(i+1), (t, pd_dataframe[f'{bp} {axis}'][t]), color = c)
 
     # if method != 'Baseline':
     #     # the find minimum step in "baseline" interferes with on- and offset judgment

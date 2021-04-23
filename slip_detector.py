@@ -1,5 +1,5 @@
 import wx
-from Panels import Start, AnalyzeSlip, AnalyzeStride, ValidateSlips
+from Panels import Start, AnalyzeStride, ValidateSlips
 
 
 class HomeFrame(wx.Frame):

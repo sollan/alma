@@ -367,7 +367,7 @@ def plot_frame(video_file, n_frame, width, height, frame_rate, pd_dataframe, bod
         # plot_frame(video_file, n_frame+2, width, height, frame_rate, baseline)
 
 
-def plot_labels(pd_dataframe, n_current_frame, method, t_pred, start_pred, end_pred, width, height, bodypart, bodypart_list, selected_bodyparts, axis, likelihood_threshold, confirmed):
+def plot_labels(pd_dataframe, n_current_frame, method, t_pred, start_pred, end_pred, width, height, bodypart, bodypart_list, selected_bodyparts, axis, likelihood_threshold, confirmed, zoom=True):
     
     figure = mpl.figure.Figure(figsize=(width, height), tight_layout = True)
     axes = figure.add_subplot(111)
@@ -406,15 +406,18 @@ def plot_labels(pd_dataframe, n_current_frame, method, t_pred, start_pred, end_p
             axes.annotate(str(i+1), (t, pd_dataframe[f'{bp} {axis}'][t]), color = c)
         else:
             pass
-            # c = 'r'
-            # axes.annotate(str(i+1), (t, pd_dataframe[f'{bp} {axis}'][t]), color = c)
 
-    # if method != 'Baseline':
-    #     # the find minimum step in "baseline" interferes with on- and offset judgment
-    #     if n_current_frame in t_pred:
-    #         index = t_pred.index(n_current_frame)
-    #         for i in range(start_pred[index], end_pred[index]):
-    #             axes.axvspan(i, i+1, facecolor='0.2', alpha=0.5)
+    if zoom:
+        x_max = len(pd_dataframe)
+        if n_current_frame <= 300:
+            axes.set_xlim(0, 600)
+        elif n_current_frame >= x_max-300:
+            axes.set_xlim(x_max-600, x_max)
+        else:
+            axes.set_xlim(n_current_frame-300, n_current_frame+300)
+
+        axes.set_ylim(pd_dataframe[f'{bodypart} {axis}'].iloc[n_current_frame]+100, pd_dataframe[f'{bodypart} {axis}'].iloc[n_current_frame]-100)
+
 
     return figure
 
@@ -539,7 +542,7 @@ def DisplayPlots(panel, set_bodypart = True):
         panel.frame_canvas.Show()
 
         graph = plot_labels(panel.df, panel.n_frame, panel.method_selection, panel.t_val, panel.start_val, 
-            panel.end_val, (panel.window_width-60) // 100, (panel.window_height // 3) // 100, panel.bodypart, panel.bodypart_list_val, panel.selected_bodyparts, 'y', panel.likelihood_threshold, panel.confirmed)
+            panel.end_val, (panel.window_width-60) // 100, (panel.window_height // 3) // 100, panel.bodypart, panel.bodypart_list_val, panel.selected_bodyparts, 'y', panel.likelihood_threshold, panel.confirmed, panel.zoom)
         graph_canvas = FigureCanvas(panel, -1, graph)
         panel.graph_canvas.Hide()
         panel.second_sizer.Replace(panel.graph_canvas, graph_canvas)

@@ -532,6 +532,8 @@ class ValidateSlipPanel(wx.Panel):
         elif self.bodypart is None:
             self.bodypart = self.selected_bodyparts[0]
 
+        self.zoom = False
+
         # display frame from video
         
         frame = SlipFunctions.plot_frame(self.video, self.n_frame, 
@@ -540,7 +542,6 @@ class ValidateSlipPanel(wx.Panel):
 
         self.second_sizer.Add(self.frame_canvas, pos= (8, 0), span = (6, 0),flag = wx.LEFT, border = 25)
         self.second_sizer_widgets.append(self.frame_canvas)
-        
 
         self.validate_button = wx.Button(self, id=wx.ID_ANY, label="Confirm")
         self.validate_button.Bind(wx.EVT_BUTTON, self.OnValidate)
@@ -595,7 +596,6 @@ class ValidateSlipPanel(wx.Panel):
         self.second_sizer_widgets.append(self.next_button)
         self.second_sizer_widgets.append(self.next10_button)
 
-
         self.start_check_box.Bind(wx.EVT_CHECKBOX, lambda event, mark_type = 'start' : self.MarkFrame(event, mark_type))
         self.second_sizer.Add(self.start_check_box, pos = (11, 1), span = (0,2), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 20)
         self.second_sizer_widgets.append(self.start_check_box)
@@ -618,11 +618,15 @@ class ValidateSlipPanel(wx.Panel):
         self.second_sizer_widgets.append(self.bodypart_to_plot)
         self.bodypart_to_plot.Bind(wx.EVT_COMBOBOX, self.OnBodypartPlot)
 
+        self.zoom_button = wx.Button(self, id=wx.ID_ANY, label="Zoom in")
+        self.zoom_button.Bind(wx.EVT_BUTTON, self.zoom_plot)
+        self.second_sizer.Add(self.zoom_button, pos = (12, 4), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 25)
+        self.second_sizer_widgets.append(self.zoom_button)
+
         self.to_end_button = wx.Button(self, id=wx.ID_ANY, label="end of slip >")
         self.to_end_button.Bind(wx.EVT_BUTTON, lambda event, new_frame = 'end' : self.SwitchFrame(event, new_frame))
         self.second_sizer.Add(self.to_end_button, pos = (12, 5), span = (0,2), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 25)
         self.second_sizer_widgets.append(self.to_end_button)
-
 
         self.save_val_button = wx.Button(self, id=wx.ID_ANY, label="Save")
         self.save_val_button.Bind(wx.EVT_BUTTON, self.SaveValFunc)
@@ -635,8 +639,6 @@ class ValidateSlipPanel(wx.Panel):
         self.second_sizer_widgets.append(self.restart_button)
 
         # display location graphs
-
-
         graph = SlipFunctions.plot_labels(self.df, self.n_frame, self.method_selection, self.t_val, self.start_val, \
             self.end_val, (self.window_width-50) / 100, self.window_height / 100, self.bodypart, self.bodypart_list_val, self.selected_bodyparts, 'y', self.likelihood_threshold, self.confirmed)
         self.graph_canvas = FigureCanvas(self, -1, graph)
@@ -679,22 +681,22 @@ class ValidateSlipPanel(wx.Panel):
             index = self.t_val.index(self.n_frame)
             self.bodypart_list_val[index] = self.bodypart
 
-        frame = SlipFunctions.plot_frame(self.video, self.n_frame, 
-            (self.window_width-50) / 300 * 2, self.window_height / 100, int(self.frame_rate), self.df, self.bodypart)
-        frame_canvas = FigureCanvas(self, -1, frame)
-        self.second_sizer.Replace(self.frame_canvas, frame_canvas)        
-        self.second_sizer_widgets.remove(self.frame_canvas) 
-        self.frame_canvas = frame_canvas
-        self.second_sizer_widgets.append(self.frame_canvas)
+        # frame = SlipFunctions.plot_frame(self.video, self.n_frame, 
+        #     (self.window_width-50) / 300 * 2, self.window_height / 100, int(self.frame_rate), self.df, self.bodypart)
+        # frame_canvas = FigureCanvas(self, -1, frame)
+        # self.second_sizer.Replace(self.frame_canvas, frame_canvas)        
+        # self.second_sizer_widgets.remove(self.frame_canvas) 
+        # self.frame_canvas = frame_canvas
+        # self.second_sizer_widgets.append(self.frame_canvas)
         
-        graph = SlipFunctions.plot_labels(self.df, self.n_frame, self.method_selection, self.t_val, self.start_val, \
-            self.end_val, (self.window_width-50) / 100, (self.window_height // 3) // 100, self.bodypart, self.bodypart_list_val, self.selected_bodyparts, 'y', self.likelihood_threshold, self.confirmed)
-        graph_canvas = FigureCanvas(self, -1, graph)
-        self.second_sizer.Replace(self.graph_canvas, graph_canvas)
-        self.second_sizer_widgets.remove(self.graph_canvas) 
-        self.graph_canvas = graph_canvas
-        self.second_sizer_widgets.append(self.graph_canvas)
-        self.Fit()
+        # graph = SlipFunctions.plot_labels(self.df, self.n_frame, self.method_selection, self.t_val, self.start_val, \
+        #     self.end_val, (self.window_width-50) / 100, (self.window_height // 3) // 100, self.bodypart, self.bodypart_list_val, self.selected_bodyparts, 'y', self.likelihood_threshold, self.confirmed, self.zoom)
+        # graph_canvas = FigureCanvas(self, -1, graph)
+        # self.second_sizer.Replace(self.graph_canvas, graph_canvas)
+        # self.second_sizer_widgets.remove(self.graph_canvas) 
+        # self.graph_canvas = graph_canvas
+        # self.second_sizer_widgets.append(self.graph_canvas)
+        # self.Fit()
         
         SlipFunctions.ControlButton(self)
         SlipFunctions.DisplayPlots(self, set_bodypart=False)
@@ -793,17 +795,29 @@ class ValidateSlipPanel(wx.Panel):
 
         self.likelihood_threshold = float(self.likelihood_input.GetValue())
 
-        graph = SlipFunctions.plot_labels(self.df, self.n_frame, self.method_selection, self.t_val, self.start_val, \
-            self.end_val, (self.window_width-50) / 100, (self.window_height // 3) // 100, self.bodypart, self.bodypart_list_val, self.selected_bodyparts, 'y', self.likelihood_threshold, self.confirmed)
+        # graph = SlipFunctions.plot_labels(self.df, self.n_frame, self.method_selection, self.t_val, self.start_val, \
+        #     self.end_val, (self.window_width-50) / 100, (self.window_height // 3) // 100, self.bodypart, self.bodypart_list_val, self.selected_bodyparts, 'y', self.likelihood_threshold, self.confirmed)
 
-        graph_canvas = FigureCanvas(self, -1, graph)
-        self.second_sizer.Replace(self.graph_canvas, graph_canvas)
-        self.second_sizer_widgets.remove(self.graph_canvas) 
-        self.graph_canvas = graph_canvas
-        self.second_sizer_widgets.append(self.graph_canvas)
-        self.Fit()
+        # graph_canvas = FigureCanvas(self, -1, graph)
+        # self.second_sizer.Replace(self.graph_canvas, graph_canvas)
+        # self.second_sizer_widgets.remove(self.graph_canvas) 
+        # self.graph_canvas = graph_canvas
+        # self.second_sizer_widgets.append(self.graph_canvas)
+        # self.Fit()
         
         SlipFunctions.ControlButton(self)
         SlipFunctions.DisplayPlots(self)
 
+        self.GetParent().Layout()
+
+    def zoom_plot(self, e):
+        # change status
+        if not self.zoom:
+            self.zoom = True
+            self.zoom_button.SetLabel('Zoom out')
+        else:
+            self.zoom = False
+            self.zoom_button.SetLabel('Zoom in')
+
+        SlipFunctions.DisplayPlots(self)
         self.GetParent().Layout()

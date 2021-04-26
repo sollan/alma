@@ -681,23 +681,6 @@ class ValidateSlipPanel(wx.Panel):
             index = self.t_val.index(self.n_frame)
             self.bodypart_list_val[index] = self.bodypart
 
-        # frame = SlipFunctions.plot_frame(self.video, self.n_frame, 
-        #     (self.window_width-50) / 300 * 2, self.window_height / 100, int(self.frame_rate), self.df, self.bodypart)
-        # frame_canvas = FigureCanvas(self, -1, frame)
-        # self.second_sizer.Replace(self.frame_canvas, frame_canvas)        
-        # self.second_sizer_widgets.remove(self.frame_canvas) 
-        # self.frame_canvas = frame_canvas
-        # self.second_sizer_widgets.append(self.frame_canvas)
-        
-        # graph = SlipFunctions.plot_labels(self.df, self.n_frame, self.method_selection, self.t_val, self.start_val, \
-        #     self.end_val, (self.window_width-50) / 100, (self.window_height // 3) // 100, self.bodypart, self.bodypart_list_val, self.selected_bodyparts, 'y', self.likelihood_threshold, self.confirmed, self.zoom)
-        # graph_canvas = FigureCanvas(self, -1, graph)
-        # self.second_sizer.Replace(self.graph_canvas, graph_canvas)
-        # self.second_sizer_widgets.remove(self.graph_canvas) 
-        # self.graph_canvas = graph_canvas
-        # self.second_sizer_widgets.append(self.graph_canvas)
-        # self.Fit()
-        
         SlipFunctions.ControlButton(self)
         SlipFunctions.DisplayPlots(self, set_bodypart=False)
 
@@ -795,16 +778,6 @@ class ValidateSlipPanel(wx.Panel):
 
         self.likelihood_threshold = float(self.likelihood_input.GetValue())
 
-        # graph = SlipFunctions.plot_labels(self.df, self.n_frame, self.method_selection, self.t_val, self.start_val, \
-        #     self.end_val, (self.window_width-50) / 100, (self.window_height // 3) // 100, self.bodypart, self.bodypart_list_val, self.selected_bodyparts, 'y', self.likelihood_threshold, self.confirmed)
-
-        # graph_canvas = FigureCanvas(self, -1, graph)
-        # self.second_sizer.Replace(self.graph_canvas, graph_canvas)
-        # self.second_sizer_widgets.remove(self.graph_canvas) 
-        # self.graph_canvas = graph_canvas
-        # self.second_sizer_widgets.append(self.graph_canvas)
-        # self.Fit()
-        
         SlipFunctions.ControlButton(self)
         SlipFunctions.DisplayPlots(self)
 

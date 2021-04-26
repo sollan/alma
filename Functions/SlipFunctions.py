@@ -325,7 +325,7 @@ def load_video(filename):
 def plot_frame(video_file, n_frame, width, height, frame_rate, pd_dataframe, bodypart):
 
     try: 
-        figure = mpl.figure.Figure(figsize=(width, height))
+        figure = mpl.figure.Figure(figsize=(width, height), tight_layout=True)
         axes = figure.add_subplot(111)
         axes.margins(x = 0)
 
@@ -366,8 +366,10 @@ def plot_frame(video_file, n_frame, width, height, frame_rate, pd_dataframe, bod
 
 
 def plot_labels(pd_dataframe, n_current_frame, method, t_pred, start_pred, end_pred, width, height, bodypart, bodypart_list, selected_bodyparts, axis, likelihood_threshold, confirmed, zoom=True):
-    
-    figure = mpl.figure.Figure(figsize=(width, height))
+    if zoom:
+        figure = mpl.figure.Figure(figsize=(width, height))
+    else:
+        figure = mpl.figure.Figure(figsize=(width, height), tight_layout=True)
     axes = figure.add_subplot(111)
     axes.margins(x = 0)
     # figure.tight_layout()

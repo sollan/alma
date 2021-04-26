@@ -1,7 +1,7 @@
-from ast import parse
+# from ast import parse
 import pandas as pd
 import scipy
-from scipy.signal import peak_widths, find_peaks, butter, filtfilt
+from scipy.signal import butter, filtfilt
 from scipy.spatial.distance import euclidean
 import numpy as np
 import matplotlib as mpl
@@ -14,18 +14,18 @@ import os
 
 
 
-def test(use_preset = True):
-    '''
-    replace comments with local file paths
-    to speed up testing
-    '''
-    # filename = '/home/annette/Desktop/DeepLabCut/ladder rung results/Irregular_347_21dpi_croppedDLC_resnet50_Ladder RungMay12shuffle1_500000.csv'
-    df, filename = read_file(filename)
-    df, bodyparts = fix_column_names(df)
-    # video = '/home/annette/Desktop/DeepLabCut/ladder rung results/Irregular_347_21dpi_cropped.avi'
-    # video_name = 'Irregular_347_21dpi_cropped.avi'
+# def test(use_preset = True):
+#     '''
+#     replace comments with local file paths
+#     to speed up testing
+#     '''
+#     # filename = '/home/annette/Desktop/DeepLabCut/ladder rung results/Irregular_347_21dpi_croppedDLC_resnet50_Ladder RungMay12shuffle1_500000.csv'
+#     df, filename = read_file(filename)
+#     df, bodyparts = fix_column_names(df)
+#     # video = '/home/annette/Desktop/DeepLabCut/ladder rung results/Irregular_347_21dpi_cropped.avi'
+#     # video_name = 'Irregular_347_21dpi_cropped.avi'
 
-    return filename, df, bodyparts, video, video_name
+#     return filename, df, bodyparts, video, video_name
 
 
 def read_file(file):

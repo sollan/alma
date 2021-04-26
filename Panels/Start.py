@@ -2,7 +2,7 @@ import wx
 from wx.lib.stattext import GenStaticText as StaticText
 from Functions import ConfigFunctions
 import numpy as np
-from Panels import AnalyzeStride, ValidateSlips
+# from Panels import AnalyzeStride, ValidateSlips
 
 
 class StartPanel(wx.Panel):

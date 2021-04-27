@@ -422,7 +422,7 @@ def plot_labels(pd_dataframe, n_current_frame, method, t_pred, start_pred, end_p
     return figure
 
 
-def find_neighbors(n_current_frame, t_pred):     
+def find_neighbors(n_current_frame, t_pred, start = None, end = None):     
 
     if len(t_pred) == 0:
         return 0, 0
@@ -443,27 +443,26 @@ def find_neighbors(n_current_frame, t_pred):
             return t_pred[current_ind - 1], t_pred[current_ind + 1]
 
     else:
-        return find_closest_neighbors(n_current_frame, t_pred)
+        return find_closest_neighbors(n_current_frame, t_pred, start, end)
 
 
-def find_closest_neighbors(n_current_frame, t_pred):
-    # t_pred is usually very short and validated lists 
-    # can often be unsorted
-
-    prev = t_pred[0]
-    next = t_pred[-1]
-    for i, t in enumerate(t_pred):
-        if t > n_current_frame:
-            next = t
-            prev = t_pred[i-1]
-            return prev, next
-            break
+def find_closest_neighbors(n_current_frame, t_pred, start = None, end = None):
+    if end is not None:
+        for i in range(0, end):
+            if t_pred[i] > n_current_frame:
+                return t_pred[i-1], t_pred[i]
+    elif start is not None:
+        for i in range(start, len(t_pred)):
+            if t_pred[i] > n_current_frame:
+                return t_pred[i-1], t_pred[i]
+    else:
+        for i, t in enumerate(t_pred):
+            if t > n_current_frame:
+                return t_pred[i-1], t
 
 def find_confirmed_neighbors(n_current_frame, t_val, confirmed):
-    t_val_confirmed = []
-    for i, t in enumerate(t_val):
-        if confirmed[i] == 1:
-            t_val_confirmed.append(t)
+
+    t_val_confirmed = np.array(t_val)[np.array(confirmed) == 1]
     return find_neighbors(n_current_frame, t_val_confirmed)
 
 
@@ -481,8 +480,8 @@ def ControlButton(panel):
     # if panel.n_frame <= panel.t_pred[0]:
     if panel.n_frame <= panel.t_val[0]:
         panel.prev_pred_button.Disable()
-    # elif panel.n_frame >= panel.t_pred[-1]:
-    elif panel.n_frame <= panel.t_val[0]:
+    elif panel.n_frame >= panel.t_val[-1]:
+    # elif panel.n_frame <= panel.t_val[0]:
         panel.next_pred_button.Disable()
     
     if panel.n_frame < 10:
@@ -502,7 +501,6 @@ def ControlButton(panel):
         if panel.start_val[index] is np.nan:
             panel.to_start_button.Disable()
         if panel.end_val[index] is np.nan:
-            
             panel.to_end_button.Disable()
 
 

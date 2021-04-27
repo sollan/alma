@@ -190,7 +190,7 @@ def estimate_speed(pd_dataframe, bodypart, cm_speed, px_to_cm_speed_ratio, frame
     # print(f'Estimated px to cm speed ratio: {px_to_cm_speed_ratio} pixels per cm.')
 
     return cm_speed, px_speed, pixels_per_cm, px_to_cm_speed_ratio
- 
+
 
 def make_output(pathname, start_times, end_times, durations):
 

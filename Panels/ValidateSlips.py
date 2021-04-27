@@ -285,6 +285,11 @@ class ValidateSlipPanel(wx.Panel):
                     self.end_val.pop(index)
                     self.end_val.insert(index, np.nan)
 
+                SlipFunctions.ControlButton(self)
+
+        SlipFunctions.DisplayPlots(self)
+        self.GetParent().Layout()
+
     def OnValidate(self, e):
 
         self.val_check_box.SetValue(True)
@@ -305,6 +310,19 @@ class ValidateSlipPanel(wx.Panel):
             self.confirmed = SlipFunctions.sort_list(self.t_val, self.confirmed)
             self.t_val = sorted(self.t_val)
 
+            self.t_val_id = self.t_val.index(self.n_frame)
+            self.t_val_max += 1
+
+            if self.t_val_id+1 >= self.t_val_max:
+                self.prev_val = self.t_val[self.t_val_max-1]
+                self.next_val = 0
+                self.t_val_id += 1
+            else:
+                self.prev_val = self.t_val[self.t_val_id]
+                self.next_val = self.t_val[self.t_val_id+2]
+                self.t_val_id += 1
+
+
         else:
             index = self.t_val.index(self.n_frame)
             self.confirmed[index] = 1
@@ -314,8 +332,26 @@ class ValidateSlipPanel(wx.Panel):
             self.slider.SetValue(self.n_frame)
             self.slider_label.SetLabel(str(self.n_frame + 1))
 
-            self.prev_pred, self.next_pred = SlipFunctions.find_neighbors(self.n_frame, self.t_pred)
-            self.prev_val, self.next_val = SlipFunctions.find_neighbors(self.n_frame, self.t_val)
+            # self.prev_pred, self.next_pred = SlipFunctions.find_neighbors(self.n_frame, self.t_pred)
+            # self.prev_val, self.next_val = SlipFunctions.find_neighbors(self.n_frame, self.t_val)
+            if self.t_pred_id+1 >= self.t_pred_max:
+                self.prev_pred = self.t_pred[self.t_pred_max-1]
+                self.next_pred = 0
+                self.t_pred_id += 1
+            else:
+                # print(self.t_pred_id, self.t_pred_max)
+                self.prev_pred = self.t_pred[self.t_pred_id]
+                self.next_pred = self.t_pred[self.t_pred_id+2]
+                self.t_pred_id += 1
+            
+            if self.t_val_id+1 >= self.t_val_max:
+                self.prev_val = self.t_val[self.t_val_max-1]
+                self.next_val = 0
+                self.t_val_id += 1
+            else:
+                self.prev_val = self.t_val[self.t_val_id]
+                self.next_val = self.t_val[self.t_val_id+2]
+                self.t_val_id += 1
 
         SlipFunctions.ControlButton(self)
         SlipFunctions.DisplayPlots(self)
@@ -342,8 +378,26 @@ class ValidateSlipPanel(wx.Panel):
         self.slider.SetValue(self.n_frame)
         self.slider_label.SetLabel(str(self.n_frame + 1))
 
-        self.prev_pred, self.next_pred = SlipFunctions.find_neighbors(self.n_frame, self.t_pred)
-        self.prev_val, self.next_val = SlipFunctions.find_neighbors(self.n_frame, self.t_val)
+        # self.prev_pred, self.next_pred = SlipFunctions.find_neighbors(self.n_frame, self.t_pred)
+        # self.prev_val, self.next_val = SlipFunctions.find_neighbors(self.n_frame, self.t_val)
+
+        if self.t_pred_id+1 >= self.t_pred_max:
+            self.prev_pred = self.t_pred[-1]
+            self.next_pred = 0
+            self.t_pred_id += 1
+        else:
+            self.prev_pred = self.t_pred[self.t_pred_id]
+            self.next_pred = self.t_pred[self.t_pred_id+2]
+            self.t_pred_id += 1
+        
+        if self.t_val_id+1 >= self.t_val_max:
+            self.prev_val = self.t_val[-1]
+            self.next_val = 0
+            self.t_val_id += 1
+        else:
+            self.prev_val = self.t_val[self.t_val_id]
+            self.next_val = self.t_val[self.t_val_id+2]
+            self.t_val_id += 1
 
         SlipFunctions.ControlButton(self)
         SlipFunctions.DisplayPlots(self)
@@ -356,8 +410,28 @@ class ValidateSlipPanel(wx.Panel):
         obj = e.GetEventObject()
         self.n_frame = obj.GetValue() - 1
 
-        self.prev_pred, self.next_pred = SlipFunctions.find_neighbors(self.n_frame, self.t_pred)
-        self.prev_val, self.next_val = SlipFunctions.find_neighbors(self.n_frame, self.t_val)
+        # self.prev_pred, self.next_pred = SlipFunctions.find_neighbors(self.n_frame, self.t_pred)
+        # self.prev_val, self.next_val = SlipFunctions.find_neighbors(self.n_frame, self.t_val)
+        if self.n_frame <= self.prev_pred or self.n_frame >= self.next_pred:
+            self.prev_pred, self.next_pred = SlipFunctions.find_neighbors(self.n_frame, self.t_pred)
+            if self.prev_pred == 0:
+                self.t_pred_id = 0
+            elif self.next_pred == 0:
+                self.t_pred_id = self.t_pred_max
+            else:
+                index = self.t_pred.index(self.prev_pred)
+                self.t_pred_id = index + 1
+            
+        if self.n_frame <= self.prev_val or self.n_frame >= self.next_val:
+            self.prev_val, self.next_val = SlipFunctions.find_neighbors(self.n_frame, self.t_val)
+            if self.prev_val == 0:
+                self.t_val_id = 0
+            elif self.next_val == 0:
+                self.t_val_id = self.t_val_max
+            else:
+                index = self.t_val.index(self.prev_val)
+                self.t_val_id = index + 1
+
         self.slider_label.SetLabel(str(self.n_frame + 1))
         
         SlipFunctions.ControlButton(self)
@@ -380,14 +454,50 @@ class ValidateSlipPanel(wx.Panel):
             index = self.t_val.index(self.n_frame)
             if self.start_val[index] is not np.nan and new_frame == 'start': 
                 self.n_frame = self.start_val[index]
+                self.next_val = self.t_val[index]
             elif self.end_val[index] is not np.nan and new_frame == 'end':
-                self.n_frame = self.end_val[index]              
+                self.n_frame = self.end_val[index]
+                self.prev_val = self.t_val[index]
             
         self.slider.SetValue(self.n_frame)
         self.slider_label.SetLabel(str(self.n_frame + 1))
 
-        self.prev_pred, self.next_pred = SlipFunctions.find_neighbors(self.n_frame, self.t_pred)
-        self.prev_val, self.next_val = SlipFunctions.find_neighbors(self.n_frame, self.t_val)
+        if self.n_frame <= self.prev_pred:
+            self.prev_pred, self.next_pred = SlipFunctions.find_neighbors(self.n_frame, self.t_pred, end = self.t_pred_id)
+            if self.prev_pred == 0:
+                self.t_pred_id = 0
+            elif self.next_pred == 0:
+                self.t_pred_id = self.t_pred_max
+            else:
+                index = self.t_pred.index(self.prev_pred)
+                self.t_pred_id = index + 1
+        elif self.n_frame >= self.next_pred:
+            self.prev_pred, self.next_pred = SlipFunctions.find_neighbors(self.n_frame, self.t_pred, start = self.t_pred_id)
+            if self.prev_pred == 0:
+                self.t_pred_id = 0
+            elif self.next_pred == 0:
+                self.t_pred_id = self.t_pred_max
+            else:
+                index = self.t_pred.index(self.prev_pred)
+                self.t_pred_id = index + 1
+        if self.n_frame <= self.prev_val or self.n_frame >= self.next_val:
+            self.prev_val, self.next_val = SlipFunctions.find_neighbors(self.n_frame, self.t_val)
+            if self.prev_val == 0:
+                self.t_val_id = 0
+            elif self.next_val == 0:
+                self.t_val_id = self.t_val_max
+            else:
+                index = self.t_val.index(self.prev_val)
+                self.t_val_id = index + 1
+        elif self.n_frame >= self.next_val:
+            self.prev_val, self.next_val = SlipFunctions.find_neighbors(self.n_frame, self.t_val, start = self.t_val_id)
+            if self.prev_val == 0:
+                self.t_val_id = 0
+            elif self.next_val == 0:
+                self.t_val_id = self.t_val_max
+            else:
+                index = self.t_val.index(self.prev_val)
+                self.t_val_id = index + 1
 
         SlipFunctions.ControlButton(self)
         SlipFunctions.DisplayPlots(self)
@@ -521,16 +631,25 @@ class ValidateSlipPanel(wx.Panel):
 
         if self.n_pred is not None:
             self.n_frame = self.t_pred[0]
+            self.t_pred_id = 0
+            self.t_val_id = 0
             self.val_check_box.SetValue(self.confirmed[0])
         else:
             self.n_frame = 0
+            self.t_pred_id = None
+            self.t_val_id = None
         self.n_val, self.depth_val, self.t_val, self.start_val, self.end_val, self.bodypart_list_val = \
             self.n_pred, self.depth_pred[:], self.t_pred[:], self.start_pred[:], self.end_pred[:], self.bodypart_list_pred[:]
 
+        # initialize pred and val slip time indices
+        self.t_pred_max = len(self.t_pred) - 1
+        self.t_val_max = len(self.t_val) - 1
+
         if self.n_frame in self.t_pred:
             self.bodypart = self.bodypart_list_pred[self.t_pred.index(self.n_frame)]
-        elif self.bodypart is None:
+        else:
             self.bodypart = self.selected_bodyparts[0]
+
 
         self.zoom = False
 

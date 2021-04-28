@@ -445,7 +445,7 @@ def find_neighbors(n_current_frame, t_pred, start = None, end = None):
             return t_pred[current_ind - 1], t_pred[current_ind + 1]
 
     else:
-        return find_closest_neighbors(n_current_frame, t_pred, start, end)
+        return find_closest_neighbors(n_current_frame, t_pred, start=start, end=end)
 
 
 def find_closest_neighbors(n_current_frame, t_pred, start = None, end = None):
@@ -453,10 +453,6 @@ def find_closest_neighbors(n_current_frame, t_pred, start = None, end = None):
         for i in range(end-1, -1, -1):
             if t_pred[i] < n_current_frame:
                 return t_pred[i], t_pred[i+1]
-    # if end is not None:
-    #     for i in range(0, end):
-    #         if t_pred[i] > n_current_frame:
-    #             return t_pred[i-1], t_pred[i]
     elif start is not None:
         for i in range(start, len(t_pred)):
             if t_pred[i] > n_current_frame:
@@ -466,14 +462,25 @@ def find_closest_neighbors(n_current_frame, t_pred, start = None, end = None):
             if t > n_current_frame:
                 return t_pred[i-1], t
 
-def find_confirmed_neighbors(n_current_frame, t_val, confirmed, start = None, end = None):
+def find_confirmed_neighbors(n_current_frame, t_val, confirmed = None, start = None, end = None):
 
     t_val_confirmed = np.array(t_val)[np.array(confirmed) == 1]
     if start is not None:
-        start = list(t_val_confirmed).index(t_val[start])
+        try:
+            start = list(t_val_confirmed).index(t_val[start])
+            return find_neighbors(n_current_frame, t_val_confirmed, start=start)
+        except ValueError:
+            # prev closest prediction is not confirmed
+            start = None
+            return find_neighbors(n_current_frame, t_val)
     if end is not None:
-        end = list(t_val_confirmed).index(t_val[end])
-    return find_neighbors(n_current_frame, t_val_confirmed, start=start, end=end)
+        try:
+            end = list(t_val_confirmed).index(t_val[end])
+            return find_neighbors(n_current_frame, t_val_confirmed, end=end)
+        except ValueError:
+            # next closest prediction is not confirmed
+            end = None
+            return find_neighbors(n_current_frame, t_val)
 
 
 def ControlButton(panel):

@@ -412,8 +412,9 @@ class ValidateSlipPanel(wx.Panel):
 
         # self.prev_pred, self.next_pred = SlipFunctions.find_neighbors(self.n_frame, self.t_pred)
         # self.prev_val, self.next_val = SlipFunctions.find_neighbors(self.n_frame, self.t_val)
-        if self.n_frame <= self.prev_pred or self.n_frame >= self.next_pred:
-            self.prev_pred, self.next_pred = SlipFunctions.find_neighbors(self.n_frame, self.t_pred)
+        
+        if self.n_frame <= self.prev_pred:
+            self.prev_pred, self.next_pred = SlipFunctions.find_neighbors(self.n_frame, self.t_pred, end = self.t_pred_id)
             if self.prev_pred == 0:
                 self.t_pred_id = 0
             elif self.next_pred == 0:
@@ -421,9 +422,26 @@ class ValidateSlipPanel(wx.Panel):
             else:
                 index = self.t_pred.index(self.prev_pred)
                 self.t_pred_id = index + 1
-            
-        if self.n_frame <= self.prev_val or self.n_frame >= self.next_val:
-            self.prev_val, self.next_val = SlipFunctions.find_neighbors(self.n_frame, self.t_val)
+        elif self.n_frame >= self.next_pred:
+            self.prev_pred, self.next_pred = SlipFunctions.find_neighbors(self.n_frame, self.t_pred, start = self.t_pred_id)
+            if self.prev_pred == 0:
+                self.t_pred_id = 0
+            elif self.next_pred == 0:
+                self.t_pred_id = self.t_pred_max
+            else:
+                index = self.t_pred.index(self.prev_pred)
+                self.t_pred_id = index + 1
+        if self.n_frame <= self.prev_val:
+            self.prev_val, self.next_val = SlipFunctions.find_neighbors(self.n_frame, self.t_val, end = self.t_val_id)
+            if self.prev_val == 0:
+                self.t_val_id = 0
+            elif self.next_val == 0:
+                self.t_val_id = self.t_val_max
+            else:
+                index = self.t_val.index(self.prev_val)
+                self.t_val_id = index + 1
+        elif self.n_frame >= self.next_val:
+            self.prev_val, self.next_val = SlipFunctions.find_neighbors(self.n_frame, self.t_val, start = self.t_val_id)
             if self.prev_val == 0:
                 self.t_val_id = 0
             elif self.next_val == 0:
@@ -480,8 +498,8 @@ class ValidateSlipPanel(wx.Panel):
             else:
                 index = self.t_pred.index(self.prev_pred)
                 self.t_pred_id = index + 1
-        if self.n_frame <= self.prev_val or self.n_frame >= self.next_val:
-            self.prev_val, self.next_val = SlipFunctions.find_neighbors(self.n_frame, self.t_val)
+        if self.n_frame <= self.prev_val:
+            self.prev_val, self.next_val = SlipFunctions.find_neighbors(self.n_frame, self.t_val, end = self.t_val_id)
             if self.prev_val == 0:
                 self.t_val_id = 0
             elif self.next_val == 0:

@@ -472,7 +472,7 @@ def find_confirmed_neighbors(n_current_frame, t_val, confirmed = None, start = N
         except ValueError:
             # prev closest prediction is not confirmed
             start = None
-            return find_neighbors(n_current_frame, t_val)
+            return find_neighbors(n_current_frame, t_val_confirmed)
     if end is not None:
         try:
             end = list(t_val_confirmed).index(t_val[end])
@@ -480,7 +480,7 @@ def find_confirmed_neighbors(n_current_frame, t_val, confirmed = None, start = N
         except ValueError:
             # next closest prediction is not confirmed
             end = None
-            return find_neighbors(n_current_frame, t_val)
+            return find_neighbors(n_current_frame, t_val_confirmed)
 
 
 def ControlButton(panel):

@@ -249,7 +249,7 @@ class ValidateSlipPanel(wx.Panel):
         # assuming there is always an existing next/prev prediction
         # that matches the frame to be labelled as start/end of slip
         elif mark_type == "start":
-            _, self.next_val_confirmed = SlipFunctions.find_confirmed_neighbors(self.n_frame, self.t_val, self.confirmed)
+            _, self.next_val_confirmed = SlipFunctions.find_confirmed_neighbors(self.n_frame, self.t_val, self.confirmed, end=self.t_val_id)
 
             if self.n_frame in self.t_val:
                 index = self.t_val.index(self.n_frame)
@@ -268,7 +268,7 @@ class ValidateSlipPanel(wx.Panel):
                     self.start_val.insert(index, np.nan)
             
         elif mark_type == "end":
-            self.prev_val_confirmed, _ = SlipFunctions.find_confirmed_neighbors(self.n_frame, self.t_val, self.confirmed)
+            self.prev_val_confirmed, _ = SlipFunctions.find_confirmed_neighbors(self.n_frame, self.t_val, self.confirmed, start=self.t_val_id)
             if self.n_frame in self.t_val:
                 index = self.t_val.index(self.n_frame)
             elif self.prev_val_confirmed != 0:

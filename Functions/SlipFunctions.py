@@ -397,13 +397,15 @@ def plot_labels(pd_dataframe, n_current_frame, method, t_pred, start_pred, end_p
     axes.scatter(pd_dataframe[pd_dataframe[f'{bodypart} likelihood'] < likelihood_threshold]['bodyparts coords'], \
         pd_dataframe[pd_dataframe[f'{bodypart} likelihood'] < likelihood_threshold][f'{bodypart} {axis}'], s = 1, c = '0.7')
     axes.invert_yaxis()
+    count_slips = 0
     for i, t in enumerate(t_pred):
         bp = bodypart_list[i]
         if bp == np.nan:
             bp = bodypart
         if confirmed[i]: 
+            count_slips += 1
             c = 'g'
-            axes.annotate(str(i+1), (t, pd_dataframe[f'{bp} {axis}'][t]), color = c)
+            axes.annotate(str(count_slips), (t, pd_dataframe[f'{bp} {axis}'][t]), color = c)
         else:
             pass
 
@@ -448,9 +450,13 @@ def find_neighbors(n_current_frame, t_pred, start = None, end = None):
 
 def find_closest_neighbors(n_current_frame, t_pred, start = None, end = None):
     if end is not None:
-        for i in range(0, end):
-            if t_pred[i] > n_current_frame:
-                return t_pred[i-1], t_pred[i]
+        for i in range(end-1, -1, -1):
+            if t_pred[i] < n_current_frame:
+                return t_pred[i], t_pred[i+1]
+    # if end is not None:
+    #     for i in range(0, end):
+    #         if t_pred[i] > n_current_frame:
+    #             return t_pred[i-1], t_pred[i]
     elif start is not None:
         for i in range(start, len(t_pred)):
             if t_pred[i] > n_current_frame:
@@ -460,10 +466,14 @@ def find_closest_neighbors(n_current_frame, t_pred, start = None, end = None):
             if t > n_current_frame:
                 return t_pred[i-1], t
 
-def find_confirmed_neighbors(n_current_frame, t_val, confirmed):
+def find_confirmed_neighbors(n_current_frame, t_val, confirmed, start = None, end = None):
 
     t_val_confirmed = np.array(t_val)[np.array(confirmed) == 1]
-    return find_neighbors(n_current_frame, t_val_confirmed)
+    if start is not None:
+        start = list(t_val_confirmed).index(t_val[start])
+    if end is not None:
+        end = list(t_val_confirmed).index(t_val[end])
+    return find_neighbors(n_current_frame, t_val_confirmed, start=start, end=end)
 
 
 def ControlButton(panel):

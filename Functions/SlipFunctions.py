@@ -322,7 +322,7 @@ def load_video(filename):
     return vidcap
 
 
-def plot_frame(video_file, n_frame, width, height, frame_rate, pd_dataframe, bodypart):
+def plot_frame(video_file, n_frame, width, height, frame_rate, pd_dataframe, bodypart, zoom):
 
     try: 
         figure = mpl.figure.Figure(figsize=(width, height), tight_layout=True)
@@ -333,27 +333,29 @@ def plot_frame(video_file, n_frame, width, height, frame_rate, pd_dataframe, bod
         vidcap.set(1, n_frame)
         _, frame = vidcap.read()
         image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        # print(np.array(image).shape)
-        y_max = np.array(image).shape[0]
-        x_max = np.array(image).shape[1]
 
-        # print(x_max, y_max)
-        x_loc = pd_dataframe[f'{bodypart} x'].iloc[n_frame]
-        y_loc = pd_dataframe[f'{bodypart} y'].iloc[n_frame]
+        if zoom: 
+            # print(np.array(image).shape)
+            y_max = np.array(image).shape[0]
+            x_max = np.array(image).shape[1]
 
-        if x_loc <= 100:
-            axes.set_xlim(0, 200)
-        elif x_loc >= x_max-100:
-            axes.set_xlim(x_max-200, x_max)
-        else:
-            axes.set_xlim(x_loc-100, x_loc+100)
+            # print(x_max, y_max)
+            x_loc = pd_dataframe[f'{bodypart} x'].iloc[n_frame]
+            y_loc = pd_dataframe[f'{bodypart} y'].iloc[n_frame]
 
-        if y_loc <= 50:
-            axes.set_ylim(100, 0)
-        elif y_loc >= y_max-50:
-            axes.set_ylim(y_max, y_max-100)
-        else:
-            axes.set_ylim(y_loc+50, y_loc-50)
+            if x_loc <= 100:
+                axes.set_xlim(0, 200)
+            elif x_loc >= x_max-100:
+                axes.set_xlim(x_max-200, x_max)
+            else:
+                axes.set_xlim(x_loc-100, x_loc+100)
+
+            if y_loc <= 50:
+                axes.set_ylim(100, 0)
+            elif y_loc >= y_max-50:
+                axes.set_ylim(y_max, y_max-100)
+            else:
+                axes.set_ylim(y_loc+50, y_loc-50)
 
         axes.imshow(image)
         axes.title.set_text(f'frame {n_frame} ({n_frame/frame_rate:.1f} s)')
@@ -548,7 +550,7 @@ def DisplayPlots(panel, set_bodypart = True):
         
     try:
         frame = plot_frame(panel.video, panel.n_frame, 
-        6,3, int(panel.frame_rate), panel.df, panel.bodypart)
+        6,3, int(panel.frame_rate), panel.df, panel.bodypart, panel.zoom_image)
         frame_canvas  = FigureCanvas(panel, -1, frame)
         panel.frame_canvas.Hide()
         panel.second_sizer.Replace(panel.frame_canvas, frame_canvas)

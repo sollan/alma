@@ -46,10 +46,10 @@ class ValidateSlipPanel(wx.Panel):
         self.header = wx.StaticText(self, -1, "Validate", size=(500,100))
         font = wx.Font(20,wx.MODERN,wx.NORMAL,wx.NORMAL)
         self.header.SetFont(font)
-        self.first_sizer.Add(self.header, pos = (0, 0), span = (2, 5), flag = wx.LEFT|wx.TOP, border = 25)
+        self.first_sizer.Add(self.header, pos = (0, 0), span = (1, 5), flag = wx.LEFT|wx.TOP, border = 25)
 
         self.instructions = wx.StaticText(self, -1, "Load the csv output from DeepLabCut and validate behavioral predictions manually.")
-        self.first_sizer.Add(self.instructions, pos = (2, 0), span = (1, 3), flag = wx.LEFT|wx.TOP|wx.BOTTOM, border=25)
+        self.first_sizer.Add(self.instructions, pos = (1, 0), span = (1, 5), flag = wx.LEFT|wx.TOP|wx.BOTTOM, border=25)
         self.first_sizer_widgets.append(self.instructions)
         self.FirstPage()
 
@@ -682,25 +682,34 @@ class ValidateSlipPanel(wx.Panel):
             self.bodypart = self.selected_bodyparts[0]
 
 
+        self.instructions = wx.StaticText(self, -1, f"Currently validating predictions for {self.video_name}")
+        self.second_sizer.Add(self.instructions, pos = (7, 0), flag = wx.LEFT|wx.TOP|wx.BOTTOM, border=25)
+        self.second_sizer_widgets.append(self.instructions)
+
         self.zoom = False
+        self.zoom_image = False
 
         # display frame from video
-        
+        self.zoom_frame_button = wx.Button(self, id=wx.ID_ANY, label="Zoom in")
+        self.zoom_frame_button.Bind(wx.EVT_BUTTON, self.zoom_frame)
+        self.second_sizer.Add(self.zoom_frame_button, pos = (7, 1), flag = wx.ALIGN_CENTER_VERTICAL | wx.LEFT, border = 25)
+        self.second_sizer_widgets.append(self.zoom_frame_button)
+
         frame = SlipFunctions.plot_frame(self.video, self.n_frame, 
-            8, 4, int(self.frame_rate), self.df, self.bodypart)
+            8, 4, int(self.frame_rate), self.df, self.bodypart, self.zoom_image)
         self.frame_canvas = FigureCanvas(self, -1, frame)
 
-        self.second_sizer.Add(self.frame_canvas, pos= (8, 0), span = (6, 0),flag = wx.LEFT, border = 25)
+        self.second_sizer.Add(self.frame_canvas, pos= (8, 0), span = (6, 2), flag = wx.LEFT, border = 25)
         self.second_sizer_widgets.append(self.frame_canvas)
 
         self.validate_button = wx.Button(self, id=wx.ID_ANY, label="Confirm")
         self.validate_button.Bind(wx.EVT_BUTTON, self.OnValidate)
-        self.second_sizer.Add(self.validate_button, pos = (8, 3), flag =  wx.BOTTOM | wx.ALIGN_CENTER_VERTICAL, border = 25)
+        self.second_sizer.Add(self.validate_button, pos = (8, 4), flag =  wx.BOTTOM | wx.ALIGN_CENTER_VERTICAL, border = 25)
         self.second_sizer_widgets.append(self.validate_button)
 
         self.reject_button = wx.Button(self, id=wx.ID_ANY, label="Reject")
         self.reject_button.Bind(wx.EVT_BUTTON, self.OnReject)
-        self.second_sizer.Add(self.reject_button, pos = (8, 4), flag =  wx.BOTTOM | wx.ALIGN_CENTER_VERTICAL | wx.LEFT, border = 25)
+        self.second_sizer.Add(self.reject_button, pos = (8, 5), flag =  wx.BOTTOM | wx.ALIGN_CENTER_VERTICAL | wx.LEFT, border = 25)
         self.second_sizer_widgets.append(self.reject_button)
 
         # display prev / next buttons
@@ -713,11 +722,11 @@ class ValidateSlipPanel(wx.Panel):
         self.prev_pred, self.next_pred = SlipFunctions.find_neighbors(self.n_frame, self.t_pred)
         self.prev_val, self.next_val = SlipFunctions.find_neighbors(self.n_frame, self.t_val)
 
-        self.second_sizer.Add(self.prev_pred_button, pos = (9, 1), span = (0,2), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL)
+        self.second_sizer.Add(self.prev_pred_button, pos = (9, 2), span = (0,2), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL)
         self.second_sizer_widgets.append(self.prev_pred_button)
-        self.second_sizer.Add(self.frame_label, pos = (9, 3), span = (0,2), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.LEFT, border = -15)
+        self.second_sizer.Add(self.frame_label, pos = (9, 4), span = (0,2), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.LEFT, border = -15)
         self.second_sizer_widgets.append(self.frame_label)
-        self.second_sizer.Add(self.next_pred_button, pos = (9, 5), span = (0,2), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL)
+        self.second_sizer.Add(self.next_pred_button, pos = (9, 6), span = (0,1), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL)
         self.second_sizer_widgets.append(self.next_pred_button)
 
         self.prev_button = wx.Button(self, id=wx.ID_ANY, label="<")
@@ -734,11 +743,11 @@ class ValidateSlipPanel(wx.Panel):
         self.next10_button = wx.Button(self, id=wx.ID_ANY, label=">>")
         self.next10_button.Bind(wx.EVT_BUTTON, lambda event, new_frame = 10 : self.SwitchFrame(event, new_frame))
 
-        self.second_sizer.Add(self.prev10_button, pos = (10, 1), span = (0,1), flag = wx.LEFT | wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL, border = 25)
-        self.second_sizer.Add(self.prev_button, pos = (10, 2), span = (0,1), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL)        
-        self.second_sizer.Add(self.slider_label, pos = (10, 3), span = (0,2), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.LEFT, border = -15)
-        self.second_sizer.Add(self.next_button, pos = (10, 5), span = (0,1), flag = wx.ALIGN_CENTER_VERTICAL | wx.LEFT, border = -25)
-        self.second_sizer.Add(self.next10_button, pos = (10, 6), span = (0,1))
+        self.second_sizer.Add(self.prev10_button, pos = (10, 2), span = (0,1), flag = wx.LEFT | wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 10)
+        self.second_sizer.Add(self.prev_button, pos = (10, 3), span = (0,1), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 10)        
+        self.second_sizer.Add(self.slider_label, pos = (10, 4), span = (0,2), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 10)
+        self.second_sizer.Add(self.next_button, pos = (10, 6), span = (0,1), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 10)
+        self.second_sizer.Add(self.next10_button, pos = (10, 7), span = (0,1), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 10)
 
         self.second_sizer_widgets.append(self.prev10_button)
         self.second_sizer_widgets.append(self.prev_button)
@@ -747,59 +756,59 @@ class ValidateSlipPanel(wx.Panel):
         self.second_sizer_widgets.append(self.next10_button)
 
         self.start_check_box.Bind(wx.EVT_CHECKBOX, lambda event, mark_type = 'start' : self.MarkFrame(event, mark_type))
-        self.second_sizer.Add(self.start_check_box, pos = (11, 1), span = (0,2), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 20)
+        self.second_sizer.Add(self.start_check_box, pos = (11, 2), span = (0,2), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 20)
         self.second_sizer_widgets.append(self.start_check_box)
 
         self.val_check_box.Bind(wx.EVT_CHECKBOX, lambda event, mark_type = 'confirmed' : self.MarkFrame(event, mark_type))
-        self.second_sizer.Add(self.val_check_box, pos = (11, 3), span = (0,2), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 20)
+        self.second_sizer.Add(self.val_check_box, pos = (11, 4), span = (0,2), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 20)
         self.second_sizer_widgets.append(self.val_check_box)
 
         self.end_check_box.Bind(wx.EVT_CHECKBOX, lambda event, mark_type = 'end' : self.MarkFrame(event, mark_type))
-        self.second_sizer.Add(self.end_check_box, pos = (11, 5), span = (0,2), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 20)
+        self.second_sizer.Add(self.end_check_box, pos = (11, 6), span = (0,2), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 20)
         self.second_sizer_widgets.append(self.end_check_box)
 
         self.to_start_button = wx.Button(self, id=wx.ID_ANY, label="< start of slip")
         self.to_start_button.Bind(wx.EVT_BUTTON, lambda event, new_frame = 'start' : self.SwitchFrame(event, new_frame))
-        self.second_sizer.Add(self.to_start_button, pos = (12, 1), span = (0,2), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 25)
+        self.second_sizer.Add(self.to_start_button, pos = (12, 2), span = (0,2), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 25)
         self.second_sizer_widgets.append(self.to_start_button)
 
         self.bodypart_to_plot = wx.ComboBox(self, choices = self.selected_bodyparts)
-        self.second_sizer.Add(self.bodypart_to_plot, pos= (12, 3) , flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 25)
+        self.second_sizer.Add(self.bodypart_to_plot, pos= (12, 4) , flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 25)
         self.second_sizer_widgets.append(self.bodypart_to_plot)
         self.bodypart_to_plot.Bind(wx.EVT_COMBOBOX, self.OnBodypartPlot)
 
         self.zoom_button = wx.Button(self, id=wx.ID_ANY, label="Zoom in")
         self.zoom_button.Bind(wx.EVT_BUTTON, self.zoom_plot)
-        self.second_sizer.Add(self.zoom_button, pos = (12, 4), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 25)
+        self.second_sizer.Add(self.zoom_button, pos = (12, 5), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 25)
         self.second_sizer_widgets.append(self.zoom_button)
 
         self.to_end_button = wx.Button(self, id=wx.ID_ANY, label="end of slip >")
         self.to_end_button.Bind(wx.EVT_BUTTON, lambda event, new_frame = 'end' : self.SwitchFrame(event, new_frame))
-        self.second_sizer.Add(self.to_end_button, pos = (12, 5), span = (0,2), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 25)
+        self.second_sizer.Add(self.to_end_button, pos = (12, 6), span = (0,2), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 25)
         self.second_sizer_widgets.append(self.to_end_button)
 
         self.save_val_button = wx.Button(self, id=wx.ID_ANY, label="Save")
         self.save_val_button.Bind(wx.EVT_BUTTON, self.SaveValFunc)
-        self.second_sizer.Add(self.save_val_button, pos = (13, 3), span = (0, 1), flag = wx.TOP | wx.BOTTOM, border = 15)
+        self.second_sizer.Add(self.save_val_button, pos = (13, 4), span = (0, 1), flag = wx.TOP | wx.BOTTOM, border = 15)
         self.second_sizer_widgets.append(self.save_val_button)
 
         self.restart_button = wx.Button(self, id=wx.ID_ANY, label="Analyze new file")
         self.restart_button.Bind(wx.EVT_BUTTON, self.DisplayFirstPage)
-        self.second_sizer.Add(self.restart_button, pos = (13, 4), span = (0, 2), flag = wx.TOP | wx.BOTTOM, border = 15)
+        self.second_sizer.Add(self.restart_button, pos = (13, 5), span = (0, 2), flag = wx.TOP | wx.BOTTOM, border = 15)
         self.second_sizer_widgets.append(self.restart_button)
 
         # display location graphs
         graph = SlipFunctions.plot_labels(self.df, self.n_frame, self.method_selection, self.t_val, self.start_val, \
             self.end_val, (self.window_width-50) / 100, self.window_height / 100, self.bodypart, self.bodypart_list_val, self.selected_bodyparts, 'y', self.likelihood_threshold, self.confirmed)
         self.graph_canvas = FigureCanvas(self, -1, graph)
-        self.second_sizer.Add(self.graph_canvas, pos = (14, 0), span = (1, 7), flag = wx.TOP | wx.LEFT, border = 25) 
+        self.second_sizer.Add(self.graph_canvas, pos = (14, 0), span = (1, 8), flag = wx.TOP | wx.LEFT, border = 25) 
         self.second_sizer_widgets.append(self.graph_canvas)       
 
         # display slider
         self.slider = wx.Slider(self, value=self.n_frame+1, minValue=1, maxValue=len(self.df),
             style=wx.SL_HORIZONTAL)
         self.slider.Bind(wx.EVT_SCROLL, self.OnSliderScroll)
-        self.second_sizer.Add(self.slider, pos=(15, 0), span = (2, 7), flag = wx.LEFT | wx.EXPAND | wx.TOP | wx.RIGHT, border = 25)
+        self.second_sizer.Add(self.slider, pos=(15, 0), span = (2, 8), flag = wx.LEFT | wx.EXPAND | wx.TOP | wx.RIGHT, border = 25)
         self.second_sizer_widgets.append(self.slider)
 
         self.likelihood_label = wx.StaticText(self, label = "Set likelihood threshold (data below threshold are labeled grey; between 0 and 1)")
@@ -807,12 +816,12 @@ class ValidateSlipPanel(wx.Panel):
         self.second_sizer_widgets.append(self.likelihood_label)
 
         self.likelihood_input = wx.TextCtrl(self, value = str(self.likelihood_threshold))
-        self.second_sizer.Add(self.likelihood_input, pos= (17, 3), flag = wx.LEFT | wx.TOP, border = 25)
+        self.second_sizer.Add(self.likelihood_input, span = (1, 1), pos= (17, 3), flag = wx.LEFT | wx.TOP, border = 25)
         self.second_sizer_widgets.append(self.likelihood_input)
 
         self.likelihood_button = wx.Button(self, id = wx.ID_ANY, label = "Update")
         self.likelihood_button.Bind(wx.EVT_BUTTON, self.OnLikelihood)
-        self.second_sizer.Add(self.likelihood_button, pos = (17, 4), flag = wx.LEFT | wx.TOP, border = 25)
+        self.second_sizer.Add(self.likelihood_button, span = (1, 1), pos = (17, 4), flag = wx.LEFT | wx.TOP, border = 25)
         self.second_sizer_widgets.append(self.likelihood_button)
 
         self.Fit()
@@ -941,6 +950,19 @@ class ValidateSlipPanel(wx.Panel):
         else:
             self.zoom = False
             self.zoom_button.SetLabel('Zoom in')
+
+        SlipFunctions.DisplayPlots(self)
+        self.GetParent().Layout()
+
+
+    def zoom_frame(self, e):
+        # change status
+        if not self.zoom_image:
+            self.zoom_image = True
+            self.zoom_frame_button.SetLabel('Zoom out')
+        else:
+            self.zoom_image = False
+            self.zoom_frame_button.SetLabel('Zoom in')
 
         SlipFunctions.DisplayPlots(self)
         self.GetParent().Layout()

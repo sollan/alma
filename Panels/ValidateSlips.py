@@ -683,7 +683,7 @@ class ValidateSlipPanel(wx.Panel):
 
 
         self.instructions = wx.StaticText(self, -1, f"Currently validating predictions for {self.video_name}")
-        self.second_sizer.Add(self.instructions, pos = (7, 0), flag = wx.LEFT|wx.TOP|wx.BOTTOM, border=25)
+        self.second_sizer.Add(self.instructions, pos = (7, 0), flag = wx.LEFT | wx.ALIGN_CENTER_VERTICAL | wx.BOTTOM, border=25)
         self.second_sizer_widgets.append(self.instructions)
 
         self.zoom = False
@@ -692,7 +692,7 @@ class ValidateSlipPanel(wx.Panel):
         # display frame from video
         self.zoom_frame_button = wx.Button(self, id=wx.ID_ANY, label="Zoom in")
         self.zoom_frame_button.Bind(wx.EVT_BUTTON, self.zoom_frame)
-        self.second_sizer.Add(self.zoom_frame_button, pos = (7, 1), flag = wx.ALIGN_CENTER_VERTICAL | wx.LEFT, border = 25)
+        self.second_sizer.Add(self.zoom_frame_button, pos = (7, 1), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_RIGHT | wx.BOTTOM, border = 25)
         self.second_sizer_widgets.append(self.zoom_frame_button)
 
         frame = SlipFunctions.plot_frame(self.video, self.n_frame, 

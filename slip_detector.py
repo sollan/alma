@@ -66,8 +66,8 @@ class HomeFrame(wx.Frame):
         help_menu = wx.Menu()
         about_item = help_menu.Append(wx.ID_ABOUT)
         help_item = help_menu.Append(wx.ID_HELP)
-        contact_item = help_menu.Append(-1, "&Contact us...\tCtrl-O",
-                "Contact us for suggestions and support")
+        # contact_item = help_menu.Append(-1, "&Contact us...\tCtrl-O",
+                # "Contact us for suggestions and support")
 
         # configure menu_bar
 
@@ -81,12 +81,13 @@ class HomeFrame(wx.Frame):
         
         # configure events for menu items
         self.Bind(wx.EVT_MENU, self.on_start, start_item)
-        self.Bind(wx.EVT_MENU, self.on_about, about_item)
         # self.Bind(wx.EVT_MENU, self.on_quit, quit_item)
         # self.Bind(wx.EVT_MENU, self.on_analyze_slip, analyze_slip_item)
         self.Bind(wx.EVT_MENU, self.on_validate, validate_item)
         self.Bind(wx.EVT_MENU, self.on_analyze_stride, analyze_stride_item)
-
+        self.Bind(wx.EVT_MENU, self.on_about, about_item)
+        self.Bind(wx.EVT_MENU, self.on_help, help_item)
+        # self.Bind(wx.EVT_MENU, self.on_contact, contact_item)
     
     def on_start(self, event):
         
@@ -157,23 +158,23 @@ class HomeFrame(wx.Frame):
         wx.MessageBox( "This is a slip detector for ladder rung "\
                         "analysis, based on DeepLabCut output of "\
                         "bodypart coordinates (or similarly "\
-                        "structured data). Made by Shuqing Zhao.",
+                        "structured data). ",
                         "About Slip Detector",
                         wx.OK|wx.ICON_INFORMATION)
 
     def on_help(self, event):
 
         # wx.MessageBox("This function is still under development. Thanks for your patience! :)")
-        wx.MessageBox("Please go to our GitHub Wiki for help or email us :)")
+        wx.MessageBox("Please go to our GitHub Wiki for help or email us :)",
+                        "Support",
+                        wx.OK|wx.ICON_INFORMATION)
 
-        pass
 
 
-    def on_contact(self, event):
+    # def on_contact(self, event):
 
-        wx.MessageBox("This function is still under development. Thanks for your patience! :)")
+    #     wx.MessageBox("This function is still under development. Thanks for your patience! :)")
 
-        pass
 
 
 

@@ -147,7 +147,10 @@ class ValidateSlipPanel(wx.Panel):
             if import_dialog.ShowModal() == wx.ID_OK:
                 self.video_dirname = import_dialog.GetDirectory()
                 self.video = os.path.join(self.video_dirname, import_dialog.GetFilename())
-                self.video_name = self.video.split('/')[-1]
+                if '/' in self.video:
+                    self.video_name = self.video.split('/')[-1]
+                elif '\\' in self.video:
+                    self.video_name = self.video.split('\\')[-1]
 
         if self.video is not None:
             self.has_imported_video = True
@@ -682,9 +685,10 @@ class ValidateSlipPanel(wx.Panel):
             self.bodypart = self.selected_bodyparts[0]
 
 
-        self.instructions = wx.StaticText(self, -1, f"Currently validating predictions for {self.video_name}")
-        self.second_sizer.Add(self.instructions, pos = (7, 0), flag = wx.LEFT | wx.ALIGN_CENTER_VERTICAL | wx.BOTTOM, border=25)
-        self.second_sizer_widgets.append(self.instructions)
+        self.file_info_button = wx.Button(self, id=wx.ID_ANY, label="Show file information")
+        self.file_info_button.Bind(wx.EVT_BUTTON, self.display_info)
+        self.second_sizer.Add(self.file_info_button, pos = (7, 0), flag = wx.LEFT | wx.ALIGN_CENTER_VERTICAL | wx.BOTTOM, border=25)
+        self.second_sizer_widgets.append(self.file_info_button)
 
         self.zoom = False
         self.zoom_image = False
@@ -966,3 +970,10 @@ class ValidateSlipPanel(wx.Panel):
 
         SlipFunctions.DisplayPlots(self)
         self.GetParent().Layout()
+
+
+    def display_info(self, e):
+        
+        wx.MessageBox(f"Currently validating predictions for {self.video_name}",
+                        "File information",
+                        wx.OK|wx.ICON_INFORMATION)

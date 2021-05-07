@@ -80,11 +80,16 @@ def filter_predictions(t_peaks, properties, pd_dataframe, bodypart, likelihood_t
         max_between = np.array(pd_dataframe.iloc[prev_mid : curr_mid]['bodyparts coords'])[max_between]
         prev_depth = pd_dataframe.iloc[t_peaks[result[i-1]]][f'{bodypart} y'] - \
                         pd_dataframe.iloc[properties['left_bases'][result[i-1]]][f'{bodypart} y']
-        prev_mid_depth = pd_dataframe.iloc[t_peaks[result[i-1]]][f'{bodypart} y'] 
+        prev_mid_depth = pd_dataframe.iloc[t_peaks[result[i-1]]][f'{bodypart} y']
         prev_end = properties['right_bases'][result[i-1]]
         curr_mid_depth = pd_dataframe.iloc[t_peaks[result[i]]][f'{bodypart} y']
         curr_start = properties['left_bases'][result[i]]
-        if curr_start > prev_end:
+
+        # x coordinate location compared to prev slip
+        prev_x = pd_dataframe.iloc[prev_mid][f'{bodypart} x']
+        curr_x = pd_dataframe.iloc[curr_mid][f'{bodypart} x']
+        x_diff = np.abs(prev_x - curr_x)
+        if curr_start > prev_end and x_diff >= 30:
             # separate slips
             ind_valid_peaks.append(result[i])
         else:

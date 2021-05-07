@@ -974,6 +974,6 @@ class ValidateSlipPanel(wx.Panel):
 
     def display_info(self, e):
         
-        wx.MessageBox(f"Currently validating predictions for {self.video_name}",
+        wx.MessageBox(f"Currently validating predictions for \n\n{self.filename} \n\nand \n\n{self.video_name}",
                         "File information",
                         wx.OK|wx.ICON_INFORMATION)

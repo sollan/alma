@@ -93,7 +93,7 @@ class ValidateSlipPanel(wx.Panel):
 
         except AttributeError:
             # user cancelled file import in pop up
-            print(sys.exc_info())
+            # print(sys.exc_info())
             pass
 
 

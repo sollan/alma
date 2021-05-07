@@ -178,65 +178,68 @@ class AnalyzeStridePanel(wx.Panel):
         if import_dialog.ShowModal() == wx.ID_OK:
             # load directory
             self.input_path = import_dialog.GetPath()
+
+
+            self.files = []
+            for file in os.listdir(self.input_path):
+                if file.endswith('.csv'):
+                    self.files.append(file)
             
+            try:
+                if len(self.files) > 0:
+                    self.df = None
+                    self.has_input_path = True
+                    self.has_imported_file = False
+                    self.import_csv_text.SetLabel(
+                        f"Loaded {len(self.files)} csv files found in {self.input_path}.\n")
+                    self.GetParent().Layout()
+
+                    configs = ConfigFunctions.load_config('./config.yaml')
+                    self.pixels_per_cm = configs['pixels_per_cm']
+                    self.cutoff_f = configs['lowpass_filter_cutoff']
+                    self.px_to_cm_speed_ratio = configs['px_to_cm_speed_ratio']
+                    if configs['cm_speed'] == '':
+                        self.cm_speed = None
+                    else:   
+                        self.cm_speed = configs['cm_speed']
+
+                    self.method_label.Show()
+
+                    # self.method_choices.SetSelection(0)
+                    # self.method_selection = self.method_choices.GetValue()
+                    self.method_choices.Show()
+                    self.GetParent().Layout()
+                    try:    
+                        
+                        self.select_output_path_button.Hide()
+                        self.select_output_path_button.Destroy()
+                        self.extract_parameters_text.Hide()
+                        self.extract_parameters_text.Destroy()
+                        self.extract_parameters_button.Hide()
+                        self.extract_parameters_button.Destroy()
+                        
+                        
+                    except:
+                        pass
+                    # self.EstimateParams(self)
+                    self.GetParent().Layout()
+
+                    return self.input_path, self.files, len(self.files)
+
+                else:
+                    self.has_input_path = False
+
+            except AttributeError:
+                # user cancelled file import in pop up
+                self.GetParent().Layout()
+                pass
+
         else:
             self.input_path = ''
 
         # Destroy the dialog.
         import_dialog.Destroy()
 
-        self.files = []
-        for file in os.listdir(self.input_path):
-            if file.endswith('.csv'):
-                self.files.append(file)
-        
-        try:
-            if len(self.files) > 0:
-                self.df = None
-                self.has_input_path = True
-                self.has_imported_file = False
-                self.import_csv_text.SetLabel(
-                    f"Loaded {len(self.files)} csv files found in {self.input_path}.\n")
-                self.GetParent().Layout()
-
-                configs = ConfigFunctions.load_config('./config.yaml')
-                self.pixels_per_cm = configs['pixels_per_cm']
-                self.cutoff_f = configs['lowpass_filter_cutoff']
-                self.px_to_cm_speed_ratio = configs['px_to_cm_speed_ratio']
-                if configs['cm_speed'] == '':
-                    self.cm_speed = None
-                else:   
-                    self.cm_speed = configs['cm_speed']
-
-                self.method_label.Show()
-
-                # self.method_choices.SetSelection(0)
-                # self.method_selection = self.method_choices.GetValue()
-                self.method_choices.Show()
-                self.GetParent().Layout()
-                try:    
-                    
-                    self.select_output_path_button.Hide()
-                    self.select_output_path_button.Destroy()
-                    self.extract_parameters_text.Hide()
-                    self.extract_parameters_text.Destroy()
-                    self.extract_parameters_button.Hide()
-                    self.extract_parameters_button.Destroy()
-                    
-                    
-                except:
-                    pass
-                # self.EstimateParams(self)
-                self.GetParent().Layout()
-            else:
-                self.has_input_path = False
-
-        except AttributeError:
-            # user cancelled file import in pop up
-            self.GetParent().Layout()
-            pass
-
-        return self.input_path, self.files, len(self.files)
 
 
     def OnMethod(self, e):

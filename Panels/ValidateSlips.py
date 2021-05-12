@@ -798,8 +798,8 @@ class ValidateSlipPanel(wx.Panel):
         self.second_sizer_widgets.append(self.save_val_button)
 
         accelerator_list = [(wx.ACCEL_NORMAL, wx.WXK_SPACE, self.validate_button.GetId()), 
-                            (wx.ACCEL_NORMAL, wx.WXK_LEFT, self.prev_pred_button.GetId()), 
-                            (wx.ACCEL_NORMAL, wx.WXK_RIGHT, self.next_pred_button.GetId()),
+                            (wx.ACCEL_NORMAL, ord('d'), self.prev_pred_button.GetId()), 
+                            (wx.ACCEL_NORMAL, ord('a'), self.next_pred_button.GetId()),
                             (wx.ACCEL_CTRL, ord('s'), self.save_val_button.GetId())]
         self.accel_tbl = wx.AcceleratorTable(accelerator_list)
         self.SetAcceleratorTable(self.accel_tbl)

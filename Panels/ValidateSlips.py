@@ -717,10 +717,10 @@ class ValidateSlipPanel(wx.Panel):
         self.second_sizer_widgets.append(self.reject_button)
 
         # display prev / next buttons
-        self.prev_pred_button = wx.Button(self, id=wx.ID_ANY, label="<- prev prediction (left)")
+        self.prev_pred_button = wx.Button(self, id=wx.ID_ANY, label="<- prev prediction (A)")
         self.Bind(wx.EVT_BUTTON, lambda event, new_frame = 'prev_pred' : self.SwitchFrame(event, new_frame), self.prev_pred_button)
         self.frame_label = wx.StaticText(self, label='Frame')
-        self.next_pred_button = wx.Button(self, id=wx.ID_ANY, label="next prediction (right) ->")
+        self.next_pred_button = wx.Button(self, id=wx.ID_ANY, label="next prediction (D) ->")
         self.Bind(wx.EVT_BUTTON, lambda event, new_frame = 'next_pred' : self.SwitchFrame(event, new_frame), self.next_pred_button)
 
 
@@ -798,8 +798,8 @@ class ValidateSlipPanel(wx.Panel):
         self.second_sizer_widgets.append(self.save_val_button)
 
         accelerator_list = [(wx.ACCEL_NORMAL, wx.WXK_SPACE, self.validate_button.GetId()), 
-                            (wx.ACCEL_NORMAL, ord('d'), self.prev_pred_button.GetId()), 
-                            (wx.ACCEL_NORMAL, ord('a'), self.next_pred_button.GetId()),
+                            (wx.ACCEL_NORMAL, ord('a'), self.prev_pred_button.GetId()), 
+                            (wx.ACCEL_NORMAL, ord('d'), self.next_pred_button.GetId()),
                             (wx.ACCEL_CTRL, ord('s'), self.save_val_button.GetId())]
         self.accel_tbl = wx.AcceleratorTable(accelerator_list)
         self.SetAcceleratorTable(self.accel_tbl)

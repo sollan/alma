@@ -706,8 +706,8 @@ class ValidateSlipPanel(wx.Panel):
         self.second_sizer.Add(self.frame_canvas, pos= (8, 0), span = (6, 2), flag = wx.LEFT, border = 25)
         self.second_sizer_widgets.append(self.frame_canvas)
 
-        self.validate_button = wx.Button(self, id=wx.ID_ANY, label="Confirm")
-        self.validate_button.Bind(wx.EVT_BUTTON, self.OnValidate)
+        self.validate_button = wx.Button(self, label="Confirm (space)")
+        self.Bind(wx.EVT_BUTTON, self.OnValidate, self.validate_button)
         self.second_sizer.Add(self.validate_button, pos = (8, 4), flag =  wx.BOTTOM | wx.ALIGN_CENTER_VERTICAL, border = 25)
         self.second_sizer_widgets.append(self.validate_button)
 
@@ -717,11 +717,12 @@ class ValidateSlipPanel(wx.Panel):
         self.second_sizer_widgets.append(self.reject_button)
 
         # display prev / next buttons
-        self.prev_pred_button = wx.Button(self, id=wx.ID_ANY, label="<- prev prediction")
-        self.prev_pred_button.Bind(wx.EVT_BUTTON, lambda event, new_frame = 'prev_pred' : self.SwitchFrame(event, new_frame))
+        self.prev_pred_button = wx.Button(self, id=wx.ID_ANY, label="<- prev prediction (left)")
+        self.Bind(wx.EVT_BUTTON, lambda event, new_frame = 'prev_pred' : self.SwitchFrame(event, new_frame), self.prev_pred_button)
         self.frame_label = wx.StaticText(self, label='Frame')
-        self.next_pred_button = wx.Button(self, id=wx.ID_ANY, label="next prediction ->")
-        self.next_pred_button.Bind(wx.EVT_BUTTON, lambda event, new_frame = 'next_pred' : self.SwitchFrame(event, new_frame))
+        self.next_pred_button = wx.Button(self, id=wx.ID_ANY, label="next prediction (right) ->")
+        self.Bind(wx.EVT_BUTTON, lambda event, new_frame = 'next_pred' : self.SwitchFrame(event, new_frame), self.next_pred_button)
+
 
         self.prev_pred, self.next_pred = SlipFunctions.find_neighbors(self.n_frame, self.t_pred)
         self.prev_val, self.next_val = SlipFunctions.find_neighbors(self.n_frame, self.t_val)
@@ -791,10 +792,18 @@ class ValidateSlipPanel(wx.Panel):
         self.second_sizer.Add(self.to_end_button, pos = (12, 6), span = (0,2), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 25)
         self.second_sizer_widgets.append(self.to_end_button)
 
-        self.save_val_button = wx.Button(self, id=wx.ID_ANY, label="Save")
-        self.save_val_button.Bind(wx.EVT_BUTTON, self.SaveValFunc)
+        self.save_val_button = wx.Button(self, id=wx.ID_ANY, label="Save (Ctrl-S)")
+        self.Bind(wx.EVT_BUTTON, self.SaveValFunc, self.save_val_button)
         self.second_sizer.Add(self.save_val_button, pos = (13, 4), span = (0, 1), flag = wx.TOP | wx.BOTTOM, border = 15)
         self.second_sizer_widgets.append(self.save_val_button)
+
+        accelerator_list = [(wx.ACCEL_NORMAL, wx.WXK_SPACE, self.validate_button.GetId()), 
+                            (wx.ACCEL_NORMAL, wx.WXK_LEFT, self.prev_pred_button.GetId()), 
+                            (wx.ACCEL_NORMAL, wx.WXK_RIGHT, self.next_pred_button.GetId()),
+                            (wx.ACCEL_CTRL, ord('s'), self.save_val_button.GetId())]
+        self.accel_tbl = wx.AcceleratorTable(accelerator_list)
+        self.SetAcceleratorTable(self.accel_tbl)
+
 
         self.restart_button = wx.Button(self, id=wx.ID_ANY, label="Analyze new file")
         self.restart_button.Bind(wx.EVT_BUTTON, self.DisplayFirstPage)
@@ -836,6 +845,8 @@ class ValidateSlipPanel(wx.Panel):
         # self.Layout()
         self.GetParent().Layout()
 
+    def onTest(self, event):
+        print("refreshed!")
 
     def OnBodypartPlot(self, e):
 

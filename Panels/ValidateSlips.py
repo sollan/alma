@@ -782,7 +782,7 @@ class ValidateSlipPanel(wx.Panel):
         self.second_sizer_widgets.append(self.bodypart_to_plot)
         self.bodypart_to_plot.Bind(wx.EVT_COMBOBOX, self.OnBodypartPlot)
 
-        self.zoom_button = wx.Button(self, id=wx.ID_ANY, label="Zoom in")
+        self.zoom_button = wx.Button(self, id=wx.ID_ANY, label="Zoom in plot")
         self.zoom_button.Bind(wx.EVT_BUTTON, self.zoom_plot)
         self.second_sizer.Add(self.zoom_button, pos = (12, 5), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 25)
         self.second_sizer_widgets.append(self.zoom_button)

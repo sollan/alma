@@ -54,7 +54,7 @@ During validation, you can
 - manually correct the slip detection results, including removing false positives and adding missed slips, and
 - save the validated results as a csv file. 
 
-![](https://github.com/sollan/slip_detector/blob/master/Screenshots/validation%20main%20page.png)
+![](https://github.com/sollan/slip_detector/blob/master/Screenshots/validate.PNG)
 
 
 _(Validate model prediction using the GUI.

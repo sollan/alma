@@ -1,6 +1,6 @@
-# Slip detector GUI
+# Automated Limb Motion Analysis (ALMA) GUI
 
-An add-on for DeepLabCut-assisted behavioral analysis. 
+A DeepLabCut-assisted behavioral analysis. 
 
 ### To get started
 

@@ -1,4 +1,4 @@
-# Automated Limb Motion Analysis (ALMA) GUI
+# Automated Limb Motion Analysis (ALMA)
 
 ![](https://github.com/sollan/slip_detector/blob/master/Screenshots/ALMA.PNG)
 

@@ -42,7 +42,7 @@ In Action - Validation:
 - save the predicted slip properties as a csv file.
 
 
-![](https://github.com/sollan/slip_detector/blob/master/Screenshots/validation%20start%20screen.png)
+![](https://github.com/sollan/slip_detector/blob/master/Screenshots/validate.PNG)
 
 _(Select parameters for slip detection.)_
 

@@ -21,8 +21,13 @@ class StartPanel(wx.Panel):
         self.window_width = configs['window_width']
         self.window_height = configs['window_height']
 
+<<<<<<< HEAD
         self.header = wx.StaticText(self, -1, "Automated Limb Motion Analysis (ALMA)", size=(self.window_width,60))
         font = wx.Font(30,wx.MODERN,wx.NORMAL,wx.NORMAL)
+=======
+        self.header = wx.StaticText(self, -1, "Automated Limb Motion Analysis (ALMA)", size=(400,60))
+        font = wx.Font(20,wx.MODERN,wx.NORMAL,wx.NORMAL)
+>>>>>>> 35682791a78c397d50761d9e3fbec8cf60801c75
         self.header.SetFont(font)
         self.sizer.Add(self.header, pos = (1, 0), span=(1,2), flag = wx.ALL, border = 25)
 

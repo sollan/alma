@@ -69,7 +69,7 @@ class AnalyzeStridePanel(wx.Panel):
                             pos=(6, 0), flag=wx.LEFT, border=25)
         self.first_sizer_widgets.append(self.import_csv_button)
 
-        self.import_csv_text = wx.StaticText(self, label="Import a csv file for stride extraction and calculate kinematics parameters. "
+        self.import_csv_text = wx.StaticText(self, label="Import a csv file for stride extraction and calculate kinematic parameters. "
                                             + "\nThe file should be DeepLabCut output (or of a similar format) to ensure proper parsing!")
         self.first_sizer.Add(self.import_csv_text, pos=(
             6, 1), flag=wx.LEFT, border=25)

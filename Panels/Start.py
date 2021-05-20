@@ -2,7 +2,7 @@ import wx
 from wx.lib.stattext import GenStaticText as StaticText
 from Functions import ConfigFunctions
 import numpy as np
-# from Panels import AnalyzeStride, ValidateSlips
+# from Panels import AnalyzeStride, ValidateFootfalls
 
 
 class StartPanel(wx.Panel):
@@ -21,13 +21,15 @@ class StartPanel(wx.Panel):
         self.window_width = configs['window_width']
         self.window_height = configs['window_height']
 
-        self.header = wx.StaticText(self, -1, "DeepLimbKinematics", size=(400,60))
-        font = wx.Font(20,wx.MODERN,wx.NORMAL,wx.NORMAL)
+        self.header = wx.StaticText(self, -1, "Automated Limb Motion Analysis (ALMA)", size=(self.window_width,60))
+        font = wx.Font(30,wx.MODERN,wx.NORMAL,wx.NORMAL)
         self.header.SetFont(font)
-        self.sizer.Add(self.header, pos = (0, 0), flag = wx.ALL, border = 25)
+        self.sizer.Add(self.header, pos = (1, 0), span=(1,2), flag = wx.ALL, border = 25)
 
         self.intro_text = wx.StaticText(self, 
             label = "Select behavioral test to analyze:\n")
+        font = wx.Font(15,wx.MODERN,wx.NORMAL,wx.NORMAL)
+        self.intro_text.SetFont(font)
         
         ladder_rung_img = wx.Bitmap('./Resources/image_ladder_rung.png')
         w, h = ladder_rung_img.GetWidth(), ladder_rung_img.GetHeight()
@@ -42,9 +44,9 @@ class StartPanel(wx.Panel):
         kinematics_img = wx.Bitmap(kinematics_img)
         self.kinematics_button = wx.BitmapButton(self, id=wx.ID_ANY, bitmap=kinematics_img)
 
-        self.sizer.Add(self.intro_text, pos= (1, 0) , flag = wx.ALL, border = 25)
-        self.sizer.Add(self.ladder_rung_button, pos=(2,0) , flag = wx.ALL, border = 25)
-        self.sizer.Add(self.kinematics_button, pos=(2,1) , flag = wx.ALL, border = 25)
+        self.sizer.Add(self.intro_text, pos= (2, 0) , flag = wx.ALL, border = 25)
+        self.sizer.Add(self.ladder_rung_button, pos=(3,0) , flag = wx.ALL, border = 25)
+        self.sizer.Add(self.kinematics_button, pos=(3,1) , flag = wx.ALL, border = 25)
         # self.sizer.Add(control)
 
         self.ladder_rung_button.Bind(wx.EVT_BUTTON, parent.on_validate)

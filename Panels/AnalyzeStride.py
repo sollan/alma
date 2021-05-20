@@ -1,6 +1,6 @@
 import wx
 from wx.lib.stattext import GenStaticText as StaticText
-from Functions import SlipFunctions, ConfigFunctions, KinematicsFunctions
+from Functions import ConfigFunctions, KinematicsFunctions
 import os
 import yaml
 import matplotlib as mpl
@@ -47,16 +47,18 @@ class AnalyzeStridePanel(wx.Panel):
         self.first_sizer = wx.GridBagSizer(0, 0)
 
         self.header = wx.StaticText(
-            self, -1, "Kinematics Analysis", size=(500, 100))
+            self, -1, "Kinematic Analysis", size=(500, 100))
         font = wx.Font(20, wx.MODERN, wx.NORMAL, wx.NORMAL)
         self.header.SetFont(font)
         self.first_sizer.Add(self.header, pos=(0, 0), span=(
             2, 5), flag=wx.LEFT | wx.TOP, border=25)
 
         self.instructions = wx.StaticText(
-            self, -1, "Load the csv output from DeepLabCut and automatically extract stride and kinematics parameters.")
+            self, -1, "Load the csv file of bodypart coordinates (e.g., from DLC) and automatically extract kinematic parameters.", size=(self.window_width,50))
+        font = wx.Font(15,wx.MODERN,wx.NORMAL,wx.NORMAL)
+        self.instructions.SetFont(font)
         self.first_sizer.Add(self.instructions, pos=(
-            2, 0), span=(1, 3), flag=wx.LEFT | wx.TOP, border=25)
+            2, 0), span=(1, 3), flag=wx.LEFT, border=25)
 
         self.FirstPage()
 

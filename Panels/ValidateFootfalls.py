@@ -1,6 +1,6 @@
 import wx
 from wx.lib.stattext import GenStaticText as StaticText
-from Functions import SlipFunctions, ConfigFunctions
+from Functions import FootfallFunctions, ConfigFunctions
 import os, sys
 import yaml
 import matplotlib as mpl
@@ -10,22 +10,11 @@ import warnings
 warnings.filterwarnings("error")
 warnings.filterwarnings("ignore", category=ResourceWarning)
 
-    #################################
-    # (automatically find csv output from same session?)
-    # "start another" button
-    # get window size and resize elements?
-    # prompt user to save before going to another panel
-    # add option to display prediction vs validated slips
-    # update button after reject
-    # --> only display validate button if method, bodypart and files are selected
-    # --> fix next / prev pred after adding new slip (sort issue)
-    #################################
-
 TEST = False
 # set to True: import default files to reduce clicks :)
-# default files are set in SlipFunctions.test()
+# default files are set in FootfallFunctions.test()
 
-class ValidateSlipPanel(wx.Panel):
+class ValidateFootfallPanel(wx.Panel):
 
 
     def __init__(self, parent):
@@ -43,13 +32,16 @@ class ValidateSlipPanel(wx.Panel):
         
         self.first_sizer = wx.GridBagSizer(0, 0)
 
-        self.header = wx.StaticText(self, -1, "Validate", size=(500,100))
+        self.header = wx.StaticText(self, -1, "Ladder rung (footfall) analysis", size=(500,100))
         font = wx.Font(20,wx.MODERN,wx.NORMAL,wx.NORMAL)
         self.header.SetFont(font)
         self.first_sizer.Add(self.header, pos = (0, 0), span = (1, 5), flag = wx.LEFT|wx.TOP, border = 25)
 
-        self.instructions = wx.StaticText(self, -1, "Load the csv output from DeepLabCut and validate behavioral predictions manually.")
-        self.first_sizer.Add(self.instructions, pos = (1, 0), span = (1, 5), flag = wx.LEFT|wx.TOP|wx.BOTTOM, border=25)
+        self.instructions = wx.StaticText(self, -1, "Load the csv file of bodypart coordinates (e.g., from DLC) and validate detected footfalls.", 
+                                            size=(self.window_width,30))
+        font = wx.Font(15,wx.MODERN,wx.NORMAL,wx.NORMAL)
+        self.instructions.SetFont(font)
+        self.first_sizer.Add(self.instructions, pos = (1, 0), span = (1, 5), flag = wx.LEFT, border=25)
         self.first_sizer_widgets.append(self.instructions)
         self.FirstPage()
 
@@ -61,8 +53,8 @@ class ValidateSlipPanel(wx.Panel):
             if import_dialog.ShowModal() == wx.ID_OK:
                 self.csv_dirname = import_dialog.GetDirectory()
                 self.filename = os.path.join(self.csv_dirname, import_dialog.GetFilename())
-                self.df, self.filename = SlipFunctions.read_file(self.filename)
-                self.df, self.bodyparts = SlipFunctions.fix_column_names(self.df)
+                self.df, self.filename = FootfallFunctions.read_file(self.filename)
+                self.df, self.bodyparts = FootfallFunctions.fix_column_names(self.df)
         try: 
             if self.df is not None:
                 self.has_imported_file = True
@@ -105,7 +97,7 @@ class ValidateSlipPanel(wx.Panel):
 
         for bodypart in self.selected_bodyparts:
             n_pred_temp, depth_pred_temp, t_pred_temp, start_pred_temp, end_pred_temp = \
-                SlipFunctions.find_slips(self.df, bodypart, 'y', panel=self, method = self.method_selection, likelihood_threshold = self.likelihood_threshold, depth_threshold = self.depth_threshold, threshold = self.threshold)
+                FootfallFunctions.find_footfalls(self.df, bodypart, 'y', panel=self, method = self.method_selection, likelihood_threshold = self.likelihood_threshold, depth_threshold = self.depth_threshold, threshold = self.threshold)
             n_pred += n_pred_temp
             depth_pred.extend(depth_pred_temp)
             t_pred.extend(t_pred_temp)
@@ -114,13 +106,13 @@ class ValidateSlipPanel(wx.Panel):
             bodypart_list_pred.extend([bodypart for i in range(n_pred_temp)])
 
 
-        depth_pred = SlipFunctions.sort_list(t_pred, depth_pred)
-        start_pred = SlipFunctions.sort_list(t_pred, start_pred)
-        end_pred = SlipFunctions.sort_list(t_pred, end_pred)
-        bodypart_list_pred = SlipFunctions.sort_list(t_pred, bodypart_list_pred)
+        depth_pred = FootfallFunctions.sort_list(t_pred, depth_pred)
+        start_pred = FootfallFunctions.sort_list(t_pred, start_pred)
+        end_pred = FootfallFunctions.sort_list(t_pred, end_pred)
+        bodypart_list_pred = FootfallFunctions.sort_list(t_pred, bodypart_list_pred)
         t_pred = sorted(t_pred)
 
-        to_remove = SlipFunctions.find_duplicates(t_pred)
+        to_remove = FootfallFunctions.find_duplicates(t_pred)
         for ind in range(len(to_remove)-1, -1, -1):
             i = to_remove[ind]
             _,_,_,_,_ = t_pred.pop(i), depth_pred.pop(i), end_pred.pop(i), start_pred.pop(i), bodypart_list_pred.pop(i)
@@ -129,7 +121,7 @@ class ValidateSlipPanel(wx.Panel):
         self.n_pred, self.depth_pred, self.t_pred, self.start_pred, self.end_pred, self.bodypart_list_pred = n_pred, depth_pred, t_pred, start_pred, end_pred, bodypart_list_pred
         self.confirmed = [0]*self.n_pred
         # print(self.confirmed)
-        self.pred_text.SetLabel(f"\nThe algorithm predicted {self.n_pred} slips {np.mean(self.depth_pred):.2f} pixels deep on average.\n")
+        self.pred_text.SetLabel(f"\nThe algorithm predicted {self.n_pred} footfalls {np.mean(self.depth_pred):.2f} pixels deep on average.\n")
 
         self.save_pred_button.Show()
         self.import_new_csv_button.Show()
@@ -175,13 +167,13 @@ class ValidateSlipPanel(wx.Panel):
             pathname = save_pred_dialog.GetPath()
 
             try:
-                SlipFunctions.make_output(pathname, self.df, self.t_pred, self.depth_pred, self.start_pred, self.end_pred, self.bodypart_list_pred, self.frame_rate)
+                FootfallFunctions.make_output(pathname, self.df, self.t_pred, self.depth_pred, self.start_pred, self.end_pred, self.bodypart_list_pred, self.frame_rate)
 
             except IOError:
                 wx.LogError(f"Cannot save current data in file {pathname}. Try another location or filename?")
                 
 
-    # def MarkSlip(self, e):
+    # def MarkFootfall(self, e):
 
     #     sender = e.GetEventObject()
     #     isChecked = sender.GetValue()
@@ -222,18 +214,18 @@ class ValidateSlipPanel(wx.Panel):
                     self.bodypart_list_val.append(self.bodypart_to_plot.GetValue())
                     self.confirmed.append(1)
 
-                    self.depth_val = SlipFunctions.sort_list(self.t_val, self.depth_val)
-                    self.start_val = SlipFunctions.sort_list(self.t_val, self.start_val)
-                    self.end_val = SlipFunctions.sort_list(self.t_val, self.end_val)
-                    self.bodypart_list_val = SlipFunctions.sort_list(self.t_val, self.bodypart_list_val)
-                    self.confirmed = SlipFunctions.sort_list(self.t_val, self.confirmed)
+                    self.depth_val = FootfallFunctions.sort_list(self.t_val, self.depth_val)
+                    self.start_val = FootfallFunctions.sort_list(self.t_val, self.start_val)
+                    self.end_val = FootfallFunctions.sort_list(self.t_val, self.end_val)
+                    self.bodypart_list_val = FootfallFunctions.sort_list(self.t_val, self.bodypart_list_val)
+                    self.confirmed = FootfallFunctions.sort_list(self.t_val, self.confirmed)
                     self.t_val = sorted(self.t_val)
                 else:
                     index = self.t_val.index(self.n_frame)
                     self.confirmed[index] = 1
                 
-                SlipFunctions.ControlButton(self)
-                SlipFunctions.DisplayPlots(self)
+                FootfallFunctions.ControlButton(self)
+                FootfallFunctions.DisplayPlots(self)
 
                 self.GetParent().Layout()
 
@@ -250,9 +242,9 @@ class ValidateSlipPanel(wx.Panel):
                     self.confirmed[index] = 0
 
         # assuming there is always an existing next/prev prediction
-        # that matches the frame to be labelled as start/end of slip
+        # that matches the frame to be labelled as start/end of footfall
         elif mark_type == "start":
-            _, self.next_val_confirmed = SlipFunctions.find_confirmed_neighbors(self.n_frame, self.t_val, self.confirmed, end=self.t_val_id)
+            _, self.next_val_confirmed = FootfallFunctions.find_confirmed_neighbors(self.n_frame, self.t_val, self.confirmed, end=self.t_val_id)
 
             if self.n_frame in self.t_val:
                 index = self.t_val.index(self.n_frame)
@@ -271,7 +263,7 @@ class ValidateSlipPanel(wx.Panel):
                     self.start_val.insert(index, np.nan)
             
         elif mark_type == "end":
-            self.prev_val_confirmed, _ = SlipFunctions.find_confirmed_neighbors(self.n_frame, self.t_val, self.confirmed, start=self.t_val_id)
+            self.prev_val_confirmed, _ = FootfallFunctions.find_confirmed_neighbors(self.n_frame, self.t_val, self.confirmed, start=self.t_val_id)
             if self.n_frame in self.t_val:
                 index = self.t_val.index(self.n_frame)
             elif self.prev_val_confirmed != 0:
@@ -288,9 +280,9 @@ class ValidateSlipPanel(wx.Panel):
                     self.end_val.pop(index)
                     self.end_val.insert(index, np.nan)
 
-                SlipFunctions.ControlButton(self)
+                FootfallFunctions.ControlButton(self)
 
-        SlipFunctions.DisplayPlots(self)
+        FootfallFunctions.DisplayPlots(self)
         self.GetParent().Layout()
 
     def OnValidate(self, e):
@@ -306,11 +298,11 @@ class ValidateSlipPanel(wx.Panel):
             self.bodypart_list_val.append(self.bodypart)
             self.confirmed.append(1)
 
-            self.depth_val = SlipFunctions.sort_list(self.t_val, self.depth_val)
-            self.start_val = SlipFunctions.sort_list(self.t_val, self.start_val)
-            self.end_val = SlipFunctions.sort_list(self.t_val, self.end_val)
-            self.bodypart_list_val = SlipFunctions.sort_list(self.t_val, self.bodypart_list_val)
-            self.confirmed = SlipFunctions.sort_list(self.t_val, self.confirmed)
+            self.depth_val = FootfallFunctions.sort_list(self.t_val, self.depth_val)
+            self.start_val = FootfallFunctions.sort_list(self.t_val, self.start_val)
+            self.end_val = FootfallFunctions.sort_list(self.t_val, self.end_val)
+            self.bodypart_list_val = FootfallFunctions.sort_list(self.t_val, self.bodypart_list_val)
+            self.confirmed = FootfallFunctions.sort_list(self.t_val, self.confirmed)
             self.t_val = sorted(self.t_val)
 
             self.t_val_id = self.t_val.index(self.n_frame)
@@ -335,8 +327,8 @@ class ValidateSlipPanel(wx.Panel):
             self.slider.SetValue(self.n_frame)
             self.slider_label.SetLabel(str(self.n_frame + 1))
 
-            # self.prev_pred, self.next_pred = SlipFunctions.find_neighbors(self.n_frame, self.t_pred)
-            # self.prev_val, self.next_val = SlipFunctions.find_neighbors(self.n_frame, self.t_val)
+            # self.prev_pred, self.next_pred = FootfallFunctions.find_neighbors(self.n_frame, self.t_pred)
+            # self.prev_val, self.next_val = FootfallFunctions.find_neighbors(self.n_frame, self.t_val)
             if self.t_pred_id+1 >= self.t_pred_max:
                 self.prev_pred = self.t_pred[self.t_pred_max-1]
                 self.next_pred = 0
@@ -356,8 +348,8 @@ class ValidateSlipPanel(wx.Panel):
                 self.next_val = self.t_val[self.t_val_id+2]
                 self.t_val_id += 1
 
-        SlipFunctions.ControlButton(self)
-        SlipFunctions.DisplayPlots(self)
+        FootfallFunctions.ControlButton(self)
+        FootfallFunctions.DisplayPlots(self)
 
         self.GetParent().Layout()
 
@@ -381,8 +373,8 @@ class ValidateSlipPanel(wx.Panel):
         self.slider.SetValue(self.n_frame)
         self.slider_label.SetLabel(str(self.n_frame + 1))
 
-        # self.prev_pred, self.next_pred = SlipFunctions.find_neighbors(self.n_frame, self.t_pred)
-        # self.prev_val, self.next_val = SlipFunctions.find_neighbors(self.n_frame, self.t_val)
+        # self.prev_pred, self.next_pred = FootfallFunctions.find_neighbors(self.n_frame, self.t_pred)
+        # self.prev_val, self.next_val = FootfallFunctions.find_neighbors(self.n_frame, self.t_val)
 
         if self.t_pred_id+1 >= self.t_pred_max:
             self.prev_pred = self.t_pred[-1]
@@ -402,8 +394,8 @@ class ValidateSlipPanel(wx.Panel):
             self.next_val = self.t_val[self.t_val_id+2]
             self.t_val_id += 1
 
-        SlipFunctions.ControlButton(self)
-        SlipFunctions.DisplayPlots(self)
+        FootfallFunctions.ControlButton(self)
+        FootfallFunctions.DisplayPlots(self)
 
         self.GetParent().Layout()
 
@@ -413,14 +405,14 @@ class ValidateSlipPanel(wx.Panel):
         obj = e.GetEventObject()
         self.n_frame = obj.GetValue() - 1
 
-        # self.prev_pred, self.next_pred = SlipFunctions.find_neighbors(self.n_frame, self.t_pred)
-        # self.prev_val, self.next_val = SlipFunctions.find_neighbors(self.n_frame, self.t_val)
+        # self.prev_pred, self.next_pred = FootfallFunctions.find_neighbors(self.n_frame, self.t_pred)
+        # self.prev_val, self.next_val = FootfallFunctions.find_neighbors(self.n_frame, self.t_val)
         if self.n_frame > self.prev_pred and self.n_frame < self.t_pred[self.t_pred_id]:
             self.next_pred = self.t_pred[self.t_pred_id]
         elif self.n_frame < self.next_pred and self.n_frame > self.t_pred[self.t_pred_id]:
             self.prev_pred = self.t_pred[self.t_pred_id]
         elif self.n_frame <= self.prev_pred:
-            self.prev_pred, self.next_pred = SlipFunctions.find_neighbors(self.n_frame, self.t_pred, end = self.t_pred_id)
+            self.prev_pred, self.next_pred = FootfallFunctions.find_neighbors(self.n_frame, self.t_pred, end = self.t_pred_id)
             if self.prev_pred == 0:
                 self.t_pred_id = 0
             elif self.next_pred == 0:
@@ -429,7 +421,7 @@ class ValidateSlipPanel(wx.Panel):
                 index = self.t_pred.index(self.prev_pred)
                 self.t_pred_id = index + 1
         elif self.n_frame >= self.next_pred:
-            self.prev_pred, self.next_pred = SlipFunctions.find_neighbors(self.n_frame, self.t_pred, start = self.t_pred_id)
+            self.prev_pred, self.next_pred = FootfallFunctions.find_neighbors(self.n_frame, self.t_pred, start = self.t_pred_id)
             if self.prev_pred == 0:
                 self.t_pred_id = 0
             elif self.next_pred == 0:
@@ -442,7 +434,7 @@ class ValidateSlipPanel(wx.Panel):
         elif self.n_frame < self.next_val and self.n_frame > self.t_val[self.t_val_id]:
             self.prev_val = self.t_val[self.t_val_id]
         elif self.n_frame <= self.prev_val:
-            self.prev_val, self.next_val = SlipFunctions.find_neighbors(self.n_frame, self.t_val, end = self.t_val_id)
+            self.prev_val, self.next_val = FootfallFunctions.find_neighbors(self.n_frame, self.t_val, end = self.t_val_id)
             if self.prev_val == 0:
                 self.t_val_id = 0
             elif self.next_val == 0:
@@ -451,7 +443,7 @@ class ValidateSlipPanel(wx.Panel):
                 index = self.t_val.index(self.prev_val)
                 self.t_val_id = index + 1
         elif self.n_frame >= self.next_val:
-            self.prev_val, self.next_val = SlipFunctions.find_neighbors(self.n_frame, self.t_val, start = self.t_val_id)
+            self.prev_val, self.next_val = FootfallFunctions.find_neighbors(self.n_frame, self.t_val, start = self.t_val_id)
             if self.prev_val == 0:
                 self.t_val_id = 0
             elif self.next_val == 0:
@@ -462,8 +454,8 @@ class ValidateSlipPanel(wx.Panel):
 
         self.slider_label.SetLabel(str(self.n_frame + 1))
         
-        SlipFunctions.ControlButton(self)
-        SlipFunctions.DisplayPlots(self)
+        FootfallFunctions.ControlButton(self)
+        FootfallFunctions.DisplayPlots(self)
 
         self.GetParent().Layout()
 
@@ -493,7 +485,7 @@ class ValidateSlipPanel(wx.Panel):
         elif self.n_frame < self.next_pred and self.n_frame > self.t_pred[self.t_pred_id]:
             self.prev_pred = self.t_pred[self.t_pred_id]
         elif self.n_frame <= self.prev_pred:
-            self.prev_pred, self.next_pred = SlipFunctions.find_neighbors(self.n_frame, self.t_pred, end = self.t_pred_id)
+            self.prev_pred, self.next_pred = FootfallFunctions.find_neighbors(self.n_frame, self.t_pred, end = self.t_pred_id)
             if self.prev_pred == 0:
                 self.t_pred_id = 0
             elif self.next_pred == 0:
@@ -502,7 +494,7 @@ class ValidateSlipPanel(wx.Panel):
                 index = self.t_pred.index(self.prev_pred)
                 self.t_pred_id = index + 1
         elif self.n_frame >= self.next_pred:
-            self.prev_pred, self.next_pred = SlipFunctions.find_neighbors(self.n_frame, self.t_pred, start = self.t_pred_id)
+            self.prev_pred, self.next_pred = FootfallFunctions.find_neighbors(self.n_frame, self.t_pred, start = self.t_pred_id)
             if self.prev_pred == 0:
                 self.t_pred_id = 0
             elif self.next_pred == 0:
@@ -515,7 +507,7 @@ class ValidateSlipPanel(wx.Panel):
         elif self.n_frame < self.next_val and self.n_frame > self.t_val[self.t_val_id]:
             self.prev_val = self.t_val[self.t_val_id]
         elif self.n_frame <= self.prev_val:
-            self.prev_val, self.next_val = SlipFunctions.find_neighbors(self.n_frame, self.t_val, end = self.t_val_id)
+            self.prev_val, self.next_val = FootfallFunctions.find_neighbors(self.n_frame, self.t_val, end = self.t_val_id)
             if self.prev_val == 0:
                 self.t_val_id = 0
             elif self.next_val == 0:
@@ -524,7 +516,7 @@ class ValidateSlipPanel(wx.Panel):
                 index = self.t_val.index(self.prev_val)
                 self.t_val_id = index + 1
         elif self.n_frame >= self.next_val:
-            self.prev_val, self.next_val = SlipFunctions.find_neighbors(self.n_frame, self.t_val, start = self.t_val_id)
+            self.prev_val, self.next_val = FootfallFunctions.find_neighbors(self.n_frame, self.t_val, start = self.t_val_id)
             if self.prev_val == 0:
                 self.t_val_id = 0
             elif self.next_val == 0:
@@ -533,8 +525,8 @@ class ValidateSlipPanel(wx.Panel):
                 index = self.t_val.index(self.prev_val)
                 self.t_val_id = index + 1
 
-        SlipFunctions.ControlButton(self)
-        SlipFunctions.DisplayPlots(self)
+        FootfallFunctions.ControlButton(self)
+        FootfallFunctions.DisplayPlots(self)
 
         self.GetParent().Layout()
 
@@ -551,7 +543,7 @@ class ValidateSlipPanel(wx.Panel):
             pathname = save_pred_dialog.GetPath()
 
             try:
-                SlipFunctions.make_output(pathname, self.df, self.t_val, self.depth_val, self.start_val, self.end_val, self.bodypart_list_val, self.frame_rate, self.confirmed, True)
+                FootfallFunctions.make_output(pathname, self.df, self.t_val, self.depth_val, self.start_val, self.end_val, self.bodypart_list_val, self.frame_rate, self.confirmed, True)
 
             except IOError:
                 wx.LogError(f"Cannot save current data in file {pathname}. Try another location or filename?")
@@ -563,15 +555,15 @@ class ValidateSlipPanel(wx.Panel):
         self.first_sizer.Add(self.import_csv_button, pos = (6, 0), flag = wx.LEFT, border = 25)
         self.first_sizer_widgets.append(self.import_csv_button)
 
-        self.import_csv_text = wx.StaticText(self, label = "Import a csv file for slip prediction. " + "\nThe file should be DeepLabCut output (or of a similar format) to ensure proper parsing!")
+        self.import_csv_text = wx.StaticText(self, label = "Import a csv file for footfall detection. " + "\nThe file should be DeepLabCut output (or of a similar format) to ensure proper parsing!")
         self.first_sizer.Add(self.import_csv_text, pos=(6, 1), flag = wx.LEFT, border = 25)
         self.first_sizer_widgets.append(self.import_csv_text)
 
-        self.pred_text = wx.StaticText(self, label = "\nThe chosen algorithm will make a prediction using csv input.")
+        self.pred_text = wx.StaticText(self, label = "\nThe chosen algorithm will make a detection using csv input.")
         self.first_sizer.Add(self.pred_text, pos= (7, 1) , flag = wx.LEFT, border = 25)      
         self.first_sizer_widgets.append(self.pred_text)  
 
-        self.method_label = wx.StaticText(self, label = 'Select algorithm for slip prediction:') 
+        self.method_label = wx.StaticText(self, label = 'Select algorithm for footfall detection:') 
         self.first_sizer.Add(self.method_label, pos=(8, 1), flag = wx.LEFT | wx.TOP, border = 25)
         self.first_sizer_widgets.append(self.method_label)  
         self.method_label.Hide()
@@ -597,7 +589,7 @@ class ValidateSlipPanel(wx.Panel):
         #################################
         # add algorithm selection menu
 
-        self.save_pred_button = wx.Button(self, id=wx.ID_ANY, label="Save initial prediction")
+        self.save_pred_button = wx.Button(self, id=wx.ID_ANY, label="Save detected footfalls")
         self.first_sizer.Add(self.save_pred_button, pos = (10, 1), flag = wx.TOP | wx.LEFT | wx.BOTTOM, border = 25)
         self.first_sizer_widgets.append(self.save_pred_button)
         self.save_pred_button.Hide()
@@ -637,7 +629,7 @@ class ValidateSlipPanel(wx.Panel):
         self.import_new_video_button.Bind(wx.EVT_BUTTON, self.ImportVideo)
 
         if TEST is True:
-            self.filename, self.df, self.bodyparts, self.video, self.video_name = SlipFunctions.test(TEST)
+            self.filename, self.df, self.bodyparts, self.video, self.video_name = FootfallFunctions.test(TEST)
 
         self.Fit()
         self.SetSizer(self.first_sizer)
@@ -659,9 +651,9 @@ class ValidateSlipPanel(wx.Panel):
         self.second_sizer = wx.GridBagSizer(0, 0)
 
         # initialize checkboxes (related to n_frame and plotting)
-        self.start_check_box = wx.CheckBox(self, label="Start of slip")
+        self.start_check_box = wx.CheckBox(self, label="Start of footfall")
         self.val_check_box = wx.CheckBox(self, label="Confirmed")
-        self.end_check_box = wx.CheckBox(self, label="End of slip")
+        self.end_check_box = wx.CheckBox(self, label="End of footfall")
 
         if self.n_pred is not None:
             self.n_frame = self.t_pred[0]
@@ -675,7 +667,7 @@ class ValidateSlipPanel(wx.Panel):
         self.n_val, self.depth_val, self.t_val, self.start_val, self.end_val, self.bodypart_list_val = \
             self.n_pred, self.depth_pred[:], self.t_pred[:], self.start_pred[:], self.end_pred[:], self.bodypart_list_pred[:]
 
-        # initialize pred and val slip time indices
+        # initialize pred and val footfall time indices
         self.t_pred_max = len(self.t_pred) - 1
         self.t_val_max = len(self.t_val) - 1
 
@@ -699,7 +691,7 @@ class ValidateSlipPanel(wx.Panel):
         self.second_sizer.Add(self.zoom_frame_button, pos = (7, 1), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_RIGHT | wx.BOTTOM, border = 25)
         self.second_sizer_widgets.append(self.zoom_frame_button)
 
-        frame = SlipFunctions.plot_frame(self.video, self.n_frame, 
+        frame = FootfallFunctions.plot_frame(self.video, self.n_frame, 
             8, 4, int(self.frame_rate), self.df, self.bodypart, self.zoom_image)
         self.frame_canvas = FigureCanvas(self, -1, frame)
 
@@ -717,15 +709,15 @@ class ValidateSlipPanel(wx.Panel):
         self.second_sizer_widgets.append(self.reject_button)
 
         # display prev / next buttons
-        self.prev_pred_button = wx.Button(self, id=wx.ID_ANY, label="<- prev prediction (A)")
+        self.prev_pred_button = wx.Button(self, id=wx.ID_ANY, label="<- prev detected footfall (A)")
         self.Bind(wx.EVT_BUTTON, lambda event, new_frame = 'prev_pred' : self.SwitchFrame(event, new_frame), self.prev_pred_button)
         self.frame_label = wx.StaticText(self, label='Frame')
-        self.next_pred_button = wx.Button(self, id=wx.ID_ANY, label="next prediction (D) ->")
+        self.next_pred_button = wx.Button(self, id=wx.ID_ANY, label="next detected footfall (D) ->")
         self.Bind(wx.EVT_BUTTON, lambda event, new_frame = 'next_pred' : self.SwitchFrame(event, new_frame), self.next_pred_button)
 
 
-        self.prev_pred, self.next_pred = SlipFunctions.find_neighbors(self.n_frame, self.t_pred)
-        self.prev_val, self.next_val = SlipFunctions.find_neighbors(self.n_frame, self.t_val)
+        self.prev_pred, self.next_pred = FootfallFunctions.find_neighbors(self.n_frame, self.t_pred)
+        self.prev_val, self.next_val = FootfallFunctions.find_neighbors(self.n_frame, self.t_val)
 
         self.second_sizer.Add(self.prev_pred_button, pos = (9, 2), span = (0,2), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL)
         self.second_sizer_widgets.append(self.prev_pred_button)
@@ -772,7 +764,7 @@ class ValidateSlipPanel(wx.Panel):
         self.second_sizer.Add(self.end_check_box, pos = (11, 6), span = (0,2), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 20)
         self.second_sizer_widgets.append(self.end_check_box)
 
-        self.to_start_button = wx.Button(self, id=wx.ID_ANY, label="< start of slip")
+        self.to_start_button = wx.Button(self, id=wx.ID_ANY, label="< start of footfall")
         self.to_start_button.Bind(wx.EVT_BUTTON, lambda event, new_frame = 'start' : self.SwitchFrame(event, new_frame))
         self.second_sizer.Add(self.to_start_button, pos = (12, 2), span = (0,2), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 25)
         self.second_sizer_widgets.append(self.to_start_button)
@@ -787,7 +779,7 @@ class ValidateSlipPanel(wx.Panel):
         self.second_sizer.Add(self.zoom_button, pos = (12, 5), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 25)
         self.second_sizer_widgets.append(self.zoom_button)
 
-        self.to_end_button = wx.Button(self, id=wx.ID_ANY, label="end of slip >")
+        self.to_end_button = wx.Button(self, id=wx.ID_ANY, label="end of footfall >")
         self.to_end_button.Bind(wx.EVT_BUTTON, lambda event, new_frame = 'end' : self.SwitchFrame(event, new_frame))
         self.second_sizer.Add(self.to_end_button, pos = (12, 6), span = (0,2), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 25)
         self.second_sizer_widgets.append(self.to_end_button)
@@ -811,7 +803,7 @@ class ValidateSlipPanel(wx.Panel):
         self.second_sizer_widgets.append(self.restart_button)
 
         # display location graphs
-        graph = SlipFunctions.plot_labels(self.df, self.n_frame, self.method_selection, self.t_val, self.start_val, \
+        graph = FootfallFunctions.plot_labels(self.df, self.n_frame, self.method_selection, self.t_val, self.start_val, \
             self.end_val, (self.window_width-50) / 100, self.window_height / 100, self.bodypart, self.bodypart_list_val, self.selected_bodyparts, 'y', self.likelihood_threshold, self.confirmed)
         self.graph_canvas = FigureCanvas(self, -1, graph)
         self.second_sizer.Add(self.graph_canvas, pos = (14, 0), span = (1, 8), flag = wx.TOP | wx.LEFT, border = 25) 
@@ -838,8 +830,8 @@ class ValidateSlipPanel(wx.Panel):
         self.second_sizer_widgets.append(self.likelihood_button)
 
         self.Fit()
-        SlipFunctions.ControlButton(self)
-        SlipFunctions.ControlPrediction(self)
+        FootfallFunctions.ControlButton(self)
+        FootfallFunctions.ControlPrediction(self)
 
         self.SetSizer(self.second_sizer)
         # self.Layout()
@@ -855,8 +847,8 @@ class ValidateSlipPanel(wx.Panel):
             index = self.t_val.index(self.n_frame)
             self.bodypart_list_val[index] = self.bodypart
 
-        SlipFunctions.ControlButton(self)
-        SlipFunctions.DisplayPlots(self, set_bodypart=False)
+        FootfallFunctions.ControlButton(self)
+        FootfallFunctions.DisplayPlots(self, set_bodypart=False)
 
         self.GetParent().Layout()
 
@@ -889,7 +881,7 @@ class ValidateSlipPanel(wx.Panel):
         self.header.SetFont(font)
         self.first_sizer.Add(self.header, pos = (0, 0), span = (2, 5), flag = wx.LEFT|wx.TOP, border = 25)
 
-        self.instructions = wx.StaticText(self, -1, "Load the csv output from DeepLabCut and validate behavioral predictions manually.")
+        self.instructions = wx.StaticText(self, -1, "Load the csv file of bodypart coordinates (e.g., from DLC) and validate detected footfalls.")
         self.first_sizer.Add(self.instructions, pos = (2, 0), span = (1, 3), flag = wx.LEFT|wx.TOP|wx.BOTTOM, border=25)
         self.first_sizer_widgets.append(self.instructions)
         self.SetSizer(self.first_sizer)
@@ -902,8 +894,8 @@ class ValidateSlipPanel(wx.Panel):
     def DisplaySecondPage(self, e):
 
         self.SecondPage()
-        SlipFunctions.ControlButton(self)
-        SlipFunctions.DisplayPlots(self)
+        FootfallFunctions.ControlButton(self)
+        FootfallFunctions.DisplayPlots(self)
 
         self.GetParent().Layout()
         
@@ -925,7 +917,7 @@ class ValidateSlipPanel(wx.Panel):
             self.GetParent().Layout()
         except:
             # awaiting bodypart selection
-            self.pred_text.SetLabel(f"\n{self.pred_text_extra}No slips detected! Try selecting a different bodypart or method?\n")
+            self.pred_text.SetLabel(f"\n{self.pred_text_extra}No footfalls detected! Try selecting a different bodypart or method?\n")
             # print(sys.exc_info())
             pass
 
@@ -945,15 +937,15 @@ class ValidateSlipPanel(wx.Panel):
             self.GetParent().Layout()
         except:
             # awaiting method selection
-            self.pred_text.SetLabel(f"\n{self.pred_text_extra}No slips detected! Try selecting a different bodypart or method?\n")
+            self.pred_text.SetLabel(f"\n{self.pred_text_extra}No footfalls detected! Try selecting a different bodypart or method?\n")
             pass
 
     def OnLikelihood(self, e):
 
         self.likelihood_threshold = float(self.likelihood_input.GetValue())
 
-        SlipFunctions.ControlButton(self)
-        SlipFunctions.DisplayPlots(self)
+        FootfallFunctions.ControlButton(self)
+        FootfallFunctions.DisplayPlots(self)
 
         self.GetParent().Layout()
 
@@ -966,7 +958,7 @@ class ValidateSlipPanel(wx.Panel):
             self.zoom = False
             self.zoom_button.SetLabel('Zoom in')
 
-        SlipFunctions.DisplayPlots(self)
+        FootfallFunctions.DisplayPlots(self)
         self.GetParent().Layout()
 
 
@@ -979,12 +971,12 @@ class ValidateSlipPanel(wx.Panel):
             self.zoom_image = False
             self.zoom_frame_button.SetLabel('Zoom in')
 
-        SlipFunctions.DisplayPlots(self)
+        FootfallFunctions.DisplayPlots(self)
         self.GetParent().Layout()
 
 
     def display_info(self, e):
         
-        wx.MessageBox(f"Currently validating predictions for \n\n{self.filename} \n\nand \n\n{self.video_name}",
+        wx.MessageBox(f"Currently validating detected footfalls for \n\n{self.filename} \n\nand \n\n{self.video_name}",
                         "File information",
                         wx.OK|wx.ICON_INFORMATION)

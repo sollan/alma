@@ -1,12 +1,9 @@
 import wx
-from Panels import Start, AnalyzeStride, ValidateSlips
+from Panels import Start, AnalyzeStride, ValidateFootfalls
 
 
 class HomeFrame(wx.Frame):
-    
-    """
-    main frame for the slip detector
-    """
+
 
     def __init__(self, *args, **kw):
         
@@ -17,11 +14,11 @@ class HomeFrame(wx.Frame):
         self.StartPanel = Start.StartPanel(self)
         self.StartPanel.Hide()
 
-        # self.AnalyzeSlipPanel = AnalyzeSlip.AnalyzeSlipPanel(self)
-        # self.AnalyzeSlipPanel.Hide()
+        # self.AnalyzeFootfallPanel = AnalyzeFootfall.AnalyzeFootfallPanel(self)
+        # self.AnalyzeFootfallPanel.Hide()
         
-        self.ValidateSlipPanel = ValidateSlips.ValidateSlipPanel(self)
-        self.ValidateSlipPanel.Hide()
+        self.ValidateFootfallPanel = ValidateFootfalls.ValidateFootfallPanel(self)
+        self.ValidateFootfallPanel.Hide()
 
         self.AnalyzeStridePanel = AnalyzeStride.AnalyzeStridePanel(self)
         self.AnalyzeStridePanel.Hide()
@@ -40,7 +37,7 @@ class HomeFrame(wx.Frame):
 
         # and a status bar
         self.CreateStatusBar()
-        self.SetStatusText("Slip detector ready for new job")
+        self.SetStatusText("Footfall detector ready for new job")
 
         self.current_panel.Show()
 
@@ -53,14 +50,14 @@ class HomeFrame(wx.Frame):
         
         action_menu = wx.Menu()
         start_item = action_menu.Append(-1, "&Start page \tCtrl-S")
-        # analyze_item = action_menu.Append(-1, "&Analyze slip data...\tCtrl-N",
-        #         "Predict slips based on csv")
-        validate_item = action_menu.Append(-1, "&Validate slip predictions...\tCtrl-L",
-                "Manually validate and correct detected slips")
+        # analyze_item = action_menu.Append(-1, "&Analyze footfall data...\tCtrl-N",
+        #         "Predict footfalls based on csv")
+        validate_item = action_menu.Append(-1, "&Validate footfall predictions...\tCtrl-L",
+                "Manually validate and correct detected footfalls")
         analyze_stride_item = action_menu.Append(-1, "&Analyze kinematics / stride data...\tCtrl-K",
                 "Extract strides and kinematics parameters from csv")
-        # validate_stride_item = action_menu.Append(-1, "&Validate slip predictions...\tCtrl-L",
-        #         "Manually validate and correct detected slips")
+        # validate_stride_item = action_menu.Append(-1, "&Validate footfall predictions...\tCtrl-L",
+        #         "Manually validate and correct detected footfalls")
 
 
         help_menu = wx.Menu()
@@ -82,7 +79,7 @@ class HomeFrame(wx.Frame):
         # configure events for menu items
         self.Bind(wx.EVT_MENU, self.on_start, start_item)
         # self.Bind(wx.EVT_MENU, self.on_quit, quit_item)
-        # self.Bind(wx.EVT_MENU, self.on_analyze_slip, analyze_slip_item)
+        # self.Bind(wx.EVT_MENU, self.on_analyze_footfall, analyze_footfall_item)
         self.Bind(wx.EVT_MENU, self.on_validate, validate_item)
         self.Bind(wx.EVT_MENU, self.on_analyze_stride, analyze_stride_item)
         self.Bind(wx.EVT_MENU, self.on_about, about_item)
@@ -109,17 +106,17 @@ class HomeFrame(wx.Frame):
         self.Close(True)
 
 
-    # def on_analyze_slip(self, event):
+    # def on_analyze_footfall(self, event):
         
     #     self.current_panel.Hide()
 
-    #     self.main_sizer.Replace(self.current_panel, self.AnalyzeSlipPanel, pos=(0, 0), span = (5, 5), flag=wx.EXPAND)
+    #     self.main_sizer.Replace(self.current_panel, self.AnalyzeFootfallPanel, pos=(0, 0), span = (5, 5), flag=wx.EXPAND)
     #     self.SetSizer(self.main_sizer)
 
-    #     self.current_panel = self.AnalyzeSlipPanel
+    #     self.current_panel = self.AnalyzeFootfallPanel
     #     self.current_panel.Show()
 
-    #     self.SetStatusText('Slip detector ready for new job')
+    #     self.SetStatusText('Footfall detector ready for new job')
     #     self.Layout()
     #     self.Refresh()
 
@@ -128,13 +125,13 @@ class HomeFrame(wx.Frame):
 
         self.current_panel.Hide()
 
-        self.main_sizer.Replace(self.current_panel, self.ValidateSlipPanel)
+        self.main_sizer.Replace(self.current_panel, self.ValidateFootfallPanel)
         self.SetSizer(self.main_sizer)
 
-        self.current_panel = self.ValidateSlipPanel
+        self.current_panel = self.ValidateFootfallPanel
         self.current_panel.Show()
 
-        self.SetStatusText('Validating data')
+        self.SetStatusText('Ready for automated footfall analysis')
         self.Layout()
         self.Refresh() # refresh to show slider in right proportion
 
@@ -148,18 +145,17 @@ class HomeFrame(wx.Frame):
         self.current_panel = self.AnalyzeStridePanel
         self.current_panel.Show()
 
-        self.SetStatusText('Kinematics analyzer ready for new job')
+        self.SetStatusText('Ready for automated kinematic analysis')
         self.Layout()
         self.Refresh()
 
 
     def on_about(self, event):
         
-        wx.MessageBox( "This is a slip detector for ladder rung "\
-                        "analysis, based on DeepLabCut output of "\
-                        "bodypart coordinates (or similarly "\
-                        "structured data). ",
-                        "About Slip Detector",
+        wx.MessageBox( "This is a toolbox for fully automated (rodent) "\
+                        "limb motion analysis with markerless bodypart tracking data. "\
+                        "Compatible with csv output from DeepLabCut.",
+                        "About ALMA",
                         wx.OK|wx.ICON_INFORMATION)
 
     def on_help(self, event):
@@ -186,6 +182,6 @@ if __name__ == '__main__':
     window_width, window_height = configs['window_width'], configs['window_height']
 
     app = wx.App(redirect = True)
-    home_frame = HomeFrame(None, title='Slip Detector', size=(window_width, window_height))
+    home_frame = HomeFrame(None, title='ALMA - Automated Limb Motion Analysis', size=(window_width, window_height))
     home_frame.Show()
     app.MainLoop()

@@ -62,9 +62,9 @@ def filter_predictions(t_peaks, properties, pd_dataframe, bodypart, likelihood_t
         prev_mid = t_peaks[result[i-1]]
         curr_mid = t_peaks[result[i]]
 
-        # highest point between prev and current slip (recovered y distance)
-        max_between_slip = min(pd_dataframe.iloc[prev_mid : curr_mid][pd_dataframe.iloc[prev_mid : curr_mid][f'{bodypart} likelihood'] >= likelihood_threshold][f'{bodypart} y'])
-        max_between = np.where(pd_dataframe.iloc[prev_mid : curr_mid][f'{bodypart} y']==max_between_slip)[0][0]
+        # highest point between prev and current footfall (recovered y distance)
+        max_between_footfall = min(pd_dataframe.iloc[prev_mid : curr_mid][pd_dataframe.iloc[prev_mid : curr_mid][f'{bodypart} likelihood'] >= likelihood_threshold][f'{bodypart} y'])
+        max_between = np.where(pd_dataframe.iloc[prev_mid : curr_mid][f'{bodypart} y']==max_between_footfall)[0][0]
         max_between = np.array(pd_dataframe.iloc[prev_mid : curr_mid]['bodyparts coords'])[max_between]
         prev_depth = pd_dataframe.iloc[prev_mid][f'{bodypart} y'] - \
                         pd_dataframe.iloc[properties['left_bases'][result[i-1]]][f'{bodypart} y']
@@ -73,31 +73,31 @@ def filter_predictions(t_peaks, properties, pd_dataframe, bodypart, likelihood_t
         curr_mid_depth = pd_dataframe.iloc[t_peaks[result[i]]][f'{bodypart} y']
         curr_start = properties['left_bases'][result[i]]
         
-        # x coordinate location compared to prev slip
+        # x coordinate location compared to prev footfall
         prev_x = pd_dataframe.iloc[prev_mid][f'{bodypart} x']
         curr_x = pd_dataframe.iloc[curr_mid][f'{bodypart} x']
         x_diff = np.abs(prev_x - curr_x)
         if curr_start > prev_end and x_diff >= 30:
-            # separate slips
+            # separate footfalls
             ind_valid_peaks.append(result[i])
         else:
             # overlapping predictions
-            if curr_mid_depth - max_between_slip >= depth_threshold*prev_depth:
-                # recovered a percentage of prev slip depth
+            if curr_mid_depth - max_between_footfall >= depth_threshold*prev_depth:
+                # recovered a percentage of prev footfall depth
                 if x_diff >= 30:
                     # different rung
                     properties['left_bases'][result[i]] = max_between
                     ind_valid_peaks.append(result[i])
                     # not different rung, recovered -> do not count
             else:
-                # did not recover, mark as same slip; correct prev end and depth
+                # did not recover, mark as same footfall; correct prev end and depth
                 if curr_mid_depth > prev_mid_depth:
-                    # current prediction is deeper; adjust mid and start of slip timing
+                    # current prediction is deeper; adjust mid and start of footfall timing
                     ind_valid_peaks.pop()
                     ind_valid_peaks.append(result[i])
                     properties['left_bases'][result[i]] = properties['left_bases'][result[i-1]]
                 else:
-                    # prev prediction is deeper; adjust end of slip timing
+                    # prev prediction is deeper; adjust end of footfall timing
                     properties['right_bases'][result[i-1]] = properties['right_bases'][result[i]]
 
     t_peaks = t_peaks[ind_valid_peaks]
@@ -112,7 +112,7 @@ def filter_predictions(t_peaks, properties, pd_dataframe, bodypart, likelihood_t
     return t_peaks, properties
 
 
-def find_slips(pd_dataframe, bodypart, axis, panel = None, method = 'Baseline', likelihood_threshold = 0.1, depth_threshold = 0.8, window = '', threshold = '', **kwargs): 
+def find_footfalls(pd_dataframe, bodypart, axis, panel = None, method = 'Baseline', likelihood_threshold = 0.1, depth_threshold = 0.8, window = '', threshold = '', **kwargs): 
         
     if method == 'Deviation':
         '''
@@ -261,7 +261,7 @@ def adjust_times(y, t_prediction, window):
     return t_prediction
 
 
-def make_output(pathname, pd_dataframe, t_slips, depth_slips, start_slips, end_slips, bodyparts, frame_rate, confirmed = [], confirmed_only = False):
+def make_output(pathname, pd_dataframe, t_footfalls, depth_footfalls, start_footfalls, end_footfalls, bodyparts, frame_rate, confirmed = [], confirmed_only = False):
     duration = []
 
     if confirmed_only:
@@ -272,23 +272,23 @@ def make_output(pathname, pd_dataframe, t_slips, depth_slips, start_slips, end_s
         bds = []
         for i, bodypart in enumerate(bodyparts):
             if confirmed[i] == 1:
-                ts.append(t_slips[i])
+                ts.append(t_footfalls[i])
                 bds.append(bodyparts[i])
                 try:
-                    depths.append(calculate_depths(pd_dataframe, bodypart, start_slips[i], end_slips[i], t_slips[i]))
+                    depths.append(calculate_depths(pd_dataframe, bodypart, start_footfalls[i], end_footfalls[i], t_footfalls[i]))
                 except TypeError:
                     # missing start and end?
                     depths.append(np.nan)
                 try:
-                    duration.append(round((end_slips[i] - start_slips[i]) / frame_rate, 3))
+                    duration.append(round((end_footfalls[i] - start_footfalls[i]) / frame_rate, 3))
                 except TypeError:
                     duration.append(np.nan)
                 try: 
-                    starts.append(start_slips[i])
+                    starts.append(start_footfalls[i])
                 except TypeError:
                     starts.append(np.nan)
                 try:
-                    ends.append(end_slips[i])
+                    ends.append(end_footfalls[i])
                 except TypeError:
                     ends.append(np.nan)
 
@@ -301,13 +301,13 @@ def make_output(pathname, pd_dataframe, t_slips, depth_slips, start_slips, end_s
 
     else:
         for i, bodypart in enumerate(bodyparts):
-            depth_slips[i] = calculate_depths(pd_dataframe, bodypart, start_slips[i], end_slips[i], t_slips[i])
-            duration.append(round((end_slips[i] - start_slips[i]) / frame_rate, 3))
+            depth_footfalls[i] = calculate_depths(pd_dataframe, bodypart, start_footfalls[i], end_footfalls[i], t_footfalls[i])
+            duration.append(round((end_footfalls[i] - start_footfalls[i]) / frame_rate, 3))
         
-        df_output = pd.DataFrame({'time (frame)': t_slips,
-                                'depth (pixel)': depth_slips,
-                                'start (frame)': start_slips,
-                                'end (frame)': end_slips,
+        df_output = pd.DataFrame({'time (frame)': t_footfalls,
+                                'depth (pixel)': depth_footfalls,
+                                'start (frame)': start_footfalls,
+                                'end (frame)': end_footfalls,
                                 'duration (s)': duration,
                                 'bodypart': bodyparts})
 
@@ -391,21 +391,21 @@ def plot_labels(pd_dataframe, n_current_frame, method, t_pred, start_pred, end_p
                 axes.annotate('Start', (start_pred[index], pd_dataframe[f'{bodypart} {axis}'].iloc[start_pred[index]]))
                 axes.annotate('End', (end_pred[index], pd_dataframe[f'{bodypart} {axis}'].iloc[end_pred[index]]))
         except TypeError:
-            # user hasn't selected start and end time for added slips!
+            # user hasn't selected start and end time for added footfalls!
             pass
 
     axes.scatter(pd_dataframe[pd_dataframe[f'{bodypart} likelihood'] < likelihood_threshold]['bodyparts coords'], \
         pd_dataframe[pd_dataframe[f'{bodypart} likelihood'] < likelihood_threshold][f'{bodypart} {axis}'], s = 1, c = '0.7')
     axes.invert_yaxis()
-    count_slips = 0
+    count_footfalls = 0
     for i, t in enumerate(t_pred):
         bp = bodypart_list[i]
         if bp == np.nan:
             bp = bodypart
         if confirmed[i]: 
-            count_slips += 1
+            count_footfalls += 1
             c = 'g'
-            axes.annotate(str(count_slips), (t, pd_dataframe[f'{bp} {axis}'][t]), color = c)
+            axes.annotate(str(count_footfalls), (t, pd_dataframe[f'{bp} {axis}'][t]), color = c)
         else:
             pass
 

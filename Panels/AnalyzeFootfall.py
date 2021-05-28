@@ -14,7 +14,7 @@ TEST = False
 # set to True: import default files to reduce clicks :)
 # default files are set in FootfallFunctions.test()
 
-class ValidateFootfallPanel(wx.Panel):
+class AnalyzeFootfallPanel(wx.Panel):
 
 
     def __init__(self, parent):
@@ -25,25 +25,25 @@ class ValidateFootfallPanel(wx.Panel):
         configs = ConfigFunctions.load_config('./config.yaml')
         self.window_width, self.window_height, self.frame_rate, self.likelihood_threshold, self.depth_threshold, self.threshold = \
             configs['window_width'], configs['window_height'], configs['frame_rate'], configs['likelihood_threshold'], configs['depth_threshold'], configs['threshold']
-        self.first_sizer_widgets = []
-        self.second_sizer_widgets = []
+        self.sizer_1_widgets = []
+        self.sizer_2_widgets = []
         self.has_imported_file = False
         self.dirname = os.getcwd()
         
-        self.first_sizer = wx.GridBagSizer(0, 0)
+        self.sizer_1 = wx.GridBagSizer(0, 0)
 
         self.header = wx.StaticText(self, -1, "Ladder rung (footfall) analysis", size=(500,100))
         font = wx.Font(20,wx.MODERN,wx.NORMAL,wx.NORMAL)
         self.header.SetFont(font)
-        self.first_sizer.Add(self.header, pos = (0, 0), span = (1, 5), flag = wx.LEFT|wx.TOP, border = 25)
+        self.sizer_1.Add(self.header, pos = (0, 0), span = (1, 5), flag = wx.LEFT|wx.TOP, border = 25)
 
         self.instructions = wx.StaticText(self, -1, "Load the csv file of bodypart coordinates (e.g., from DLC) and validate detected footfalls.", 
                                             size=(self.window_width,30))
         font = wx.Font(15,wx.MODERN,wx.NORMAL,wx.NORMAL)
         self.instructions.SetFont(font)
-        self.first_sizer.Add(self.instructions, pos = (1, 0), span = (1, 5), flag = wx.LEFT, border=25)
-        self.first_sizer_widgets.append(self.instructions)
-        self.FirstPage()
+        self.sizer_1.Add(self.instructions, pos = (1, 0), span = (1, 5), flag = wx.LEFT, border=25)
+        self.sizer_1_widgets.append(self.instructions)
+        self.Footfall_UI_1()
 
 
     def ImportBehavioralCSV(self, e):
@@ -71,11 +71,11 @@ class ValidateFootfallPanel(wx.Panel):
                 self.bodypart_choices.Hide()
 
                 bodypart_choices = wx.CheckListBox(self, choices = self.bodyparts)
-                self.first_sizer.Replace(self.bodypart_choices, bodypart_choices)
+                self.sizer_1.Replace(self.bodypart_choices, bodypart_choices)
                 self.bodypart_choices = bodypart_choices
                 # self.bodypart_choices.SetCheckedItems([0])
                 # self.bodypart = self.bodyparts[list(self.bodypart_choices.GetCheckedItems())[0]]
-                self.first_sizer_widgets.append(self.bodypart_choices)
+                self.sizer_1_widgets.append(self.bodypart_choices)
                 self.bodypart_choices.Bind(wx.EVT_CHECKLISTBOX, self.OnBodypart)
                 self.bodypart_choices.Show()
 
@@ -549,97 +549,97 @@ class ValidateFootfallPanel(wx.Panel):
                 wx.LogError(f"Cannot save current data in file {pathname}. Try another location or filename?")
 
 
-    def FirstPage(self):
+    def Footfall_UI_1(self):
 
         self.import_csv_button = wx.Button(self, id=wx.ID_ANY, label="Import")
-        self.first_sizer.Add(self.import_csv_button, pos = (6, 0), flag = wx.LEFT, border = 25)
-        self.first_sizer_widgets.append(self.import_csv_button)
+        self.sizer_1.Add(self.import_csv_button, pos = (6, 0), flag = wx.LEFT, border = 25)
+        self.sizer_1_widgets.append(self.import_csv_button)
 
         self.import_csv_text = wx.StaticText(self, label = "Import a csv file for footfall detection. " + "\nThe file should be DeepLabCut output (or of a similar format) to ensure proper parsing!")
-        self.first_sizer.Add(self.import_csv_text, pos=(6, 1), flag = wx.LEFT, border = 25)
-        self.first_sizer_widgets.append(self.import_csv_text)
+        self.sizer_1.Add(self.import_csv_text, pos=(6, 1), flag = wx.LEFT, border = 25)
+        self.sizer_1_widgets.append(self.import_csv_text)
 
         self.pred_text = wx.StaticText(self, label = "\nThe chosen algorithm will make a detection using csv input.")
-        self.first_sizer.Add(self.pred_text, pos= (7, 1) , flag = wx.LEFT, border = 25)      
-        self.first_sizer_widgets.append(self.pred_text)  
+        self.sizer_1.Add(self.pred_text, pos= (7, 1) , flag = wx.LEFT, border = 25)      
+        self.sizer_1_widgets.append(self.pred_text)  
 
         self.method_label = wx.StaticText(self, label = 'Select algorithm for footfall detection:') 
-        self.first_sizer.Add(self.method_label, pos=(8, 1), flag = wx.LEFT | wx.TOP, border = 25)
-        self.first_sizer_widgets.append(self.method_label)  
+        self.sizer_1.Add(self.method_label, pos=(8, 1), flag = wx.LEFT | wx.TOP, border = 25)
+        self.sizer_1_widgets.append(self.method_label)  
         self.method_label.Hide()
 
         methods = ['Threshold', 'Deviation', 'Baseline']
         self.method_choices = wx.ComboBox(self, choices = methods)
-        self.first_sizer.Add(self.method_choices, pos= (8, 2) , flag = wx.LEFT | wx.TOP, border = 25)
-        self.first_sizer_widgets.append(self.method_choices)
+        self.sizer_1.Add(self.method_choices, pos= (8, 2) , flag = wx.LEFT | wx.TOP, border = 25)
+        self.sizer_1_widgets.append(self.method_choices)
         self.method_choices.Bind(wx.EVT_COMBOBOX, self.OnMethod)
         self.method_choices.Hide()
 
         
         self.bodypart_label = wx.StaticText(self, label = 'Bodypart to validate:') 
-        self.first_sizer.Add(self.bodypart_label, pos=(9, 1), flag = wx.LEFT | wx.TOP, border = 25)
-        self.first_sizer_widgets.append(self.bodypart_label)  
+        self.sizer_1.Add(self.bodypart_label, pos=(9, 1), flag = wx.LEFT | wx.TOP, border = 25)
+        self.sizer_1_widgets.append(self.bodypart_label)  
         self.bodypart_label.Hide()
 
         self.bodyparts = []
         self.bodypart_choices = wx.CheckListBox(self, choices = self.bodyparts)
-        self.first_sizer.Add(self.bodypart_choices, pos = (9, 2) , flag = wx.LEFT | wx.TOP, border = 25)
+        self.sizer_1.Add(self.bodypart_choices, pos = (9, 2) , flag = wx.LEFT | wx.TOP, border = 25)
         self.bodypart_choices.Hide()
 
         #################################
         # add algorithm selection menu
 
         self.save_pred_button = wx.Button(self, id=wx.ID_ANY, label="Save detected footfalls")
-        self.first_sizer.Add(self.save_pred_button, pos = (10, 1), flag = wx.TOP | wx.LEFT | wx.BOTTOM, border = 25)
-        self.first_sizer_widgets.append(self.save_pred_button)
+        self.sizer_1.Add(self.save_pred_button, pos = (10, 1), flag = wx.TOP | wx.LEFT | wx.BOTTOM, border = 25)
+        self.sizer_1_widgets.append(self.save_pred_button)
         self.save_pred_button.Hide()
 
         self.import_new_csv_button = wx.Button(self, id=wx.ID_ANY, label="Import a different file")
-        self.first_sizer.Add(self.import_new_csv_button, pos = (10, 2), flag = wx.TOP | wx.BOTTOM, border = 25)
-        self.first_sizer_widgets.append(self.import_new_csv_button)
+        self.sizer_1.Add(self.import_new_csv_button, pos = (10, 2), flag = wx.TOP | wx.BOTTOM, border = 25)
+        self.sizer_1_widgets.append(self.import_new_csv_button)
         self.import_new_csv_button.Hide()
 
         self.import_video_button = wx.Button(self, id=wx.ID_ANY, label="Import")
         
-        self.first_sizer.Add(self.import_video_button, pos = (11, 0), flag = wx.LEFT | wx.TOP, border = 25)
-        self.first_sizer_widgets.append(self.import_video_button)
+        self.sizer_1.Add(self.import_video_button, pos = (11, 0), flag = wx.LEFT | wx.TOP, border = 25)
+        self.sizer_1_widgets.append(self.import_video_button)
         self.import_video_button.Hide()
         
         self.import_video_text = wx.StaticText(self, label = "Import the corresponding video file for validation. ")
-        self.first_sizer.Add(self.import_video_text, pos=(11, 1), flag = wx.LEFT | wx.TOP, border = 25)
-        self.first_sizer_widgets.append(self.import_video_text)
+        self.sizer_1.Add(self.import_video_text, pos=(11, 1), flag = wx.LEFT | wx.TOP, border = 25)
+        self.sizer_1_widgets.append(self.import_video_text)
         self.import_video_text.Hide()
 
         self.validate_button = wx.Button(self, id=wx.ID_ANY, label="Validate")
         
-        self.first_sizer.Add(self.validate_button, pos = (12, 1), flag = wx.TOP | wx.LEFT, border = 25)
-        self.first_sizer_widgets.append(self.validate_button)
+        self.sizer_1.Add(self.validate_button, pos = (12, 1), flag = wx.TOP | wx.LEFT, border = 25)
+        self.sizer_1_widgets.append(self.validate_button)
         self.validate_button.Hide()
 
         self.import_new_video_button = wx.Button(self, id=wx.ID_ANY, label="Import a different video")
-        self.first_sizer.Add(self.import_new_video_button, pos = (12, 2), flag = wx.TOP, border = 25)
-        self.first_sizer_widgets.append(self.import_new_video_button)
+        self.sizer_1.Add(self.import_new_video_button, pos = (12, 2), flag = wx.TOP, border = 25)
+        self.sizer_1_widgets.append(self.import_new_video_button)
         self.import_new_video_button.Hide()
 
         self.save_pred_button.Bind(wx.EVT_BUTTON, self.SavePredFunc)
         self.import_csv_button.Bind(wx.EVT_BUTTON, self.ImportBehavioralCSV)
         self.import_new_csv_button.Bind(wx.EVT_BUTTON, self.ImportBehavioralCSV)
         self.import_video_button.Bind(wx.EVT_BUTTON, self.ImportVideo)
-        self.validate_button.Bind(wx.EVT_BUTTON, self.DisplaySecondPage)
+        self.validate_button.Bind(wx.EVT_BUTTON, self.DisplayFootfall_UI_2)
         self.import_new_video_button.Bind(wx.EVT_BUTTON, self.ImportVideo)
 
         if TEST is True:
             self.filename, self.df, self.bodyparts, self.video, self.video_name = FootfallFunctions.test(TEST)
 
         self.Fit()
-        self.SetSizer(self.first_sizer)
+        self.SetSizer(self.sizer_1)
         
         self.GetParent().Layout()
 
 
-    def SecondPage(self):
+    def Footfall_UI_2(self):
 
-        for widget in self.first_sizer_widgets:
+        for widget in self.sizer_1_widgets:
             try:
                 widget.Hide()
                 widget.Destroy()
@@ -647,8 +647,8 @@ class ValidateFootfallPanel(wx.Panel):
                 # widget has already been destroyed
                 pass
 
-        self.second_sizer_widgets = []
-        self.second_sizer = wx.GridBagSizer(0, 0)
+        self.sizer_2_widgets = []
+        self.sizer_2 = wx.GridBagSizer(0, 0)
 
         # initialize checkboxes (related to n_frame and plotting)
         self.start_check_box = wx.CheckBox(self, label="Start of footfall")
@@ -679,8 +679,8 @@ class ValidateFootfallPanel(wx.Panel):
 
         self.file_info_button = wx.Button(self, id=wx.ID_ANY, label="Show file information")
         self.file_info_button.Bind(wx.EVT_BUTTON, self.display_info)
-        self.second_sizer.Add(self.file_info_button, pos = (7, 0), flag = wx.LEFT | wx.ALIGN_CENTER_VERTICAL | wx.BOTTOM, border=25)
-        self.second_sizer_widgets.append(self.file_info_button)
+        self.sizer_2.Add(self.file_info_button, pos = (7, 0), flag = wx.LEFT | wx.ALIGN_CENTER_VERTICAL | wx.BOTTOM, border=25)
+        self.sizer_2_widgets.append(self.file_info_button)
 
         self.zoom = False
         self.zoom_image = False
@@ -688,25 +688,25 @@ class ValidateFootfallPanel(wx.Panel):
         # display frame from video
         self.zoom_frame_button = wx.Button(self, id=wx.ID_ANY, label="Zoom in")
         self.zoom_frame_button.Bind(wx.EVT_BUTTON, self.zoom_frame)
-        self.second_sizer.Add(self.zoom_frame_button, pos = (7, 1), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_RIGHT | wx.BOTTOM, border = 25)
-        self.second_sizer_widgets.append(self.zoom_frame_button)
+        self.sizer_2.Add(self.zoom_frame_button, pos = (7, 1), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_RIGHT | wx.BOTTOM, border = 25)
+        self.sizer_2_widgets.append(self.zoom_frame_button)
 
         frame = FootfallFunctions.plot_frame(self.video, self.n_frame, 
             8, 4, int(self.frame_rate), self.df, self.bodypart, self.zoom_image)
         self.frame_canvas = FigureCanvas(self, -1, frame)
 
-        self.second_sizer.Add(self.frame_canvas, pos= (8, 0), span = (6, 2), flag = wx.LEFT, border = 25)
-        self.second_sizer_widgets.append(self.frame_canvas)
+        self.sizer_2.Add(self.frame_canvas, pos= (8, 0), span = (6, 2), flag = wx.LEFT, border = 25)
+        self.sizer_2_widgets.append(self.frame_canvas)
 
         self.validate_button = wx.Button(self, label="Confirm (space)")
         self.Bind(wx.EVT_BUTTON, self.OnValidate, self.validate_button)
-        self.second_sizer.Add(self.validate_button, pos = (8, 4), flag =  wx.BOTTOM | wx.ALIGN_CENTER_VERTICAL, border = 25)
-        self.second_sizer_widgets.append(self.validate_button)
+        self.sizer_2.Add(self.validate_button, pos = (8, 4), flag =  wx.BOTTOM | wx.ALIGN_CENTER_VERTICAL, border = 25)
+        self.sizer_2_widgets.append(self.validate_button)
 
         self.reject_button = wx.Button(self, id=wx.ID_ANY, label="Reject")
         self.reject_button.Bind(wx.EVT_BUTTON, self.OnReject)
-        self.second_sizer.Add(self.reject_button, pos = (8, 5), flag =  wx.BOTTOM | wx.ALIGN_CENTER_VERTICAL | wx.LEFT, border = 25)
-        self.second_sizer_widgets.append(self.reject_button)
+        self.sizer_2.Add(self.reject_button, pos = (8, 5), flag =  wx.BOTTOM | wx.ALIGN_CENTER_VERTICAL | wx.LEFT, border = 25)
+        self.sizer_2_widgets.append(self.reject_button)
 
         # display prev / next buttons
         self.prev_pred_button = wx.Button(self, id=wx.ID_ANY, label="<- prev detected footfall (A)")
@@ -719,19 +719,19 @@ class ValidateFootfallPanel(wx.Panel):
         self.prev_pred, self.next_pred = FootfallFunctions.find_neighbors(self.n_frame, self.t_pred)
         self.prev_val, self.next_val = FootfallFunctions.find_neighbors(self.n_frame, self.t_val)
 
-        self.second_sizer.Add(self.prev_pred_button, pos = (9, 2), span = (0,2), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL)
-        self.second_sizer_widgets.append(self.prev_pred_button)
-        self.second_sizer.Add(self.frame_label, pos = (9, 4), span = (0,2), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.LEFT, border = -15)
-        self.second_sizer_widgets.append(self.frame_label)
-        self.second_sizer.Add(self.next_pred_button, pos = (9, 6), span = (0,1), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL)
-        self.second_sizer_widgets.append(self.next_pred_button)
+        self.sizer_2.Add(self.prev_pred_button, pos = (9, 2), span = (0,2), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL)
+        self.sizer_2_widgets.append(self.prev_pred_button)
+        self.sizer_2.Add(self.frame_label, pos = (9, 4), span = (0,2), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.LEFT, border = -15)
+        self.sizer_2_widgets.append(self.frame_label)
+        self.sizer_2.Add(self.next_pred_button, pos = (9, 6), span = (0,1), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL)
+        self.sizer_2_widgets.append(self.next_pred_button)
 
         self.prev_button = wx.Button(self, id=wx.ID_ANY, label="<")
         self.prev_button.Bind(wx.EVT_BUTTON, lambda event, new_frame = -1 : self.SwitchFrame(event, new_frame))
-        self.second_sizer_widgets.append(self.prev_button)
+        self.sizer_2_widgets.append(self.prev_button)
         self.next_button = wx.Button(self, id=wx.ID_ANY, label=">")
         self.next_button.Bind(wx.EVT_BUTTON, lambda event, new_frame = 1 : self.SwitchFrame(event, new_frame))
-        self.second_sizer_widgets.append(self.next_button)
+        self.sizer_2_widgets.append(self.next_button)
 
         self.slider_label = wx.StaticText(self, label=str(self.n_frame + 1))
 
@@ -740,54 +740,54 @@ class ValidateFootfallPanel(wx.Panel):
         self.next10_button = wx.Button(self, id=wx.ID_ANY, label=">>")
         self.next10_button.Bind(wx.EVT_BUTTON, lambda event, new_frame = 10 : self.SwitchFrame(event, new_frame))
 
-        self.second_sizer.Add(self.prev10_button, pos = (10, 2), span = (0,1), flag = wx.LEFT | wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 10)
-        self.second_sizer.Add(self.prev_button, pos = (10, 3), span = (0,1), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 10)        
-        self.second_sizer.Add(self.slider_label, pos = (10, 4), span = (0,2), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 10)
-        self.second_sizer.Add(self.next_button, pos = (10, 6), span = (0,1), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 10)
-        self.second_sizer.Add(self.next10_button, pos = (10, 7), span = (0,1), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 10)
+        self.sizer_2.Add(self.prev10_button, pos = (10, 2), span = (0,1), flag = wx.LEFT | wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 10)
+        self.sizer_2.Add(self.prev_button, pos = (10, 3), span = (0,1), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 10)        
+        self.sizer_2.Add(self.slider_label, pos = (10, 4), span = (0,2), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 10)
+        self.sizer_2.Add(self.next_button, pos = (10, 6), span = (0,1), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 10)
+        self.sizer_2.Add(self.next10_button, pos = (10, 7), span = (0,1), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 10)
 
-        self.second_sizer_widgets.append(self.prev10_button)
-        self.second_sizer_widgets.append(self.prev_button)
-        self.second_sizer_widgets.append(self.slider_label)
-        self.second_sizer_widgets.append(self.next_button)
-        self.second_sizer_widgets.append(self.next10_button)
+        self.sizer_2_widgets.append(self.prev10_button)
+        self.sizer_2_widgets.append(self.prev_button)
+        self.sizer_2_widgets.append(self.slider_label)
+        self.sizer_2_widgets.append(self.next_button)
+        self.sizer_2_widgets.append(self.next10_button)
 
         self.start_check_box.Bind(wx.EVT_CHECKBOX, lambda event, mark_type = 'start' : self.MarkFrame(event, mark_type))
-        self.second_sizer.Add(self.start_check_box, pos = (11, 2), span = (0,2), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 20)
-        self.second_sizer_widgets.append(self.start_check_box)
+        self.sizer_2.Add(self.start_check_box, pos = (11, 2), span = (0,2), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 20)
+        self.sizer_2_widgets.append(self.start_check_box)
 
         self.val_check_box.Bind(wx.EVT_CHECKBOX, lambda event, mark_type = 'confirmed' : self.MarkFrame(event, mark_type))
-        self.second_sizer.Add(self.val_check_box, pos = (11, 4), span = (0,2), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 20)
-        self.second_sizer_widgets.append(self.val_check_box)
+        self.sizer_2.Add(self.val_check_box, pos = (11, 4), span = (0,2), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 20)
+        self.sizer_2_widgets.append(self.val_check_box)
 
         self.end_check_box.Bind(wx.EVT_CHECKBOX, lambda event, mark_type = 'end' : self.MarkFrame(event, mark_type))
-        self.second_sizer.Add(self.end_check_box, pos = (11, 6), span = (0,2), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 20)
-        self.second_sizer_widgets.append(self.end_check_box)
+        self.sizer_2.Add(self.end_check_box, pos = (11, 6), span = (0,2), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 20)
+        self.sizer_2_widgets.append(self.end_check_box)
 
         self.to_start_button = wx.Button(self, id=wx.ID_ANY, label="< start of footfall")
         self.to_start_button.Bind(wx.EVT_BUTTON, lambda event, new_frame = 'start' : self.SwitchFrame(event, new_frame))
-        self.second_sizer.Add(self.to_start_button, pos = (12, 2), span = (0,2), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 25)
-        self.second_sizer_widgets.append(self.to_start_button)
+        self.sizer_2.Add(self.to_start_button, pos = (12, 2), span = (0,2), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 25)
+        self.sizer_2_widgets.append(self.to_start_button)
 
         self.bodypart_to_plot = wx.ComboBox(self, choices = self.selected_bodyparts)
-        self.second_sizer.Add(self.bodypart_to_plot, pos= (12, 4) , flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 25)
-        self.second_sizer_widgets.append(self.bodypart_to_plot)
+        self.sizer_2.Add(self.bodypart_to_plot, pos= (12, 4) , flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 25)
+        self.sizer_2_widgets.append(self.bodypart_to_plot)
         self.bodypart_to_plot.Bind(wx.EVT_COMBOBOX, self.OnBodypartPlot)
 
         self.zoom_button = wx.Button(self, id=wx.ID_ANY, label="Zoom in plot")
         self.zoom_button.Bind(wx.EVT_BUTTON, self.zoom_plot)
-        self.second_sizer.Add(self.zoom_button, pos = (12, 5), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 25)
-        self.second_sizer_widgets.append(self.zoom_button)
+        self.sizer_2.Add(self.zoom_button, pos = (12, 5), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 25)
+        self.sizer_2_widgets.append(self.zoom_button)
 
         self.to_end_button = wx.Button(self, id=wx.ID_ANY, label="end of footfall >")
         self.to_end_button.Bind(wx.EVT_BUTTON, lambda event, new_frame = 'end' : self.SwitchFrame(event, new_frame))
-        self.second_sizer.Add(self.to_end_button, pos = (12, 6), span = (0,2), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 25)
-        self.second_sizer_widgets.append(self.to_end_button)
+        self.sizer_2.Add(self.to_end_button, pos = (12, 6), span = (0,2), flag = wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_CENTER_HORIZONTAL | wx.TOP, border = 25)
+        self.sizer_2_widgets.append(self.to_end_button)
 
         self.save_val_button = wx.Button(self, id=wx.ID_ANY, label="Save (Ctrl-S)")
         self.Bind(wx.EVT_BUTTON, self.SaveValFunc, self.save_val_button)
-        self.second_sizer.Add(self.save_val_button, pos = (13, 4), span = (0, 1), flag = wx.TOP | wx.BOTTOM, border = 15)
-        self.second_sizer_widgets.append(self.save_val_button)
+        self.sizer_2.Add(self.save_val_button, pos = (13, 4), span = (0, 1), flag = wx.TOP | wx.BOTTOM, border = 15)
+        self.sizer_2_widgets.append(self.save_val_button)
 
         accelerator_list = [(wx.ACCEL_NORMAL, wx.WXK_SPACE, self.validate_button.GetId()), 
                             (wx.ACCEL_NORMAL, ord('a'), self.prev_pred_button.GetId()), 
@@ -798,42 +798,42 @@ class ValidateFootfallPanel(wx.Panel):
 
 
         self.restart_button = wx.Button(self, id=wx.ID_ANY, label="Analyze new file")
-        self.restart_button.Bind(wx.EVT_BUTTON, self.DisplayFirstPage)
-        self.second_sizer.Add(self.restart_button, pos = (13, 5), span = (0, 2), flag = wx.TOP | wx.BOTTOM, border = 15)
-        self.second_sizer_widgets.append(self.restart_button)
+        self.restart_button.Bind(wx.EVT_BUTTON, self.DisplayFootfall_UI_1)
+        self.sizer_2.Add(self.restart_button, pos = (13, 5), span = (0, 2), flag = wx.TOP | wx.BOTTOM, border = 15)
+        self.sizer_2_widgets.append(self.restart_button)
 
         # display location graphs
         graph = FootfallFunctions.plot_labels(self.df, self.n_frame, self.method_selection, self.t_val, self.start_val, \
             self.end_val, (self.window_width-50) / 100, self.window_height / 100, self.bodypart, self.bodypart_list_val, self.selected_bodyparts, 'y', self.likelihood_threshold, self.confirmed)
         self.graph_canvas = FigureCanvas(self, -1, graph)
-        self.second_sizer.Add(self.graph_canvas, pos = (14, 0), span = (1, 8), flag = wx.TOP | wx.LEFT, border = 25) 
-        self.second_sizer_widgets.append(self.graph_canvas)       
+        self.sizer_2.Add(self.graph_canvas, pos = (14, 0), span = (1, 8), flag = wx.TOP | wx.LEFT, border = 25) 
+        self.sizer_2_widgets.append(self.graph_canvas)       
 
         # display slider
         self.slider = wx.Slider(self, value=self.n_frame+1, minValue=1, maxValue=len(self.df),
             style=wx.SL_HORIZONTAL)
         self.slider.Bind(wx.EVT_SCROLL, self.OnSliderScroll)
-        self.second_sizer.Add(self.slider, pos=(15, 0), span = (2, 8), flag = wx.LEFT | wx.EXPAND | wx.TOP | wx.RIGHT, border = 25)
-        self.second_sizer_widgets.append(self.slider)
+        self.sizer_2.Add(self.slider, pos=(15, 0), span = (2, 8), flag = wx.LEFT | wx.EXPAND | wx.TOP | wx.RIGHT, border = 25)
+        self.sizer_2_widgets.append(self.slider)
 
         self.likelihood_label = wx.StaticText(self, label = "Set likelihood threshold (data below threshold are labeled grey; between 0 and 1)")
-        self.second_sizer.Add(self.likelihood_label, pos= (17, 0), span = (1, 3),flag = wx.LEFT | wx.TOP, border = 25)
-        self.second_sizer_widgets.append(self.likelihood_label)
+        self.sizer_2.Add(self.likelihood_label, pos= (17, 0), span = (1, 3),flag = wx.LEFT | wx.TOP, border = 25)
+        self.sizer_2_widgets.append(self.likelihood_label)
 
         self.likelihood_input = wx.TextCtrl(self, value = str(self.likelihood_threshold))
-        self.second_sizer.Add(self.likelihood_input, span = (1, 1), pos= (17, 3), flag = wx.LEFT | wx.TOP, border = 25)
-        self.second_sizer_widgets.append(self.likelihood_input)
+        self.sizer_2.Add(self.likelihood_input, span = (1, 1), pos= (17, 3), flag = wx.LEFT | wx.TOP, border = 25)
+        self.sizer_2_widgets.append(self.likelihood_input)
 
         self.likelihood_button = wx.Button(self, id = wx.ID_ANY, label = "Update")
         self.likelihood_button.Bind(wx.EVT_BUTTON, self.OnLikelihood)
-        self.second_sizer.Add(self.likelihood_button, span = (1, 1), pos = (17, 4), flag = wx.LEFT | wx.TOP, border = 25)
-        self.second_sizer_widgets.append(self.likelihood_button)
+        self.sizer_2.Add(self.likelihood_button, span = (1, 1), pos = (17, 4), flag = wx.LEFT | wx.TOP, border = 25)
+        self.sizer_2_widgets.append(self.likelihood_button)
 
         self.Fit()
         FootfallFunctions.ControlButton(self)
         FootfallFunctions.ControlPrediction(self)
 
-        self.SetSizer(self.second_sizer)
+        self.SetSizer(self.sizer_2)
         # self.Layout()
         self.GetParent().Layout()
 
@@ -852,9 +852,9 @@ class ValidateFootfallPanel(wx.Panel):
 
         self.GetParent().Layout()
 
-    def DisplayFirstPage(self, e):
+    def DisplayFootfall_UI_1(self, e):
 
-        for widget in self.second_sizer_widgets:
+        for widget in self.sizer_2_widgets:
             try:
                 widget.Hide()
                 widget.Destroy()
@@ -862,8 +862,8 @@ class ValidateFootfallPanel(wx.Panel):
                 # widget has already been destroyed
                 pass
 
-        self.first_sizer_widgets = []
-        self.second_sizer_widgets = []
+        self.sizer_1_widgets = []
+        self.sizer_2_widgets = []
         self.has_imported_file = False
         self.video = None
         self.df = None
@@ -874,26 +874,26 @@ class ValidateFootfallPanel(wx.Panel):
 
         self.dirname = os.getcwd()
         
-        self.first_sizer = wx.GridBagSizer(0, 0)
+        self.sizer_1 = wx.GridBagSizer(0, 0)
 
         self.header = wx.StaticText(self, -1, "Validate", size=(500,100))
         font = wx.Font(20,wx.MODERN,wx.NORMAL,wx.NORMAL)
         self.header.SetFont(font)
-        self.first_sizer.Add(self.header, pos = (0, 0), span = (2, 5), flag = wx.LEFT|wx.TOP, border = 25)
+        self.sizer_1.Add(self.header, pos = (0, 0), span = (2, 5), flag = wx.LEFT|wx.TOP, border = 25)
 
         self.instructions = wx.StaticText(self, -1, "Load the csv file of bodypart coordinates (e.g., from DLC) and validate detected footfalls.")
-        self.first_sizer.Add(self.instructions, pos = (2, 0), span = (1, 3), flag = wx.LEFT|wx.TOP|wx.BOTTOM, border=25)
-        self.first_sizer_widgets.append(self.instructions)
-        self.SetSizer(self.first_sizer)
+        self.sizer_1.Add(self.instructions, pos = (2, 0), span = (1, 3), flag = wx.LEFT|wx.TOP|wx.BOTTOM, border=25)
+        self.sizer_1_widgets.append(self.instructions)
+        self.SetSizer(self.sizer_1)
 
-        self.FirstPage()
+        self.Footfall_UI_1()
         self.Fit()
         self.GetParent().Layout()
 
 
-    def DisplaySecondPage(self, e):
+    def DisplayFootfall_UI_2(self, e):
 
-        self.SecondPage()
+        self.Footfall_UI_2()
         FootfallFunctions.ControlButton(self)
         FootfallFunctions.DisplayPlots(self)
 

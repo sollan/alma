@@ -1,8 +1,6 @@
 import wx
-from wx.lib.stattext import GenStaticText as StaticText
 from Functions import ConfigFunctions
 import numpy as np
-# from Panels import AnalyzeStride, ValidateFootfalls
 
 
 class StartPanel(wx.Panel):
@@ -49,7 +47,7 @@ class StartPanel(wx.Panel):
         self.sizer.Add(self.kinematics_button, pos=(3,1) , flag = wx.ALL, border = 25)
         # self.sizer.Add(control)
 
-        self.ladder_rung_button.Bind(wx.EVT_BUTTON, parent.on_validate)
+        self.ladder_rung_button.Bind(wx.EVT_BUTTON, parent.on_analyze_footfall)
         self.kinematics_button.Bind(wx.EVT_BUTTON, parent.on_analyze_stride)
 
         self.SetSizer(self.sizer)

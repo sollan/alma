@@ -551,22 +551,22 @@ def DisplayPlots(panel, set_bodypart = True):
         6,3, int(panel.frame_rate), panel.df, panel.bodypart, panel.zoom_image)
         frame_canvas  = FigureCanvas(panel, -1, frame)
         panel.frame_canvas.Hide()
-        panel.second_sizer.Replace(panel.frame_canvas, frame_canvas)
+        panel.sizer_2.Replace(panel.frame_canvas, frame_canvas)
         panel.frame_canvas = frame_canvas
-        panel.second_sizer_widgets.append(panel.frame_canvas)  
+        panel.sizer_2_widgets.append(panel.frame_canvas)  
         panel.frame_canvas.Show()
 
         graph = plot_labels(panel.df, panel.n_frame, panel.method_selection, panel.t_val, panel.start_val, 
             panel.end_val, (panel.window_width-60) // 100, (panel.window_height // 3) // 100, panel.bodypart, panel.bodypart_list_val, panel.selected_bodyparts, 'y', panel.likelihood_threshold, panel.confirmed, panel.zoom)
         graph_canvas = FigureCanvas(panel, -1, graph)
         panel.graph_canvas.Hide()
-        panel.second_sizer.Replace(panel.graph_canvas, graph_canvas)
+        panel.sizer_2.Replace(panel.graph_canvas, graph_canvas)
         panel.graph_canvas = graph_canvas
-        panel.second_sizer_widgets.append(panel.graph_canvas)
+        panel.sizer_2_widgets.append(panel.graph_canvas)
         panel.graph_canvas.Show()     
         panel.Fit()
 
-        panel.SetSizer(panel.second_sizer)
+        panel.SetSizer(panel.sizer_2)
         ControlPrediction(panel)
         panel.GetParent().Layout()
         

@@ -13,7 +13,6 @@ warnings.filterwarnings("ignore", category=ResourceWarning)
 
 TEST = False
 
-
 class AnalyzeStridePanel(wx.Panel):
 
     def __init__(self, parent):
@@ -25,12 +24,7 @@ class AnalyzeStridePanel(wx.Panel):
         self.window_width = configs['window_width']
         self.window_height = configs['window_height']
         self.frame_rate = configs['frame_rate']
-        # self.treadmill_speed = configs['treadmill_speed']
-        # self.rolling_window = configs['rolling_window']
-        # self.change_threshold = configs['change_threshold']
         self.pixels_per_cm = configs['pixels_per_cm']
-        # self.stance_threshold = configs['stance_threshold']
-        # self.treadmill_y = configs['treadmill_y']
         self.cutoff_f = configs['lowpass_filter_cutoff']
         self.px_to_cm_speed_ratio = configs['px_to_cm_speed_ratio']
         if configs['cm_speed'] == '':
@@ -38,68 +32,67 @@ class AnalyzeStridePanel(wx.Panel):
         else:   
             self.cm_speed = configs['cm_speed']
     
-
-        self.first_sizer_widgets = []
-        self.second_sizer_widgets = []
+        self.stride_widgets = []
         self.has_imported_file = False
         self.dirname = os.getcwd()
 
-        self.first_sizer = wx.GridBagSizer(0, 0)
+        self.sizer = wx.GridBagSizer(0, 0)
 
         self.header = wx.StaticText(
             self, -1, "Kinematic Analysis", size=(500, 100))
         font = wx.Font(20, wx.MODERN, wx.NORMAL, wx.NORMAL)
         self.header.SetFont(font)
-        self.first_sizer.Add(self.header, pos=(0, 0), span=(
+        self.sizer.Add(self.header, pos=(0, 0), span=(
             2, 5), flag=wx.LEFT | wx.TOP, border=25)
 
         self.instructions = wx.StaticText(
             self, -1, "Load the csv file of bodypart coordinates (e.g., from DLC) and automatically extract kinematic parameters.", size=(self.window_width,50))
         font = wx.Font(15,wx.MODERN,wx.NORMAL,wx.NORMAL)
         self.instructions.SetFont(font)
-        self.first_sizer.Add(self.instructions, pos=(
+        self.sizer.Add(self.instructions, pos=(
             2, 0), span=(1, 3), flag=wx.LEFT, border=25)
 
-        self.FirstPage()
+        self.Stride_UI()
 
-    def FirstPage(self):
+
+    def Stride_UI(self):
 
         self.import_csv_button = wx.Button(self, id=wx.ID_ANY, label="Import")
-        self.first_sizer.Add(self.import_csv_button,
+        self.sizer.Add(self.import_csv_button,
                             pos=(6, 0), flag=wx.LEFT, border=25)
-        self.first_sizer_widgets.append(self.import_csv_button)
+        self.stride_widgets.append(self.import_csv_button)
 
         self.import_csv_text = wx.StaticText(self, label="Import a csv file for stride extraction and calculate kinematic parameters. "
                                             + "\nThe file should be DeepLabCut output (or of a similar format) to ensure proper parsing!")
-        self.first_sizer.Add(self.import_csv_text, pos=(
+        self.sizer.Add(self.import_csv_text, pos=(
             6, 1), flag=wx.LEFT, border=25)
-        self.first_sizer_widgets.append(self.import_csv_text)
+        self.stride_widgets.append(self.import_csv_text)
         self.import_csv_button.Bind(wx.EVT_BUTTON, self.ImportKinematicsCSV)
         
         self.import_folder_button = wx.Button(self, id=wx.ID_ANY, label="Bulk import")
-        self.first_sizer.Add(self.import_folder_button, pos=(7, 0), flag=wx.LEFT | wx.TOP, border=25)
-        self.first_sizer_widgets.append(self.import_folder_button)
+        self.sizer.Add(self.import_folder_button, pos=(7, 0), flag=wx.LEFT | wx.TOP, border=25)
+        self.stride_widgets.append(self.import_folder_button)
 
         self.import_folder_text = wx.StaticText(self, label="Import all csv files from a folder for stride extraction and calculate kinematics parameters. "
                                             + "\n\nThe files should be DeepLabCut output (or of a similar format) to ensure proper parsing!"
                                             + "\nAll recordings should have the same treadmill speed (if using manual input) or "
                                             + "\nfollow the provided pixel to centimeter speed ratio (if using automatic speed detection).")
-        self.first_sizer.Add(self.import_folder_text, pos=(7, 1), flag=wx.LEFT | wx.TOP, border=25)
-        self.first_sizer_widgets.append(self.import_folder_text)
+        self.sizer.Add(self.import_folder_text, pos=(7, 1), flag=wx.LEFT | wx.TOP, border=25)
+        self.stride_widgets.append(self.import_folder_text)
         self.import_folder_button.Bind(wx.EVT_BUTTON, self.BulkImportKinematicsCSV)
 
         self.method_label = wx.StaticText(
             self, label='Select method for px-to-cm speed conversion:')
-        self.first_sizer.Add(self.method_label, pos=(
+        self.sizer.Add(self.method_label, pos=(
             8, 1), flag=wx.LEFT | wx.TOP, border=25)
-        self.first_sizer_widgets.append(self.method_label)
+        self.stride_widgets.append(self.method_label)
         self.method_label.Hide()
 
         methods = ['Semi-automated', 'Fully automated']
         self.method_choices = wx.ComboBox(self, choices=methods)
-        self.first_sizer.Add(self.method_choices, pos=(
+        self.sizer.Add(self.method_choices, pos=(
             8, 2), flag=wx.LEFT | wx.TOP, border=25)
-        self.first_sizer_widgets.append(self.method_choices)
+        self.stride_widgets.append(self.method_choices)
         self.method_choices.Bind(wx.EVT_COMBOBOX, self.OnMethod)
         self.method_choices.Hide()
 
@@ -108,14 +101,11 @@ class AnalyzeStridePanel(wx.Panel):
             + "\nThe pixel/frame speed and the corresponding px-to-cm speed ratio will be estimated and displayed. "
             + "\nThe ratio can then be re-used for fully automated analysis, or for finding a more precise relationship, "
             + "\ne.g., through a regression between the px-to-cm speed ratio at different speeds.")
-        self.first_sizer.Add(self.method_note_text, pos=(9, 1),
+        self.sizer.Add(self.method_note_text, pos=(9, 1),
                             flag=wx.LEFT | wx.TOP, border=25)
-        self.first_sizer_widgets.append(self.method_note_text)
-
-        self.SetSizer(self.first_sizer)
-
+        self.stride_widgets.append(self.method_note_text)
+        self.SetSizer(self.sizer)
         self.GetParent().Layout()
-
 
     def ImportKinematicsCSV(self, e):
         if not TEST:
@@ -181,7 +171,6 @@ class AnalyzeStridePanel(wx.Panel):
             # load directory
             self.input_path = import_dialog.GetPath()
 
-
             self.files = []
             for file in os.listdir(self.input_path):
                 if file.endswith('.csv'):
@@ -243,7 +232,6 @@ class AnalyzeStridePanel(wx.Panel):
         import_dialog.Destroy()
 
 
-
     def OnMethod(self, e):
 
         # self.selected_bodyparts = self.bodypart_choices.GetValue()
@@ -267,13 +255,13 @@ class AnalyzeStridePanel(wx.Panel):
                 self.cm_speed_input_button.Show()
             except:
                 self.cm_speed_input = wx.TextCtrl(self, value = str(self.cm_speed))
-                self.first_sizer.Add(self.cm_speed_input, pos= (9, 2), flag = wx.LEFT | wx.TOP, border = 25)
-                self.first_sizer_widgets.append(self.cm_speed_input)
+                self.sizer.Add(self.cm_speed_input, pos= (9, 2), flag = wx.LEFT | wx.TOP, border = 25)
+                self.stride_widgets.append(self.cm_speed_input)
 
                 self.cm_speed_input_button = wx.Button(self, id = wx.ID_ANY, label = "Update speed (cm/s)")
                 self.cm_speed_input_button.Bind(wx.EVT_BUTTON, self.UpdateSpeed)
-                self.first_sizer.Add(self.cm_speed_input_button, pos = (9, 3), flag = wx.LEFT | wx.TOP, border = 25)
-                self.first_sizer_widgets.append(self.cm_speed_input_button)
+                self.sizer.Add(self.cm_speed_input_button, pos = (9, 3), flag = wx.LEFT | wx.TOP, border = 25)
+                self.stride_widgets.append(self.cm_speed_input_button)
         else:
 
             self.method_note_text.SetLabel(
@@ -289,13 +277,13 @@ class AnalyzeStridePanel(wx.Panel):
                 self.px_cm_ratio_input_button.Show()
             except:
                 self.px_cm_ratio_input = wx.TextCtrl(self, value = str(self.px_to_cm_speed_ratio))
-                self.first_sizer.Add(self.px_cm_ratio_input, pos= (9, 2), flag = wx.LEFT | wx.TOP, border = 25)
-                self.first_sizer_widgets.append(self.px_cm_ratio_input)
+                self.sizer.Add(self.px_cm_ratio_input, pos= (9, 2), flag = wx.LEFT | wx.TOP, border = 25)
+                self.stride_widgets.append(self.px_cm_ratio_input)
 
                 self.px_cm_ratio_input_button = wx.Button(self, id = wx.ID_ANY, label = "Update pixel-to-cm speed ratio")
                 self.px_cm_ratio_input_button.Bind(wx.EVT_BUTTON, self.UpdateRatio)
-                self.first_sizer.Add(self.px_cm_ratio_input_button, pos = (9, 3), flag = wx.LEFT | wx.TOP, border = 25)
-                self.first_sizer_widgets.append(self.px_cm_ratio_input_button)
+                self.sizer.Add(self.px_cm_ratio_input_button, pos = (9, 3), flag = wx.LEFT | wx.TOP, border = 25)
+                self.stride_widgets.append(self.px_cm_ratio_input_button)
 
         self.EstimateParams(self)
         self.GetParent().Layout()
@@ -314,8 +302,7 @@ class AnalyzeStridePanel(wx.Panel):
         self.EstimateParams(self)
         self.GetParent().Layout()
 
-# edit this to get output from new extract parameters function
-# display "done"
+
     def EstimateParams(self, e):
 
         if self.has_imported_file:
@@ -344,7 +331,6 @@ class AnalyzeStridePanel(wx.Panel):
 
                 self.method_note_text.SetLabel(
                     f'Recorded: 1 px / frame = {self.px_to_cm_speed_ratio} cm / s.'
-                    # f"\nThe algorithm extracted {self.n_strides} strides with an average duration of {np.mean(self.durations):.2f} frames.\n"
                     + f"\n\nEstimated: \nPixel speed: {self.est_px_speed} px / frame."
                     + f"\nRecording cm speed: {self.est_cm_speed} cm / s."
                     + f"\nLength conversion: {self.est_pixels_per_cm} pixels per cm.")
@@ -354,18 +340,18 @@ class AnalyzeStridePanel(wx.Panel):
             except:
                 self.select_output_path_button = wx.Button(
                     self, id=wx.ID_ANY, label='Select output path')
-                self.first_sizer.Add(self.select_output_path_button, pos=(
+                self.sizer.Add(self.select_output_path_button, pos=(
                     11, 1), flag=wx.TOP | wx.LEFT | wx.BOTTOM, border=25)
-                self.first_sizer_widgets.append(self.select_output_path_button)
+                self.stride_widgets.append(self.select_output_path_button)
                 self.select_output_path_button.Bind(wx.EVT_BUTTON, self.SelectOutputPath)
                 self.select_output_path_button.Show()
             try:
                 self.extract_parameters_text.Show()
             except:
                 self.extract_parameters_text = wx.StaticText(self, label="")
-                self.first_sizer.Add(self.extract_parameters_text, pos=(
+                self.sizer.Add(self.extract_parameters_text, pos=(
                     12, 1), flag=wx.TOP | wx.BOTTOM, border=25)
-                self.first_sizer_widgets.append(self.extract_parameters_text)
+                self.stride_widgets.append(self.extract_parameters_text)
                 self.extract_parameters_text.Show()
 
             self.GetParent().Layout()
@@ -393,18 +379,18 @@ class AnalyzeStridePanel(wx.Panel):
             except:
                 self.select_output_folder_button = wx.Button(
                     self, id=wx.ID_ANY, label='Select output folder')
-                self.first_sizer.Add(self.select_output_folder_button, pos=(
+                self.sizer.Add(self.select_output_folder_button, pos=(
                     11, 1), flag=wx.TOP | wx.BOTTOM, border=25)
-                self.first_sizer_widgets.append(self.select_output_folder_button)
+                self.stride_widgets.append(self.select_output_folder_button)
                 self.select_output_folder_button.Bind(wx.EVT_BUTTON, self.SelectOutputFolder)
                 self.select_output_folder_button.Show()
             try:
                 self.extract_parameters_text.Show()
             except:
                 self.extract_parameters_text = wx.StaticText(self, label="")
-                self.first_sizer.Add(self.extract_parameters_text, pos=(
+                self.sizer.Add(self.extract_parameters_text, pos=(
                     12, 1), flag=wx.TOP | wx.BOTTOM, border=25)
-                self.first_sizer_widgets.append(self.extract_parameters_text)
+                self.stride_widgets.append(self.extract_parameters_text)
                 self.extract_parameters_text.Show()
 
             self.GetParent().Layout()
@@ -424,9 +410,9 @@ class AnalyzeStridePanel(wx.Panel):
 
         self.bulk_extract_parameters_button = wx.Button(
             self, id=wx.ID_ANY, label='Start parameter extraction')
-        self.first_sizer.Add(self.bulk_extract_parameters_button, pos=(
+        self.sizer.Add(self.bulk_extract_parameters_button, pos=(
             11, 2), flag=wx.TOP | wx.BOTTOM, border=25)
-        self.first_sizer_widgets.append(self.bulk_extract_parameters_button)
+        self.stride_widgets.append(self.bulk_extract_parameters_button)
         self.bulk_extract_parameters_button.Bind(wx.EVT_BUTTON, self.BulkExtractParameters)
         self.bulk_extract_parameters_button.Show()
 
@@ -436,9 +422,6 @@ class AnalyzeStridePanel(wx.Panel):
     def BulkExtractParameters(self, e):
         
         for i, file in enumerate(self.files):
-            
-            # self.extract_parameters_text.SetLabel("This might take a while (depending on your computer processor). Please be patient.")
-            # self.GetParent().Layout()
 
             self.GetParent().SetStatusText(f"Extracting parameters for file {i+1} out of {len(self.files)}...")
             self.GetParent().Layout()
@@ -467,8 +450,6 @@ class AnalyzeStridePanel(wx.Panel):
         self.GetParent().SetStatusText(
             f"\nKinematic parameters have been extracted and saved to {self.output_path}!\n")
 
-        # self.GetParent().Layout()
-
 
     def SelectOutputPath(self, e):
 
@@ -484,16 +465,15 @@ class AnalyzeStridePanel(wx.Panel):
 
             self.extract_parameters_button = wx.Button(
                 self, id=wx.ID_ANY, label='Start parameter extraction')
-            self.first_sizer.Add(self.extract_parameters_button, pos=(
+            self.sizer.Add(self.extract_parameters_button, pos=(
                 11, 2), flag=wx.TOP | wx.BOTTOM, border=25)
-            self.first_sizer_widgets.append(self.extract_parameters_button)
+            self.stride_widgets.append(self.extract_parameters_button)
             self.extract_parameters_button.Bind(wx.EVT_BUTTON, self.ExtractParameters)
             self.extract_parameters_button.Show()
             self.GetParent().Layout()
-
         else:
             self.output_path = ""
-            
+
         export_dialog.Destroy()
 
 
@@ -504,14 +484,11 @@ class AnalyzeStridePanel(wx.Panel):
 
         self.GetParent().SetStatusText(
             f"\nWorking hard to extract 44 kinematic parameters for {self.filename}...\n")
-
         self.GetParent().Layout()
-        
-        if self.method_selection == 'Semi-automated':
 
+        if self.method_selection == 'Semi-automated':
             parameters = KinematicsFunctions.extract_parameters(self.frame_rate, self.df, self.cutoff_f, 'toe', 
                 cm_speed = self.cm_speed, px_to_cm_speed_ratio = self.est_px_to_cm_speed_ratio)
-
         elif self.method_selection == 'Fully automated':
             parameters = KinematicsFunctions.extract_parameters(self.frame_rate, self.df, self.cutoff_f, 'toe', 
                 cm_speed = self.est_cm_speed, px_to_cm_speed_ratio = self.px_to_cm_speed_ratio)
@@ -519,6 +496,4 @@ class AnalyzeStridePanel(wx.Panel):
         KinematicsFunctions.make_parameters_output(self.output_path, parameters)
 
         self.GetParent().SetStatusText(
-            f"\nKinematic parameters have been extracted and saved to {self.output_path}!\n")
-
-        # self.GetParent().Layout()
+            f"\nKinematic parameters have been extracted and saved to {self.output_path}! Ready for between-group analysis\n")

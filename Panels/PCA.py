@@ -201,7 +201,7 @@ class PCAPanel(wx.Panel):
         else:
             file_lists = [group_1_file_list, group_2_file_list]
             group_names = [self.group_name_1, self.group_name_2]
-        combined_df = DataAnalysisFunctions.combine_files(file_lists, group_names, 'average')
+        combined_df = DataAnalysisFunctions.combine_files(file_lists, group_names, self.output_path, 'average')
 
         DataAnalysisFunctions.PCA(combined_df, self.output_path)
 

@@ -158,7 +158,7 @@ class RandomForestPanel(wx.Panel):
         group_2_file_list = DataAnalysisFunctions.find_files(self.folder2)
         file_lists = [group_1_file_list, group_2_file_list]
         group_names = [self.group_name_1, self.group_name_2]
-        combined_df = DataAnalysisFunctions.combine_files(file_lists, group_names, 'strides')
+        combined_df = DataAnalysisFunctions.combine_files(file_lists, group_names, self.output_path, 'strides')
 
         DataAnalysisFunctions.random_forest(combined_df, self.output_path)
 

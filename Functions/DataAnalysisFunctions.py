@@ -23,7 +23,7 @@ def find_files(folder):
     return file_list
 
 
-def combine_files(file_lists, group_names, file_type='strides'):
+def combine_files(file_lists, group_names, output_path, file_type='strides'):
     '''
     merge result files from all groups into a single pd dataframe
     '''
@@ -46,7 +46,9 @@ def combine_files(file_lists, group_names, file_type='strides'):
             combined_df.fillna(combined_df.mean(), inplace=True)
         elif file_type == 'average':
             combined_df = pd.concat(dfs).iloc[:,2:].groupby(['id', 'group']).agg('mean').reset_index()
-
+            
+    file_name = f'concatenated_results_{file_type}.csv'
+    combined_df.to_csv(os.path.join(output_path, file_name))
     return combined_df
 
 

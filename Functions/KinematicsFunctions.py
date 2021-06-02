@@ -890,3 +890,4 @@ def extract_parameters(frame_rate, pd_dataframe, cutoff_f, bodypart, cm_speed = 
 def make_parameters_output(pathname, parameters):
 
     parameters.to_csv(pathname)
+

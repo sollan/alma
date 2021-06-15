@@ -313,7 +313,7 @@ def pairwise_dtw(iterable):
     return dtw_result
 
 
-def extract_parameters(frame_rate, pd_dataframe, cutoff_f, bodypart, cm_speed = None, px_to_cm_speed_ratio = 0.4806):
+def extract_parameters(frame_rate, pd_dataframe, cutoff_f, bodypart, cm_speed = None, px_to_cm_speed_ratio = 0.4806, plot = False):
     '''
     pd_dataframe: contains raw coordinates (not adjusted for treadmill movement, unfiltered)
     bodypart: which bodypart to use for stride estimation
@@ -891,3 +891,25 @@ def make_parameters_output(pathname, parameters):
 
     parameters.to_csv(pathname)
 
+
+def make_averaged_output(pathname):
+
+    files = []
+    for file in os.listdir(pathname):
+        if file.endswith('.csv') and file.startswith('parameters_'):
+            files.append(file)
+
+    dfs = []
+    for file in files:
+
+        input_name = file.split('parameters_')[1].split('.')[0]
+
+        path = os.path.join(pathname, file)
+        df = pd.read_csv(path)
+        df['id'] = input_name
+
+        dfs.append(df)
+
+    res = pd.concat(dfs).groupby('id').agg(['mean','std'])
+    res = res.drop(['Unnamed: 0','stride_start (frame)','stride_end (frame)'], axis=1, errors='ignore')
+    res.to_csv(os.path.join(pathname, 'averaged_results.csv'))

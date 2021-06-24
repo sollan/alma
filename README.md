@@ -8,7 +8,7 @@ A DeepLabCut-assisted behavioral analysis.
 
 ```bash
 pip install -r requirements.txt
-python ./slip_detector.py
+python ./alma.py
 ```
 
 Note: wxPython might not install at first if the gtk requirements are not met. Try 

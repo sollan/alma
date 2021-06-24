@@ -74,104 +74,6 @@ def treadmill_correction(pd_dataframe, bodyparts, treadmill_speed = 8.09):
     return pd_dataframe
 
 
-# def find_strides(pd_dataframe, bodypart, method = 'Rate of change', rolling_window = None, 
-#                  change_threshold = 0, treadmill_speed = None, frame_rate = 119.88, threshold = 540, **kwargs):
-
-#     start_times = []
-#     end_times = []
-#     durations = []
-
-#     if method == "Rate of change":
-# #         axis = 'x'
-
-# #         mean_bodypart_x = pd_dataframe[f'{bodypart} {axis}'].rolling(rolling_window).mean() if rolling_window is not None else pd_dataframe[f'{bodypart} {axis}']
-# #         mean_bodypart_x_change = np.diff(mean_bodypart_x)
-
-# #         is_stance = [i <= change_threshold for i in mean_bodypart_x_change]
-
-# #         if not is_stance[0]:
-# #             start_times.append(0)
-
-# #         for i in range(1, len(is_stance)):
-# #             if is_stance[i] != is_stance[i-1]: # change of stance / swing status
-# #                 if not is_stance[i]: # from stance to not stance
-# #                     end_times.append(i-1)
-# #                     start_times.append(i)
-# #                 # else: # from not stance to stance
-# #                     # end_times.append(i)
-# #                     # pass
-# #         if is_stance[-1]:
-# #             end_times.append(len(is_stance))
-#         axis = 'x'
-
-# #         mean_bodypart_x = pd_dataframe[f'{bodypart} {axis}'].rolling(rolling_window).mean() if rolling_window is not None else pd_dataframe[f'{bodypart} {axis}']
-#         fc = 6  # Cut-off frequency of the filter
-#         w = fc / (frame_rate / 2) # Normalize the frequency
-#         b, a = butter(5, w, 'low')
-#         filtered_bodypart_x = filtfilt(b, a, pd_dataframe[f'{bodypart} x'])
-#         filtered_bodypart_x_change = np.diff(filtered_bodypart_x)
-#         # movement direction: x loc decreasing; treadmill direction: x loc increasing
-#         # x loc change > 0 -> treadmill movement dominates (limb is stable)
-#         is_stance = [i >= change_threshold for i in filtered_bodypart_x_change]
-# #         print(is_stance, filtered_bodypart_x_change)
-#         for i in range(1, len(is_stance)):
-#             if is_stance[i] != is_stance[i-1]: # change of stance / swing status
-#                 # if is_stance[i] and pd_dataframe[f'{bodypart} y'].iloc[i] >= threshold: 
-#                 # from "not stance" to "stance", and y loc also lower than threshold (opencv reverses axis)
-#                 # i.e., "touching" treadmill
-#             	start_times.append(i)
-#                 # elif is_stance[i] and pd_dataframe[f'{bodypart} y'].iloc[i] < threshold: 
-#                     # is_stance[i] = False
-                    
-#         for i in range(1,len(start_times)):
-#             end_times.append(start_times[i]-1)
-            
-#         end_times.append(len(is_stance))
-        
-
-#     elif method == 'Threshold':
-#         '''
-#         when there is a clear cut off pixel value for the entire video, 
-#         e.g. location of treadmill in frame
-#         '''
-#         axis = 'y'
-
-#         if threshold is None:  
-#             threshold = np.percentile(pd_dataframe[f'{bodypart} {axis}'], 50)
-#         # print(threshold)
-#         # pd_dataframe[f'{bodypart} {axis}'] = pd_dataframe[f'{bodypart} {axis}'].rolling(rolling_window).mean() if rolling_window is not None else pd_dataframe[f'{bodypart} {axis}']
-
-#         # y axis loc larger than threshold == limb touching treadmill == end of stride        
-#         on_treadmill = [i >= threshold for i in pd_dataframe[f'{bodypart} {axis}']]
-#         # print(on_treadmill)
-# #         if not on_treadmill[0]:
-# #             start_times.append(0)
-# #         for i in range(1, len(on_treadmill)):
-# #             if on_treadmill[i] != on_treadmill[i-1]: # change of stance / swing status
-# #                 if not on_treadmill[i]: # from not stance to stance
-# #                     # end_times.append(i)
-# #                     # pass
-# #                 # else: # from stance to not stance
-# #                     end_times.append(i-1)
-# #                     start_times.append(i)
-# #         if on_treadmill[-1]:
-# #             end_times.append(len(on_treadmill))
-
-#         for i in range(1, len(on_treadmill)):
-#             if on_treadmill[i] != on_treadmill[i-1]: # change of stance / swing status
-#                 if on_treadmill[i]: # from stance to not stance
-#                     start_times.append(i)
-                    
-#         for i in range(1,len(start_times)):
-#             end_times.append(start_times[i]-1)
-            
-#         end_times.append(len(on_treadmill))
-#         print(start_times, end_times)
-#     durations = np.array(end_times) - np.array(start_times)
-#     # print(start_times, end_times, durations)
-#     return list(start_times), list(end_times), list(durations)
-
-
 def estimate_speed(pd_dataframe, bodypart, cm_speed, px_to_cm_speed_ratio, frame_rate):
 
     x_change = np.diff(pd_dataframe[f'{bodypart} x'][pd_dataframe[f'{bodypart} likelihood']>0.5])
@@ -887,6 +789,7 @@ def extract_parameters(frame_rate, pd_dataframe, cutoff_f, bodypart, cm_speed = 
                                 'DTW distance xy plane 10 strides SD',
                                 ])
 
+
 def make_parameters_output(pathname, parameters):
 
     parameters.to_csv(pathname)
@@ -913,3 +816,53 @@ def make_averaged_output(pathname):
     res = pd.concat(dfs).groupby('id').agg(['mean','std'])
     res = res.drop(['Unnamed: 0','stride_start (frame)','stride_end (frame)'], axis=1, errors='ignore')
     res.to_csv(os.path.join(pathname, 'averaged_results.csv'))
+    
+    
+def convert_to_binary(A):
+    
+    list_valid = [0 if np.isnan(i) else 1 for i in A]
+    
+    return list_valid
+
+
+
+
+def findLongestSequence(A, k):
+    '''
+    Function to find the maximum sequence of continuous 1's by replacing
+    at most `k` zeroes by 1 using sliding window technique
+    '''
+ 
+    left = 0        # represents the current window's starting index
+    count = 0       # stores the total number of zeros in the current window
+    window = 0      # stores the maximum number of continuous 1's found
+                    # so far (including `k` zeroes)
+ 
+    leftIndex = 0   # stores the left index of maximum window found so far
+
+    for right in range(len(A)):
+ 
+        if A[right] == 0:
+            count = count + 1
+ 
+        while count > k:
+            if A[left] == 0:
+                count = count - 1
+ 
+            left = left + 1
+            
+        if right - left + 1 > window:
+            window = right - left + 1
+            leftIndex = left
+    
+    return leftIndex, leftIndex + window - 1
+
+
+def return_ten_central(pd_DataFrame):
+    
+    valid_list = convert_to_binary(pd_DataFrame['cycle duration (s)'])
+    start, end = findLongestSequence(valid_list, 0)
+    start_stride = int(np.mean([start, end]))-5
+    end_stride = start_stride+10
+    
+    return pd_DataFrame.iloc[start_stride:end_stride, :]

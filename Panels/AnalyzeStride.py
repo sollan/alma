@@ -444,6 +444,9 @@ class AnalyzeStridePanel(wx.Panel):
                     cm_speed = self.est_cm_speed, px_to_cm_speed_ratio = self.px_to_cm_speed_ratio)
 
             KinematicsFunctions.make_parameters_output(os.path.join(self.output_path, f'parameters_{file}'), parameters)
+            
+            parameters_truncated = KinematicsFunctions.return_ten_central(parameters)
+            KinematicsFunctions.make_parameters_output(os.path.join(self.output_path, f'10_continuous_strides_parameters_{file}'), parameters_truncated)
         
         KinematicsFunctions.make_averaged_output(self.output_path)
 
@@ -494,6 +497,9 @@ class AnalyzeStridePanel(wx.Panel):
                 cm_speed = self.est_cm_speed, px_to_cm_speed_ratio = self.px_to_cm_speed_ratio)
 
         KinematicsFunctions.make_parameters_output(self.output_path, parameters)
+        
+        parameters_truncated = KinematicsFunctions.return_ten_central(parameters)
+        KinematicsFunctions.make_parameters_output(os.path.join(self.output_path, f'10_continuous_strides_parameters'), parameters_truncated)
 
         self.GetParent().SetStatusText(
             f"\nKinematic parameters have been extracted and saved to {self.output_path}! Ready for between-group analysis\n")

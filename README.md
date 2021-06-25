@@ -8,7 +8,7 @@ A DeepLabCut-assisted behavioral analysis.
 
 ```bash
 pip install -r requirements.txt
-python ./slip_detector.py
+python ./alma.py
 ```
 
 Note: wxPython might not install at first if the gtk requirements are not met. Try 
@@ -29,7 +29,7 @@ sudo apt update
 sudo apt install libpng12-0
 ```
 
-We will hopefully provide a package installer in the near future (for a more mature version).
+If you have problem installing, please open an issue with the details and your system specs  (operating system, python version, ...) on Github, and we will get back to you.
 
 
 ### Usage

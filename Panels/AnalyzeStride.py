@@ -449,6 +449,7 @@ class AnalyzeStridePanel(wx.Panel):
             KinematicsFunctions.make_parameters_output(os.path.join(self.output_path, f'10_continuous_strides_parameters_{file}'), parameters_truncated)
         
         KinematicsFunctions.make_averaged_output(self.output_path)
+        KinematicsFunctions.make_averaged_output(self.output_path, truncated=True)
 
         self.GetParent().SetStatusText(
             f"\nKinematic parameters have been extracted and saved to {self.output_path}!\n")
@@ -499,7 +500,8 @@ class AnalyzeStridePanel(wx.Panel):
         KinematicsFunctions.make_parameters_output(self.output_path, parameters)
         
         parameters_truncated = KinematicsFunctions.return_ten_central(parameters)
-        KinematicsFunctions.make_parameters_output(os.path.join(self.output_path, f'10_continuous_strides_parameters'), parameters_truncated)
+        print('done truncating')
+        KinematicsFunctions.make_parameters_output(os.path.join(os.path.dirname(self.output_path), f'10_continuous_strides_parameters.csv'), parameters_truncated)
 
         self.GetParent().SetStatusText(
             f"\nKinematic parameters have been extracted and saved to {self.output_path}! Ready for between-group analysis\n")

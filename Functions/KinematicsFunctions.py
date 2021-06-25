@@ -221,7 +221,6 @@ def extract_parameters(frame_rate, pd_dataframe, cutoff_f, bodypart, cm_speed = 
     bodypart: which bodypart to use for stride estimation
 
     '''
-    
     starts = []
     ends = []
     durations = []
@@ -795,17 +794,24 @@ def make_parameters_output(pathname, parameters):
     parameters.to_csv(pathname)
 
 
-def make_averaged_output(pathname):
+def make_averaged_output(pathname, truncated=False):
 
     files = []
     for file in os.listdir(pathname):
-        if file.endswith('.csv') and file.startswith('parameters_'):
-            files.append(file)
+        if truncated:
+            if file.endswith('.csv') and file.startswith('10_continuous_strides_parameters_'):
+                files.append(file)
+        else:
+            if file.endswith('.csv') and file.startswith('parameters_'):
+                files.append(file)
 
     dfs = []
     for file in files:
 
-        input_name = file.split('parameters_')[1].split('.')[0]
+        if truncated:
+            input_name = file.split('10_continuous_strides_parameters_')[1].split('.')[0]
+        else:
+            input_name = file.split('parameters_')[1].split('.')[0]
 
         path = os.path.join(pathname, file)
         df = pd.read_csv(path)
@@ -832,23 +838,18 @@ def findLongestSequence(A, k):
     Function to find the maximum sequence of continuous 1's by replacing
     at most `k` zeroes by 1 using sliding window technique
     '''
- 
     left = 0        # represents the current window's starting index
     count = 0       # stores the total number of zeros in the current window
     window = 0      # stores the maximum number of continuous 1's found
                     # so far (including `k` zeroes)
- 
     leftIndex = 0   # stores the left index of maximum window found so far
 
     for right in range(len(A)):
- 
         if A[right] == 0:
             count = count + 1
- 
         while count > k:
             if A[left] == 0:
                 count = count - 1
- 
             left = left + 1
             
         if right - left + 1 > window:
@@ -859,7 +860,7 @@ def findLongestSequence(A, k):
 
 
 def return_ten_central(pd_DataFrame):
-    
+    print('start truncating')
     valid_list = convert_to_binary(pd_DataFrame['cycle duration (s)'])
     start, end = findLongestSequence(valid_list, 0)
     start_stride = int(np.mean([start, end]))-5

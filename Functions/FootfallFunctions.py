@@ -261,7 +261,7 @@ def adjust_times(y, t_prediction, window):
     return t_prediction
 
 
-def make_output(pathname, pd_dataframe, t_footfalls, depth_footfalls, start_footfalls, end_footfalls, bodyparts, frame_rate, confirmed = [], confirmed_only = False):
+def make_output(pathname, pd_dataframe, t_footfalls, depth_footfalls, start_footfalls, end_footfalls, bodyparts, slip_falls, frame_rate, confirmed = [], confirmed_only = False):
     duration = []
 
     if confirmed_only:
@@ -270,10 +270,12 @@ def make_output(pathname, pd_dataframe, t_footfalls, depth_footfalls, start_foot
         starts = []
         ends = []
         bds = []
+        slip_or_falls = []
         for i, bodypart in enumerate(bodyparts):
             if confirmed[i] == 1:
                 ts.append(t_footfalls[i])
                 bds.append(bodyparts[i])
+                slip_or_falls.append(slip_falls[i])
                 try:
                     depths.append(calculate_depths(pd_dataframe, bodypart, start_footfalls[i], end_footfalls[i], t_footfalls[i]))
                 except TypeError:
@@ -297,7 +299,8 @@ def make_output(pathname, pd_dataframe, t_footfalls, depth_footfalls, start_foot
                                 'start (frame)': starts,
                                 'end (frame)': ends,
                                 'duration (s)': duration,
-                                'bodypart': bds})
+                                'bodypart': bds,
+                                'slip or fall': slip_or_falls})
 
     else:
         for i, bodypart in enumerate(bodyparts):

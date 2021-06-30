@@ -120,6 +120,7 @@ class AnalyzeFootfallPanel(wx.Panel):
 
         self.n_pred, self.depth_pred, self.t_pred, self.start_pred, self.end_pred, self.bodypart_list_pred = n_pred, depth_pred, t_pred, start_pred, end_pred, bodypart_list_pred
         self.confirmed = [0]*self.n_pred
+        self.slip_fall_pred = ['']*self.n_pred
         # print(self.confirmed)
         self.pred_text.SetLabel(f"\nThe algorithm predicted {self.n_pred} footfalls {np.mean(self.depth_pred):.2f} pixels deep on average.\n")
 
@@ -171,32 +172,7 @@ class AnalyzeFootfallPanel(wx.Panel):
 
             except IOError:
                 wx.LogError(f"Cannot save current data in file {pathname}. Try another location or filename?")
-                
 
-    # def MarkFootfall(self, e):
-
-    #     sender = e.GetEventObject()
-    #     isChecked = sender.GetValue()
-
-    #     if isChecked:
-    #         if self.n_frame not in self.t_val:
-    #             self.n_val += 1
-    #             self.t_val.append(self.n_frame)
-    #             self.depth_val.append(np.nan)
-    #             self.start_val.append(np.nan)
-    #             self.end_val.append(np.nan)
-    #             self.bodypart_list_val.append(np.nan)
-    #             self.confirmed.append(1)
-    #     else:
-    #         if self.n_frame in self.t_val:
-    #             self.n_val -= 1
-    #             index = self.t_val.index(self.n_frame)
-    #             self.depth_val.pop(index)
-    #             self.t_val.pop(index)
-    #             self.start_val.pop(index)
-    #             self.end_val.pop(index)
-    #             self.bodypart_list_val.pop(index)
-    #             self.confirmed.pop(index)
 
     def MarkFrame(self, e, mark_type):
 
@@ -288,6 +264,10 @@ class AnalyzeFootfallPanel(wx.Panel):
     def OnValidate(self, e):
 
         self.val_check_box.SetValue(True)
+        if self.check_slip_fall:
+            slip_fall = self.slip_fall_popup()
+        else:
+            slip_fall = 'NaN'
 
         if self.n_frame not in self.t_val:
             self.n_val += 1
@@ -297,12 +277,14 @@ class AnalyzeFootfallPanel(wx.Panel):
             self.end_val.append(np.nan)
             self.bodypart_list_val.append(self.bodypart)
             self.confirmed.append(1)
+            self.slip_fall_val.append(slip_fall)
 
             self.depth_val = FootfallFunctions.sort_list(self.t_val, self.depth_val)
             self.start_val = FootfallFunctions.sort_list(self.t_val, self.start_val)
             self.end_val = FootfallFunctions.sort_list(self.t_val, self.end_val)
             self.bodypart_list_val = FootfallFunctions.sort_list(self.t_val, self.bodypart_list_val)
             self.confirmed = FootfallFunctions.sort_list(self.t_val, self.confirmed)
+            self.slip_fall_val = FootfallFunctions.sort_list(self.t_val, self.slip_fall)
             self.t_val = sorted(self.t_val)
 
             self.t_val_id = self.t_val.index(self.n_frame)
@@ -316,11 +298,11 @@ class AnalyzeFootfallPanel(wx.Panel):
                 self.prev_val = self.t_val[self.t_val_id]
                 self.next_val = self.t_val[self.t_val_id+2]
                 self.t_val_id += 1
-
-
         else:
+
             index = self.t_val.index(self.n_frame)
             self.confirmed[index] = 1
+            self.slip_fall_val[index] = slip_fall
             # print(self.confirmed)
 
             self.n_frame = self.next_pred
@@ -543,7 +525,7 @@ class AnalyzeFootfallPanel(wx.Panel):
             pathname = save_pred_dialog.GetPath()
 
             try:
-                FootfallFunctions.make_output(pathname, self.df, self.t_val, self.depth_val, self.start_val, self.end_val, self.bodypart_list_val, self.frame_rate, self.confirmed, True)
+                FootfallFunctions.make_output(pathname, self.df, self.t_val, self.depth_val, self.start_val, self.end_val, self.bodypart_list_val, self.slip_fall_val, self.frame_rate, self.confirmed, True)
 
             except IOError:
                 wx.LogError(f"Cannot save current data in file {pathname}. Try another location or filename?")
@@ -664,8 +646,9 @@ class AnalyzeFootfallPanel(wx.Panel):
             self.n_frame = 0
             self.t_pred_id = None
             self.t_val_id = None
-        self.n_val, self.depth_val, self.t_val, self.start_val, self.end_val, self.bodypart_list_val = \
-            self.n_pred, self.depth_pred[:], self.t_pred[:], self.start_pred[:], self.end_pred[:], self.bodypart_list_pred[:]
+        self.slip_fall_pred = ['']*self.n_pred
+        self.n_val, self.depth_val, self.t_val, self.start_val, self.end_val, self.bodypart_list_val, self.slip_fall_val = \
+            self.n_pred, self.depth_pred[:], self.t_pred[:], self.start_pred[:], self.end_pred[:], self.bodypart_list_pred[:], self.slip_fall_pred
 
         # initialize pred and val footfall time indices
         self.t_pred_max = len(self.t_pred) - 1
@@ -870,7 +853,7 @@ class AnalyzeFootfallPanel(wx.Panel):
         self.filename = None
         self.bodyparts = None
         self.n_pred, self.depth_pred, self.t_pred, self.start_pred, self.end_pred, self.bodypart_list_pred = 0,[],[],[],[],[]
-        self.n_val, self.depth_val, self.t_val, self.start_val, self.end_val, self.bodypart_list_val = 0,[],[],[],[],[]
+        self.n_val, self.depth_val, self.t_val, self.start_val, self.end_val, self.bodypart_list_val, self.slip_fall_val = 0,[],[],[],[],[],[]
 
         self.dirname = os.getcwd()
         
@@ -892,7 +875,7 @@ class AnalyzeFootfallPanel(wx.Panel):
 
 
     def DisplayFootfall_UI_2(self, e):
-
+        self.check_slip_fall = True
         self.Footfall_UI_2()
         FootfallFunctions.ControlButton(self)
         FootfallFunctions.DisplayPlots(self)
@@ -980,3 +963,32 @@ class AnalyzeFootfallPanel(wx.Panel):
         wx.MessageBox(f"Currently validating detected footfalls for \n\n{self.filename} \n\nand \n\n{self.video_name}",
                         "File information",
                         wx.OK|wx.ICON_INFORMATION)
+
+
+    def slip_fall_popup(self):
+
+        '''
+        if self.check_slip_fall:
+            continue with function and ask if is slip / fall 
+            append use selection to a list
+        else: 
+            break / pass
+        '''
+
+        dlg = wx.RichMessageDialog(self, "Is it a slip (short, shallow) or fall (long, deep)?", 
+                                    style=wx.YES|wx.NO|wx.CANCEL|wx.ICON_QUESTION)
+        dlg.ShowCheckBox("I don't want to distinguish between slip and fall, skip future popups")
+        dlg.SetYesNoCancelLabels(yes="&Slip", no="&Fall", cancel="&Do not distinguish")
+        result = dlg.ShowModal()
+
+        if dlg.IsCheckBoxChecked():
+            self.check_slip_fall = False
+        
+        if result == 5104:
+            print('5104, fall')
+            return 'fall'
+        elif result == 5103:
+            print('5103, slip')
+            return 'slip'
+        else:
+            return ''

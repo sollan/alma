@@ -889,10 +889,10 @@ class AnalyzeFootfallPanel(wx.Panel):
     def zoom_plot(self, e):
         if not self.zoom:
             self.zoom = True
-            self.zoom_button.SetLabel('Zoom out')
+            self.zoom_button.SetLabel('Zoom out plot')
         else:
             self.zoom = False
-            self.zoom_button.SetLabel('Zoom in')
+            self.zoom_button.SetLabel('Zoom in plot')
 
         FootfallFunctions.DisplayPlots(self)
         self.GetParent().Layout()

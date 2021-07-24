@@ -1,15 +1,9 @@
-window_height: 1100
-window_width: 1400
-frame_rate: 119.88
-treadmill_speed: 15.25
-rolling_window: 15
-change_threshold: 0
-pixels_per_cm: 60.939
-stance_threshold: 547
-treadmill_y: 547
-lowpass_filter_cutoff: 6
-likelihood_threshold: 0.1
-depth_threshold: 0.8
-threshold: ''
-cm_speed: ''
-px_to_cm_speed_ratio: 0.4806
+window_height: 1100             # height of the GUI window - adjust to fit your screen resolution
+window_width: 1400              # width of the GUI window
+frame_rate: 119.88              # frame rate of your video data (n. frames per second)
+lowpass_filter_cutoff: 6        # cutoff frequency for Butterworth filter applied to bodypart coordinate estimation in kinematics analysis
+likelihood_threshold: 0.1       # threshold of bodypart coordinate estimation likelihood, highlight estimates above threshold for ladder rung user validation
+depth_threshold: 0.8            # percentage of recovery relative to depth of previous footfall / slip
+threshold: ''                   # for threshold method in ladder rung
+cm_speed: ''                    # for semi-automated kinematics analysis
+px_to_cm_speed_ratio: 0.4806    # for fully automated kinematics analysis

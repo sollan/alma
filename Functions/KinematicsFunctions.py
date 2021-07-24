@@ -99,7 +99,7 @@ def find_angles(x1, y1, x_center, y_center, x2, y2):
 
 
 def butterworth_filter(bodypart_loc, frame_rate, cutoff_f):
-    w = cutoff_f / (frame_rate / 2) # rormalize the frequency
+    w = cutoff_f / (frame_rate / 2) # normalize the frequency
     b, a = butter(5, w, 'low')
     filtered_bodypart_loc = filtfilt(b, a, bodypart_loc)
     return filtered_bodypart_loc

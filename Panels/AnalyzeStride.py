@@ -11,12 +11,11 @@ class AnalyzeStridePanel(wx.Panel):
     def __init__(self, parent):
         """Constructor"""
         wx.Panel.__init__(self, parent=parent)
-        
+
         configs = ConfigFunctions.load_config('./config.yaml')
         self.window_width = configs['window_width']
         self.window_height = configs['window_height']
         self.frame_rate = configs['frame_rate']
-        self.pixels_per_cm = configs['pixels_per_cm']
         self.cutoff_f = configs['lowpass_filter_cutoff']
         self.px_to_cm_speed_ratio = configs['px_to_cm_speed_ratio']
         if configs['cm_speed'] == '':
@@ -123,7 +122,7 @@ class AnalyzeStridePanel(wx.Panel):
                 self.GetParent().Layout()
 
                 configs = ConfigFunctions.load_config('./config.yaml')
-                self.pixels_per_cm = configs['pixels_per_cm']
+                # self.pixels_per_cm = configs['pixels_per_cm']
                 self.cutoff_f = configs['lowpass_filter_cutoff']
                 self.px_to_cm_speed_ratio = configs['px_to_cm_speed_ratio']
                 if configs['cm_speed'] == '':
@@ -174,7 +173,6 @@ class AnalyzeStridePanel(wx.Panel):
                     self.GetParent().Layout()
 
                     configs = ConfigFunctions.load_config('./config.yaml')
-                    self.pixels_per_cm = configs['pixels_per_cm']
                     self.cutoff_f = configs['lowpass_filter_cutoff']
                     self.px_to_cm_speed_ratio = configs['px_to_cm_speed_ratio']
                     if configs['cm_speed'] == '':

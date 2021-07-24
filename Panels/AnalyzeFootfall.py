@@ -262,7 +262,7 @@ class AnalyzeFootfallPanel(wx.Panel):
             self.end_val = FootfallFunctions.sort_list(self.t_val, self.end_val)
             self.bodypart_list_val = FootfallFunctions.sort_list(self.t_val, self.bodypart_list_val)
             self.confirmed = FootfallFunctions.sort_list(self.t_val, self.confirmed)
-            self.slip_fall_val = FootfallFunctions.sort_list(self.t_val, self.slip_fall)
+            self.slip_fall_val = FootfallFunctions.sort_list(self.t_val, self.slip_fall_val)
             self.t_val = sorted(self.t_val)
 
             self.t_val_id = self.t_val.index(self.n_frame)
@@ -812,7 +812,7 @@ class AnalyzeFootfallPanel(wx.Panel):
         
         self.sizer_1 = wx.GridBagSizer(0, 0)
 
-        self.header = wx.StaticText(self, -1, "Validate", size=(500,100))
+        self.header = wx.StaticText(self, -1, "Ladder rung (footfall) analysis", size=(500,100))
         font = wx.Font(20,wx.MODERN,wx.NORMAL,wx.NORMAL)
         self.header.SetFont(font)
         self.sizer_1.Add(self.header, pos = (0, 0), span = (2, 5), flag = wx.LEFT|wx.TOP, border = 25)

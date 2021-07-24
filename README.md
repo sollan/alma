@@ -42,9 +42,9 @@ In Action - Validation:
 - save the predicted slip properties as a csv file.
 
 
-![](https://github.com/sollan/slip_detector/blob/master/Screenshots/loading.PNG)
+![](https://github.com/sollan/alma/blob/master/Screenshots/loading.PNG)
 
-_(Select parameters for slip detection.)_
+_(Select parameters for footfall / slip detection.)_
 
 ***
 
@@ -54,7 +54,7 @@ During validation, you can
 - manually correct the slip detection results, including removing false positives and adding missed slips, and
 - save the validated results as a csv file. 
 
-![](https://github.com/sollan/slip_detector/blob/master/Screenshots/validate.PNG)
+![](https://github.com/sollan/alma/blob/master/Screenshots/validate.PNG)
 
 
 _(Validate model prediction using the GUI.

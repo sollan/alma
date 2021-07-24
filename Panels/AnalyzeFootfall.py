@@ -928,10 +928,8 @@ class AnalyzeFootfallPanel(wx.Panel):
             self.check_slip_fall = False
         
         if result == 5104:
-            print('5104, fall')
             return 'fall'
         elif result == 5103:
-            print('5103, slip')
             return 'slip'
         else:
             return ''

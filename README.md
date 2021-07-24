@@ -53,6 +53,8 @@ Open the config.yaml file with a text editor. Here you'll find the parameters re
 
 Note: for both analysis, you need to have the bodypart coordinate data, either from DeepLabCut (validated format) or another system. For ladder rung footfall / slip analysis, you need the video recordings in addition for validating the output. 
 
+***
+
 1. Ladder rung - footfall / slip analysis
 - Import the csv output from a DeepLabCut model including the estimated bodypart coordinates (or a spreadsheets containing the same header and column structures as a DLC output file). The file should contain at least the coordinates of the limb endpoints (paw / toe) for which you want to analyze the footfalls / slips. 
 - Select the slip prediction algorithm (**threshold**: focus on data that exceeds a y-axis lowerbound; **deviation**: directly estimate peaks using raw location values; **baseline**: detect peaks based on the asymmetric least squares baseline).
@@ -60,30 +62,41 @@ Note: for both analysis, you need to have the bodypart coordinate data, either f
 - If desired, you can mark each identified mistake as either slip or fall for more refined results.
 - Export the automatic output or validated results to a csv file.
 
-![](https://github.com/sollan/alma/blob/master/Screenshots/loading.PNG)
+
 
 _(Select parameters for footfall / slip detection.)_
 
-***
 
-![](https://github.com/sollan/alma/blob/master/Screenshots/validate.PNG)
+
+![](https://github.com/sollan/alma/blob/master/Screenshots/Ladder%20rung%20footfall.png)
 
 
 _(Validate model prediction using the GUI.
 Top: a frame from original video.
 Bottom: model prediction of the y-axis location of a bodypart throughout the video duration. The location of the bodypart that led to the current slip prediction is displayed in the graph.
-This frame is identified as "slip" by the threshold method, based on pose estimation from DLC.)_
+This frame is identified as "footfall / slip" by the threshold method, based on pose estimation from DLC. After confirmation, you can select whether it's a "slip" or "fall".)_
 
+***
 
 2. Treadmill kinematics
 - Import the csv output from a DeepLabCut model including the estimated bodypart coordinates (or a spreadsheets containing the same header and column structures as a DLC output file). The file should contain the coordinates of joints on one hind limb, labelled "toe", "mtp", "ankle", "knee", "hip", and "iliac crest". (We are working on additional features to include kinematic analysis with different setups, including front limb and tail, as well as to adapt the program to data in other formats, e.g., when the bodyparts are named differently, and experimental conditions, e.g., spontaneous kinematics without treadmill.)
 - Alternatively, select a folder that contains multiple csv files that contain the estimated bodypart coordinates in the appropriate format, for data obtained with the _same_ experimental setup (most importantly, distance from camera, and - if using semi-automated mode - treadmill speed). 
 - In semi-automated mode, the program requires the cm/s speed of the treadmill. Additional relevant parameters such as px-cm ratio will be calculated immediately and displayed, prior to starting the analysis, for validation. 
-- If the conversion ratio between the px/frame speed and the cm/s speed of the treadmill is known (to be calculated during calibration outside the toolbox or estimated using the semi-automated function using known cm/s treadmill speeds), you can select "Fully automated" mode and input the conversion ratio. 
+- If the conversion ratio between the px/frame speed and the cm/s speed of the treadmill is known (to be calculated during calibration outside the toolbox or estimated using the semi-automated function using known cm/s treadmill speeds), you can select "Fully automated" mode and input the conversion ratio. In this case, bulk processing allows for analysis of data with different treadmill speed settings.
 - Extract kinematic parameters and export the results as csv files.
+
+![](https://github.com/sollan/alma/blob/master/Screenshots/Kinematics%20semi%20automated.png)
+_(Semi-automated analysis requires user input of treadmill speed in cm/s. )_
+
+![](https://github.com/sollan/alma/blob/master/Screenshots/Kinematics%20fully%20automated.png)
+_(Fully-automated analysis requires user input of the conversion ratio from px/frame to cm/s, which can be manually calculated or through the output of the semi-automated method, e.g., using a linear regression on the conversion ratio of several treadmill speed settings. Comparing the displayed parameters with those based on the semi-automated method reveals similar estimates for px-to-cm length conversion ratio by both methods and a reliable estimate of the cm/s speed using the fully-automated method - without inputting the speed.)_
+
+***
 
 3. Data analysis
 - Random forest: using the extracted kinematic parameters, build a random forest model to classify strides by animal groups (e.g., disease vs. healthy), based on parameters of individual step cycles, then save the results (prediction accuracy, parameter importance ranking, and confusion matrix).
+![](https://github.com/sollan/alma/blob/master/Screenshots/Random%20forest.png)
 - PCA: using the extracted kinematic parameters, use principal component analysis to reduce dimensionality and cluster data by animal groups (e.g., disease vs. healthy), based on parameters of individual step cycles, then save the results (PCA plot, including the explained variance of two principal components).
+![](https://github.com/sollan/alma/blob/master/Screenshots/PCA.png)
 
 For more information or support, please visit [our wiki page](https://github.com/sollan/slip_detector/wiki) or contact us.

@@ -1,18 +1,11 @@
 import wx
-from wx.lib.stattext import GenStaticText as StaticText
 from Functions import FootfallFunctions, ConfigFunctions
-import os, sys
-import yaml
-import matplotlib as mpl
+import os
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
-import numpy as np # remove later; for testing
+import numpy as np
 import warnings
 warnings.filterwarnings("error")
 warnings.filterwarnings("ignore", category=ResourceWarning)
-
-TEST = False
-# set to True: import default files to reduce clicks :)
-# default files are set in FootfallFunctions.test()
 
 class AnalyzeFootfallPanel(wx.Panel):
 
@@ -21,7 +14,6 @@ class AnalyzeFootfallPanel(wx.Panel):
         
         wx.Panel.__init__(self, parent=parent)
 
-        # load parameters to set dimension of frames and graphs
         configs = ConfigFunctions.load_config('./config.yaml')
         self.window_width, self.window_height, self.frame_rate, self.likelihood_threshold, self.depth_threshold, self.threshold = \
             configs['window_width'], configs['window_height'], configs['frame_rate'], configs['likelihood_threshold'], configs['depth_threshold'], configs['threshold']
@@ -47,20 +39,20 @@ class AnalyzeFootfallPanel(wx.Panel):
 
 
     def ImportBehavioralCSV(self, e):
-        if not TEST:
-            import_dialog = wx.FileDialog(self, 'Choose a file', self.dirname, '', 'CSV files (*.csv)|*.csv|All files(*.*)|*.*', wx.FD_OPEN)
+        
+        import_dialog = wx.FileDialog(self, 'Choose a file', self.dirname, '', 'CSV files (*.csv)|*.csv|All files(*.*)|*.*', wx.FD_OPEN)
 
-            if import_dialog.ShowModal() == wx.ID_OK:
-                self.csv_dirname = import_dialog.GetDirectory()
-                self.filename = os.path.join(self.csv_dirname, import_dialog.GetFilename())
-                self.df, self.filename = FootfallFunctions.read_file(self.filename)
-                self.df, self.bodyparts = FootfallFunctions.fix_column_names(self.df)
+        if import_dialog.ShowModal() == wx.ID_OK:
+            self.csv_dirname = import_dialog.GetDirectory()
+            self.filename = os.path.join(self.csv_dirname, import_dialog.GetFilename())
+            self.df, self.filename = FootfallFunctions.read_file(self.filename)
+            self.df, self.bodyparts = FootfallFunctions.fix_column_names(self.df)
+
         try: 
             if self.df is not None:
                 self.has_imported_file = True
                 self.import_csv_text.SetLabel(f"File imported! \n\n{self.filename}\n")
-                # self.GetParent().Layout()
-
+                
                 self.method_label.Show()
 
                 self.method_choices.SetSelection(0)
@@ -73,19 +65,15 @@ class AnalyzeFootfallPanel(wx.Panel):
                 bodypart_choices = wx.CheckListBox(self, choices = self.bodyparts)
                 self.sizer_1.Replace(self.bodypart_choices, bodypart_choices)
                 self.bodypart_choices = bodypart_choices
-                # self.bodypart_choices.SetCheckedItems([0])
-                # self.bodypart = self.bodyparts[list(self.bodypart_choices.GetCheckedItems())[0]]
+                
                 self.sizer_1_widgets.append(self.bodypart_choices)
                 self.bodypart_choices.Bind(wx.EVT_CHECKLISTBOX, self.OnBodypart)
                 self.bodypart_choices.Show()
-
-                # self.MakePrediction(self)
 
                 self.GetParent().Layout()
 
         except AttributeError:
             # user cancelled file import in pop up
-            # print(sys.exc_info())
             pass
 
 
@@ -121,7 +109,6 @@ class AnalyzeFootfallPanel(wx.Panel):
         self.n_pred, self.depth_pred, self.t_pred, self.start_pred, self.end_pred, self.bodypart_list_pred = n_pred, depth_pred, t_pred, start_pred, end_pred, bodypart_list_pred
         self.confirmed = [0]*self.n_pred
         self.slip_fall_pred = ['']*self.n_pred
-        # print(self.confirmed)
         self.pred_text.SetLabel(f"\nThe algorithm predicted {self.n_pred} footfalls {np.mean(self.depth_pred):.2f} pixels deep on average.\n")
 
         self.save_pred_button.Show()
@@ -133,22 +120,20 @@ class AnalyzeFootfallPanel(wx.Panel):
             
     def ImportVideo(self, e):
 
-        if not TEST:
-            import_dialog = wx.FileDialog(self, 'Choose a file', self.dirname, '', 
-                'Video files (*.avi)|*.avi|Video files (*.mp4)|*.mp4|Video files (*.webm)|*.webm|Video files (*.mov)|*.mov|All files(*.*)|*.*', wx.FD_OPEN)
+        import_dialog = wx.FileDialog(self, 'Choose a file', self.dirname, '', 
+            'Video files (*.avi)|*.avi|Video files (*.mp4)|*.mp4|Video files (*.webm)|*.webm|Video files (*.mov)|*.mov|All files(*.*)|*.*', wx.FD_OPEN)
 
-            if import_dialog.ShowModal() == wx.ID_OK:
-                self.video_dirname = import_dialog.GetDirectory()
-                self.video = os.path.join(self.video_dirname, import_dialog.GetFilename())
-                if '/' in self.video:
-                    self.video_name = self.video.split('/')[-1]
-                elif '\\' in self.video:
-                    self.video_name = self.video.split('\\')[-1]
+        if import_dialog.ShowModal() == wx.ID_OK:
+            self.video_dirname = import_dialog.GetDirectory()
+            self.video = os.path.join(self.video_dirname, import_dialog.GetFilename())
+            if '/' in self.video:
+                self.video_name = self.video.split('/')[-1]
+            elif '\\' in self.video:
+                self.video_name = self.video.split('\\')[-1]
 
         if self.video is not None:
             self.has_imported_video = True
             self.import_video_text.SetLabel(f"Video imported! \n\n{self.video_name}\n\nYou can validate the prediction now.")
-                    
             self.import_video_button.Disable()
             self.validate_button.Show()
             self.import_new_video_button.Show()
@@ -169,7 +154,6 @@ class AnalyzeFootfallPanel(wx.Panel):
 
             try:
                 FootfallFunctions.make_output(pathname, self.df, self.t_pred, self.depth_pred, self.start_pred, self.end_pred, self.bodypart_list_pred, self.frame_rate)
-
             except IOError:
                 wx.LogError(f"Cannot save current data in file {pathname}. Try another location or filename?")
 
@@ -209,12 +193,6 @@ class AnalyzeFootfallPanel(wx.Panel):
                 if self.n_frame in self.t_val:
                     self.n_val -= 1
                     index = self.t_val.index(self.n_frame)
-                    # self.depth_val.pop(index)
-                    # self.t_val.pop(index)
-                    # self.start_val.pop(index)
-                    # self.end_val.pop(index)
-                    # self.bodypart_list_val.pop(index)
-                    # self.confirmed.pop(index)
                     self.confirmed[index] = 0
 
         # assuming there is always an existing next/prev prediction
@@ -303,20 +281,16 @@ class AnalyzeFootfallPanel(wx.Panel):
             index = self.t_val.index(self.n_frame)
             self.confirmed[index] = 1
             self.slip_fall_val[index] = slip_fall
-            # print(self.confirmed)
 
             self.n_frame = self.next_pred
             self.slider.SetValue(self.n_frame)
             self.slider_label.SetLabel(str(self.n_frame + 1))
 
-            # self.prev_pred, self.next_pred = FootfallFunctions.find_neighbors(self.n_frame, self.t_pred)
-            # self.prev_val, self.next_val = FootfallFunctions.find_neighbors(self.n_frame, self.t_val)
             if self.t_pred_id+1 >= self.t_pred_max:
                 self.prev_pred = self.t_pred[self.t_pred_max-1]
                 self.next_pred = 0
                 self.t_pred_id += 1
             else:
-                # print(self.t_pred_id, self.t_pred_max)
                 self.prev_pred = self.t_pred[self.t_pred_id]
                 self.next_pred = self.t_pred[self.t_pred_id+2]
                 self.t_pred_id += 1
@@ -343,20 +317,11 @@ class AnalyzeFootfallPanel(wx.Panel):
         if self.n_frame in self.t_val:
             self.n_val -= 1
             index = self.t_val.index(self.n_frame)
-            # self.depth_val.pop(index)
-            # self.t_val.pop(index)
-            # self.start_val.pop(index)
-            # self.end_val.pop(index)
-            # self.bodypart_list_val.pop(index)
             self.confirmed[index] = 0
-
 
         self.n_frame = self.next_pred
         self.slider.SetValue(self.n_frame)
         self.slider_label.SetLabel(str(self.n_frame + 1))
-
-        # self.prev_pred, self.next_pred = FootfallFunctions.find_neighbors(self.n_frame, self.t_pred)
-        # self.prev_val, self.next_val = FootfallFunctions.find_neighbors(self.n_frame, self.t_val)
 
         if self.t_pred_id+1 >= self.t_pred_max:
             self.prev_pred = self.t_pred[-1]
@@ -387,8 +352,6 @@ class AnalyzeFootfallPanel(wx.Panel):
         obj = e.GetEventObject()
         self.n_frame = obj.GetValue() - 1
 
-        # self.prev_pred, self.next_pred = FootfallFunctions.find_neighbors(self.n_frame, self.t_pred)
-        # self.prev_val, self.next_val = FootfallFunctions.find_neighbors(self.n_frame, self.t_val)
         if self.n_frame > self.prev_pred and self.n_frame < self.t_pred[self.t_pred_id]:
             self.next_pred = self.t_pred[self.t_pred_id]
         elif self.n_frame < self.next_pred and self.n_frame > self.t_pred[self.t_pred_id]:
@@ -557,7 +520,6 @@ class AnalyzeFootfallPanel(wx.Panel):
         self.method_choices.Bind(wx.EVT_COMBOBOX, self.OnMethod)
         self.method_choices.Hide()
 
-        
         self.bodypart_label = wx.StaticText(self, label = 'Bodypart to validate:') 
         self.sizer_1.Add(self.bodypart_label, pos=(9, 1), flag = wx.LEFT | wx.TOP, border = 25)
         self.sizer_1_widgets.append(self.bodypart_label)  
@@ -567,9 +529,6 @@ class AnalyzeFootfallPanel(wx.Panel):
         self.bodypart_choices = wx.CheckListBox(self, choices = self.bodyparts)
         self.sizer_1.Add(self.bodypart_choices, pos = (9, 2) , flag = wx.LEFT | wx.TOP, border = 25)
         self.bodypart_choices.Hide()
-
-        #################################
-        # add algorithm selection menu
 
         self.save_pred_button = wx.Button(self, id=wx.ID_ANY, label="Save detected footfalls")
         self.sizer_1.Add(self.save_pred_button, pos = (10, 1), flag = wx.TOP | wx.LEFT | wx.BOTTOM, border = 25)
@@ -609,9 +568,6 @@ class AnalyzeFootfallPanel(wx.Panel):
         self.import_video_button.Bind(wx.EVT_BUTTON, self.ImportVideo)
         self.validate_button.Bind(wx.EVT_BUTTON, self.DisplayFootfall_UI_2)
         self.import_new_video_button.Bind(wx.EVT_BUTTON, self.ImportVideo)
-
-        if TEST is True:
-            self.filename, self.df, self.bodyparts, self.video, self.video_name = FootfallFunctions.test(TEST)
 
         self.Fit()
         self.SetSizer(self.sizer_1)
@@ -817,11 +773,8 @@ class AnalyzeFootfallPanel(wx.Panel):
         FootfallFunctions.ControlPrediction(self)
 
         self.SetSizer(self.sizer_2)
-        # self.Layout()
         self.GetParent().Layout()
 
-    def onTest(self, event):
-        print("refreshed!")
 
     def OnBodypartPlot(self, e):
 
@@ -901,8 +854,8 @@ class AnalyzeFootfallPanel(wx.Panel):
         except:
             # awaiting bodypart selection
             self.pred_text.SetLabel(f"\n{self.pred_text_extra}No footfalls detected! Try selecting a different bodypart or method?\n")
-            # print(sys.exc_info())
             pass
+
 
     def OnBodypart(self, e):
         
@@ -923,6 +876,7 @@ class AnalyzeFootfallPanel(wx.Panel):
             self.pred_text.SetLabel(f"\n{self.pred_text_extra}No footfalls detected! Try selecting a different bodypart or method?\n")
             pass
 
+
     def OnLikelihood(self, e):
 
         self.likelihood_threshold = float(self.likelihood_input.GetValue())
@@ -933,7 +887,6 @@ class AnalyzeFootfallPanel(wx.Panel):
         self.GetParent().Layout()
 
     def zoom_plot(self, e):
-        # change status
         if not self.zoom:
             self.zoom = True
             self.zoom_button.SetLabel('Zoom out')
@@ -946,7 +899,6 @@ class AnalyzeFootfallPanel(wx.Panel):
 
 
     def zoom_frame(self, e):
-        # change status
         if not self.zoom_image:
             self.zoom_image = True
             self.zoom_frame_button.SetLabel('Zoom out')
@@ -966,15 +918,6 @@ class AnalyzeFootfallPanel(wx.Panel):
 
 
     def slip_fall_popup(self):
-
-        '''
-        if self.check_slip_fall:
-            continue with function and ask if is slip / fall 
-            append use selection to a list
-        else: 
-            break / pass
-        '''
-
         dlg = wx.RichMessageDialog(self, "Is it a slip (short, shallow) or fall (long, deep)?", 
                                     style=wx.YES|wx.NO|wx.CANCEL|wx.ICON_QUESTION)
         dlg.ShowCheckBox("I don't want to distinguish between slip and fall, skip future popups")

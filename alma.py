@@ -4,12 +4,9 @@ from Panels import Start, AnalyzeStride, AnalyzeFootfall, RandomForest, PCA
 
 class HomeFrame(wx.Frame):
 
-
     def __init__(self, *args, **kw):
         
-
         super(HomeFrame, self).__init__(*args, **kw)
-
 
         self.StartPanel = Start.StartPanel(self)
         self.StartPanel.Hide()
@@ -28,15 +25,12 @@ class HomeFrame(wx.Frame):
 
         self.current_panel = self.StartPanel
 
-        # configure UI organization
         self.main_sizer = wx.GridBagSizer(0, 0)
         self.main_sizer.SetEmptyCellSize((0, 0))
         self.main_sizer.Add(self.current_panel, pos=(0, 0), span = (5, 5), flag=wx.EXPAND)
         self.SetSizer(self.main_sizer)
 
         self.makeMenuBar()
-
-        # and a status bar
         self.CreateStatusBar()
         self.SetStatusText("Welcome!")
 
@@ -51,7 +45,7 @@ class HomeFrame(wx.Frame):
         """
 
         limb_motion_menu = wx.Menu()
-        start_item = limb_motion_menu.Append(-1, "&Start page \tCtrl-S")
+        start_item = limb_motion_menu.Append(-1, "&Start \tCtrl-S")
         analyze_footfall_item = limb_motion_menu.Append(-1, "&Footfall detection\tCtrl-L",
                 "Detect footfalls and validate results")
         analyze_stride_item = limb_motion_menu.Append(-1, "&Gait kinematic data extraction\tCtrl-K",
@@ -84,7 +78,7 @@ class HomeFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.on_help, help_item)
     
 
-    def on_start(self, event):
+    def on_start(self, e):
         
         self.current_panel.Hide()
         self.main_sizer.Replace(self.current_panel, self.StartPanel)
@@ -99,12 +93,12 @@ class HomeFrame(wx.Frame):
         self.Refresh()
     
 
-    def on_quit(self, event):
+    def on_quit(self, e):
 
         self.Close(True)
 
     
-    def on_analyze_footfall(self, event):
+    def on_analyze_footfall(self, e):
 
         self.current_panel.Hide()
 
@@ -119,7 +113,7 @@ class HomeFrame(wx.Frame):
         self.Refresh() # refresh to show slider in right proportion
 
 
-    def on_analyze_stride(self, event):
+    def on_analyze_stride(self, e):
 
         self.current_panel.Hide()
 
@@ -134,7 +128,7 @@ class HomeFrame(wx.Frame):
         self.Refresh()
 
 
-    def on_random_forest(self, event):
+    def on_random_forest(self, e):
 
         self.current_panel.Hide()
 
@@ -149,7 +143,7 @@ class HomeFrame(wx.Frame):
         self.Refresh() # refresh to show slider in right proportion
 
 
-    def on_PCA(self, event):
+    def on_PCA(self, e):
 
         self.current_panel.Hide()
 
@@ -164,7 +158,7 @@ class HomeFrame(wx.Frame):
         self.Refresh() # refresh to show slider in right proportion
 
 
-    def on_about(self, event):
+    def on_about(self, e):
         
         wx.MessageBox( "This is a toolbox for fully automated (rodent) "\
                         "limb motion analysis with markerless bodypart tracking data. "\
@@ -174,7 +168,6 @@ class HomeFrame(wx.Frame):
 
     def on_help(self, event):
 
-        # wx.MessageBox("This function is still under development. Thanks for your patience! :)")
         wx.MessageBox("Please go to our GitHub Wiki for help or email us :)",
                         "Support",
                         wx.OK|wx.ICON_INFORMATION)

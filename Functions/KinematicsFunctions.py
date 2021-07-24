@@ -1,38 +1,17 @@
-# from ast import parse
 import pandas as pd
 import scipy
 from scipy.signal import butter, filtfilt
 from scipy.spatial.distance import euclidean
 import numpy as np
-import matplotlib as mpl
-from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 import math
 import fastdtw
 import statistics as stat
 from sklearn.mixture import GaussianMixture
 import os
 
-
-
-# def test(use_preset = True):
-#     '''
-#     replace comments with local file paths
-#     to speed up testing
-#     '''
-#     # filename = '/home/annette/Desktop/DeepLabCut/ladder rung results/Irregular_347_21dpi_croppedDLC_resnet50_Ladder RungMay12shuffle1_500000.csv'
-#     df, filename = read_file(filename)
-#     df, bodyparts = fix_column_names(df)
-#     # video = '/home/annette/Desktop/DeepLabCut/ladder rung results/Irregular_347_21dpi_cropped.avi'
-#     # video_name = 'Irregular_347_21dpi_cropped.avi'
-
-#     return filename, df, bodyparts, video, video_name
-
-
 def read_file(file):
     
     pd_dataframe = pd.read_csv(file, header=[1,2])
-    # filename = file.split('/')[-1].split('_')
-    # filename = filename[0] + ' ' + filename[1] + ' ' + filename[2]
     filename = file.split('/')[-1]
     return pd_dataframe, filename
 
@@ -59,7 +38,7 @@ def fix_column_names(pd_dataframe):
 def treadmill_correction(pd_dataframe, bodyparts, treadmill_speed = 8.09):
 
     correction = np.arange(0, len(pd_dataframe), 1)
-    correction = correction * treadmill_speed # should be determined manually
+    correction = correction * treadmill_speed
 
     if type(bodyparts) is list and len(bodyparts) > 1:
         for bodypart in bodyparts:
@@ -86,10 +65,7 @@ def estimate_speed(pd_dataframe, bodypart, cm_speed, px_to_cm_speed_ratio, frame
     else:
         px_to_cm_speed_ratio = px_speed / cm_speed
 
-    # use a dictionary here!
     pixels_per_cm = 1 / (cm_speed / px_speed / frame_rate)
-    # print(f'Estimated pixel speed: {px_speed} pixels per frame.\n Estimated length conversion: {pixels_per_cm} pixels per cm.')
-    # print(f'Estimated px to cm speed ratio: {px_to_cm_speed_ratio} pixels per cm.')
 
     return cm_speed, px_speed, pixels_per_cm, px_to_cm_speed_ratio
 
@@ -283,14 +259,12 @@ def extract_parameters(frame_rate, pd_dataframe, cutoff_f, bodypart, cm_speed = 
     x_change = np.diff(pd_dataframe[f'{bodypart} x'][pd_dataframe[f'{bodypart} likelihood']>0.5])
     x_change_filt = x_change[(x_change < np.mean(x_change) + 1*np.std(x_change)) & (x_change > np.mean(x_change) - 1*np.std(x_change))]
 
-    px_speed, std = scipy.stats.norm.fit(x_change_filt[x_change_filt>0])
+    px_speed, _ = scipy.stats.norm.fit(x_change_filt[x_change_filt>0])
 
     if cm_speed is None: 
         cm_speed = px_speed / px_to_cm_speed_ratio
 
-    # use a dictionary here!
     pixels_per_cm = 1 / (cm_speed / px_speed / frame_rate)
-    # print(f'Estimated pixel speed: {px_speed} pixels per frame.\n Estimated length conversion: {pixels_per_cm} pixels per cm.')
 
     correction = np.arange(0, len(pd_dataframe), 1)
     correction = correction * px_speed
@@ -302,7 +276,6 @@ def extract_parameters(frame_rate, pd_dataframe, cutoff_f, bodypart, cm_speed = 
     hip_x = -(pd_dataframe['hip x'] - correction)
     crest_x = -(pd_dataframe['iliac crest x'] - correction)
     
-    # should use a dictionary here
     smooth_toe_x = butterworth_filter(toe_x, frame_rate, cutoff_f)
     smooth_mtp_x = butterworth_filter(mtp_x, frame_rate, cutoff_f)
     smooth_ankle_x = butterworth_filter(ankle_x, frame_rate, cutoff_f)
@@ -348,9 +321,6 @@ def extract_parameters(frame_rate, pd_dataframe, cutoff_f, bodypart, cm_speed = 
 
     velocities = find_euclidean_speed(smooth_toe_x, smooth_toe_y, frame_rate)
     
-    # print(f'Absolute value (ignoring direction) of median of x coord change: {np.abs(stat.median(x_change))}')
-    # print(f'Percentage of data where absolute x coord change is less than 2px/frame: {len(np.where(np.abs(x_change) < 2)[0])/len(x_change)}')
-
     # does gait appear normal? -> multimodal distribution from swing (body movement) and stance (treadmill)
     if np.abs(stat.median(x_change)) < 0.5 and len(np.where(np.abs(x_change) < 2)[0])/len(x_change) > 0.68:
         
@@ -358,7 +328,6 @@ def extract_parameters(frame_rate, pd_dataframe, cutoff_f, bodypart, cm_speed = 
         # instead it is centered around 0
         # step cycle cannot be detected properly
         
-        # normal_gait = 0
         print('Too much dragging? Please check raw data.')
         print(f'Median of selected bodypart x coordinate change per frame: {stat.median(x_change)}')                           
         print('Calculating a subset of parameters independent of step cycles...')
@@ -435,18 +404,17 @@ def extract_parameters(frame_rate, pd_dataframe, cutoff_f, bodypart, cm_speed = 
         for i in range(1,len(starts)):
             ends.append(starts[i]-1)
         ends.append(len(is_stance))
-        # print(f'Detected {len(ends)} strides. Calculating parameters...')
 
         y = pd_dataframe['toe y'][pd_dataframe['toe likelihood'] > 0.5]
         y_filt = y[(y < np.mean(y) + 1*np.std(y)) & (y > np.mean(y) - 1*np.std(y))]
-        n, b = np.histogram(y_filt, bins=100, density=True)
+        _, b = np.histogram(y_filt, bins=100, density=True)
         # fit 2 Gaussians to the pdf of toe y coord
         gm = GaussianMixture(n_components=2, random_state=0).fit(np.array(b).reshape(-1,1))
         # the Gaussian with larger mean corresponds to y coord during stance phase
         # use this mean as threshold to detect dragging during swing phase
         stance_threshold = max(gm.means_)
         # use this plus SD (i.e., lower in space) as treadmill y coord, to calculate step height
-        treadmill_y = float(max(gm.means_) + np.sqrt(gm.covariances_[np.where(gm.means_ == max(gm.means_))]))
+        treadmill_y = float(stance_threshold + np.sqrt(gm.covariances_[np.where(gm.means_ == stance_threshold)]))
 
         starts_included = []
         ends_included = []
@@ -596,12 +564,7 @@ def extract_parameters(frame_rate, pd_dataframe, cutoff_f, bodypart, cm_speed = 
         starts_included = np.array(starts_included)
         ends_included = np.array(ends_included)
         
-        # print('Calculating windowed dynamic time warping results from valid step cycles...')
-        
         for i in range(len(starts)):
-            
-            # if (i+1)%50 == 0:
-            #     print(f'--> Completed {i+1}th stride')
             
             if starts[i] not in starts_included:
                 

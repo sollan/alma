@@ -4,27 +4,11 @@ import numpy as np
 import matplotlib as mpl
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 import cv2
-# import wx
-
-# def test(use_preset = True):
-#     '''
-#     replace comments with local file paths
-#     to speed up testing
-#     '''
-#     # filename = '/home/annette/Desktop/DeepLabCut/ladder rung results/Irregular_347_21dpi_croppedDLC_resnet50_Ladder RungMay12shuffle1_500000.csv'
-#     df, filename = read_file(filename)
-#     df, bodyparts = fix_column_names(df)
-#     # video = '/home/annette/Desktop/DeepLabCut/ladder rung results/Irregular_347_21dpi_cropped.avi'
-#     # video_name = 'Irregular_347_21dpi_cropped.avi'
-
-#     return filename, df, bodyparts, video, video_name
 
 
 def read_file(file):
     
     pd_dataframe = pd.read_csv(file, header=[1,2])
-    # filename = file.split('/')[-1].split('_')
-    # filename = filename[0] + ' ' + filename[1] + ' ' + filename[2]
     filename = file.split('/')[-1]
     return pd_dataframe, filename
 
@@ -119,9 +103,7 @@ def find_footfalls(pd_dataframe, bodypart, axis, panel = None, method = 'Baselin
         recommended for smooth / noiseless prediction
         '''
         t_peaks, properties = find_peaks(pd_dataframe[f'{bodypart} {axis}'], height=-10000, prominence=(45,100000))
-#         print('start filter')
         t_peaks, properties = filter_predictions(t_peaks, properties, pd_dataframe, bodypart, likelihood_threshold, depth_threshold)
-        # h_peaks = properties["prominences"]
         start_times = properties['left_bases']
         end_times = properties['right_bases']
         h_peaks = pd_dataframe[f'{bodypart} {axis}'][t_peaks]
@@ -336,7 +318,6 @@ def plot_frame(video_file, n_frame, width, height, frame_rate, pd_dataframe, bod
         image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
         if zoom: 
-            # print(np.array(image).shape)
             y_max = np.array(image).shape[0]
             x_max = np.array(image).shape[1]
 
@@ -365,7 +346,6 @@ def plot_frame(video_file, n_frame, width, height, frame_rate, pd_dataframe, bod
         
     except cv2.error:
         print(f'Frame {n_frame} cannot be displayed! (cv2 error)')
-        # plot_frame(video_file, n_frame+2, width, height, frame_rate, baseline)
 
 
 def plot_labels(pd_dataframe, n_current_frame, method, t_pred, start_pred, end_pred, width, height, bodypart, bodypart_list, selected_bodyparts, axis, likelihood_threshold, confirmed, zoom=True):
@@ -375,8 +355,6 @@ def plot_labels(pd_dataframe, n_current_frame, method, t_pred, start_pred, end_p
         figure = mpl.figure.Figure(figsize=(width, height), tight_layout=True, facecolor='none')
     axes = figure.add_subplot(111)
     axes.margins(x = 0)
-    # figure.tight_layout()
-    # low_likelihood = np.array(pd_dataframe[pd_dataframe[bodyparts + ' likelihood'] < likelihood_threshold]['bodyparts coords'])
     axes.xaxis.set_label_position('top') 
 
     for bp in selected_bodyparts:
@@ -422,7 +400,6 @@ def plot_labels(pd_dataframe, n_current_frame, method, t_pred, start_pred, end_p
             axes.set_xlim(n_current_frame-300, n_current_frame+300)
 
         axes.set_ylim(pd_dataframe[f'{bodypart} {axis}'].iloc[n_current_frame]+100, pd_dataframe[f'{bodypart} {axis}'].iloc[n_current_frame]-100)
-
 
     return figure
 
@@ -496,12 +473,10 @@ def ControlButton(panel):
     panel.next_button.Enable()
     panel.to_start_button.Enable()
     panel.to_end_button.Enable()
-
-    # if panel.n_frame <= panel.t_pred[0]:
+    
     if panel.n_frame <= panel.t_val[0]:
         panel.prev_pred_button.Disable()
     elif panel.n_frame >= panel.t_val[-1]:
-    # elif panel.n_frame <= panel.t_val[0]:
         panel.next_pred_button.Disable()
     
     if panel.n_frame < 10:

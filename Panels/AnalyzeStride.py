@@ -1,25 +1,17 @@
 import wx
-from wx.lib.stattext import GenStaticText as StaticText
 from Functions import ConfigFunctions, KinematicsFunctions
 import os
-import yaml
-import matplotlib as mpl
-from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
-import numpy as np  # remove later; for testing
 import warnings
 warnings.filterwarnings("error")
 warnings.filterwarnings("ignore", category=ResourceWarning)
 
-
-TEST = False
 
 class AnalyzeStridePanel(wx.Panel):
 
     def __init__(self, parent):
         """Constructor"""
         wx.Panel.__init__(self, parent=parent)
-
-        # load parameters to set dimension of frames and graphs
+        
         configs = ConfigFunctions.load_config('./config.yaml')
         self.window_width = configs['window_width']
         self.window_height = configs['window_height']
@@ -108,20 +100,19 @@ class AnalyzeStridePanel(wx.Panel):
         self.GetParent().Layout()
 
     def ImportKinematicsCSV(self, e):
-        if not TEST:
 
-            import_dialog = wx.FileDialog(
-                self, 'Choose a file', self.dirname, '', 'CSV files (*.csv)|*.csv|All files(*.*)|*.*', wx.FD_OPEN)
+        import_dialog = wx.FileDialog(
+            self, 'Choose a file', self.dirname, '', 'CSV files (*.csv)|*.csv|All files(*.*)|*.*', wx.FD_OPEN)
 
-            if import_dialog.ShowModal() == wx.ID_OK:
-                self.csv_dirname = import_dialog.GetDirectory()
-                self.filename = os.path.join(
-                    self.csv_dirname, import_dialog.GetFilename())
-                self.df, self.filename = KinematicsFunctions.read_file(
-                    self.filename)
-                self.df, self.bodyparts = KinematicsFunctions.fix_column_names(
-                    self.df)
-                    
+        if import_dialog.ShowModal() == wx.ID_OK:
+            self.csv_dirname = import_dialog.GetDirectory()
+            self.filename = os.path.join(
+                self.csv_dirname, import_dialog.GetFilename())
+            self.df, self.filename = KinematicsFunctions.read_file(
+                self.filename)
+            self.df, self.bodyparts = KinematicsFunctions.fix_column_names(
+                self.df)
+                
         try:
             if self.df is not None:
 
@@ -153,7 +144,6 @@ class AnalyzeStridePanel(wx.Panel):
                 except:
                     pass
 
-                # self.EstimateParams(self)
                 self.GetParent().Layout()
 
         except AttributeError:
@@ -161,14 +151,12 @@ class AnalyzeStridePanel(wx.Panel):
             self.GetParent().Layout()
             pass
 
-# add option to select folder
 
     def BulkImportKinematicsCSV(self, e):
         import_dialog = wx.DirDialog(
             self, 'Choose a folder', self.dirname, style=wx.DD_DEFAULT_STYLE)
         # Show the dialog and retrieve the user response.
         if import_dialog.ShowModal() == wx.ID_OK:
-            # load directory
             self.input_path = import_dialog.GetPath()
 
             self.files = []
@@ -195,9 +183,6 @@ class AnalyzeStridePanel(wx.Panel):
                         self.cm_speed = configs['cm_speed']
 
                     self.method_label.Show()
-
-                    # self.method_choices.SetSelection(0)
-                    # self.method_selection = self.method_choices.GetValue()
                     self.method_choices.Show()
                     self.GetParent().Layout()
                     try:    
@@ -209,10 +194,8 @@ class AnalyzeStridePanel(wx.Panel):
                         self.extract_parameters_button.Hide()
                         self.extract_parameters_button.Destroy()
                         
-                        
                     except:
                         pass
-                    # self.EstimateParams(self)
                     self.GetParent().Layout()
 
                     return self.input_path, self.files, len(self.files)
@@ -228,13 +211,11 @@ class AnalyzeStridePanel(wx.Panel):
         else:
             self.input_path = ''
 
-        # Destroy the dialog.
         import_dialog.Destroy()
 
 
     def OnMethod(self, e):
 
-        # self.selected_bodyparts = self.bodypart_choices.GetValue()
         self.method_selection = self.method_choices.GetValue()
 
         if self.method_selection == "Semi-automated":
@@ -482,9 +463,6 @@ class AnalyzeStridePanel(wx.Panel):
 
 
     def ExtractParameters(self, e):
-        
-        # self.extract_parameters_text.SetLabel("This might take a while (depending on your computer processor). Please be patient.")
-        # self.GetParent().Layout()
 
         self.GetParent().SetStatusText(
             f"\nWorking hard to extract 44 kinematic parameters for {self.filename}...\n")

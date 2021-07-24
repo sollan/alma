@@ -817,7 +817,7 @@ class AnalyzeFootfallPanel(wx.Panel):
         self.header.SetFont(font)
         self.sizer_1.Add(self.header, pos = (0, 0), span = (2, 5), flag = wx.LEFT|wx.TOP, border = 25)
 
-        self.instructions = wx.StaticText(self, -1, "Load the csv file of bodypart coordinates (e.g., from DLC) and validate detected footfalls.")
+        self.instructions = wx.StaticText(self, -1, "Load the csv file of bodypart coordinates and validate detected footfalls.")
         self.sizer_1.Add(self.instructions, pos = (2, 0), span = (1, 3), flag = wx.LEFT|wx.TOP|wx.BOTTOM, border=25)
         self.sizer_1_widgets.append(self.instructions)
         self.SetSizer(self.sizer_1)

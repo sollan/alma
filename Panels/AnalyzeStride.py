@@ -37,11 +37,11 @@ class AnalyzeStridePanel(wx.Panel):
             2, 5), flag=wx.LEFT | wx.TOP, border=25)
 
         self.instructions = wx.StaticText(
-            self, -1, "Load the csv file of bodypart coordinates (e.g., from DLC) and automatically extract kinematic parameters.", size=(self.window_width,50))
+            self, -1, "Load the csv file of bodypart coordinates and extract kinematic parameters.", size=(self.window_width,50))
         font = wx.Font(15,wx.MODERN,wx.NORMAL,wx.NORMAL)
         self.instructions.SetFont(font)
         self.sizer.Add(self.instructions, pos=(
-            2, 0), span=(1, 3), flag=wx.LEFT, border=25)
+            2, 0), span=(1, 5), flag=wx.LEFT, border=25)
 
         self.Stride_UI()
 
@@ -239,7 +239,7 @@ class AnalyzeStridePanel(wx.Panel):
 
                 self.cm_speed_input_button = wx.Button(self, id = wx.ID_ANY, label = "Update speed (cm/s)")
                 self.cm_speed_input_button.Bind(wx.EVT_BUTTON, self.UpdateSpeed)
-                self.sizer.Add(self.cm_speed_input_button, pos = (9, 3), flag = wx.LEFT | wx.TOP, border = 25)
+                self.sizer.Add(self.cm_speed_input_button, pos = (9, 3), flag = wx.TOP, border = 25)
                 self.stride_widgets.append(self.cm_speed_input_button)
         else:
 

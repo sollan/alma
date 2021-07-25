@@ -825,7 +825,6 @@ def findLongestSequence(A, k):
 
 
 def return_ten_central(pd_DataFrame):
-    print('start truncating')
     valid_list = convert_to_binary(pd_DataFrame['cycle duration (s)'])
     start, end = findLongestSequence(valid_list, 0)
     start_stride = int(np.mean([start, end]))-5

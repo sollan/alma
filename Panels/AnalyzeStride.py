@@ -445,12 +445,14 @@ class AnalyzeStridePanel(wx.Panel):
             self.extract_parameters_text.SetLabel(f"Saving to {self.output_path}. You can now start parameter extraction. \n\n"
             + "Parameter extraction can take a few minutes per file (depending on your computer processors). Please be patient.")
             self.GetParent().SetStatusText("Ready to extract parameters!")
-
-            self.extract_parameters_button = wx.Button(
-                self, id=wx.ID_ANY, label='Start parameter extraction')
-            self.sizer.Add(self.extract_parameters_button, pos=(
-                11, 2), flag=wx.TOP | wx.BOTTOM, border=25)
-            self.stride_widgets.append(self.extract_parameters_button)
+            try:
+                self.extract_parameters_button = wx.Button(
+                    self, id=wx.ID_ANY, label='Start parameter extraction')
+                self.sizer.Add(self.extract_parameters_button, pos=(
+                    11, 2), flag=wx.TOP | wx.BOTTOM, border=25)
+                self.stride_widgets.append(self.extract_parameters_button)
+            except wx._core.wxAssertionError:
+                pass
             self.extract_parameters_button.Bind(wx.EVT_BUTTON, self.ExtractParameters)
             self.extract_parameters_button.Show()
             self.GetParent().Layout()
@@ -476,7 +478,6 @@ class AnalyzeStridePanel(wx.Panel):
         KinematicsFunctions.make_parameters_output(self.output_path, parameters)
         
         parameters_truncated = KinematicsFunctions.return_ten_central(parameters)
-        print('done truncating')
         KinematicsFunctions.make_parameters_output(os.path.join(os.path.dirname(self.output_path), f'10_continuous_strides_parameters.csv'), parameters_truncated)
 
         self.GetParent().SetStatusText(

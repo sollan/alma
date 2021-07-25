@@ -7,6 +7,7 @@ import math
 import fastdtw
 import statistics as stat
 from sklearn.mixture import GaussianMixture
+import matplotlib.pyplot as plt
 import os
 
 def read_file(file):
@@ -35,10 +36,10 @@ def fix_column_names(pd_dataframe):
     return pd_dataframe, bodyparts
 
 
-def treadmill_correction(pd_dataframe, bodyparts, treadmill_speed = 8.09):
+def treadmill_correction(pd_dataframe, bodyparts, px_speed = 8.09):
 
     correction = np.arange(0, len(pd_dataframe), 1)
-    correction = correction * treadmill_speed
+    correction = correction * px_speed
 
     if type(bodyparts) is list and len(bodyparts) > 1:
         for bodypart in bodyparts:
@@ -191,6 +192,90 @@ def pairwise_dtw(iterable):
     return dtw_result
 
 
+def make_parameters_output(pathname, parameters):
+
+    parameters.to_csv(pathname)
+
+
+def make_averaged_output(pathname, truncated=False):
+
+    files = []
+    for file in os.listdir(pathname):
+        if truncated:
+            if file.endswith('.csv') and file.startswith('10_continuous_strides_parameters_'):
+                files.append(file)
+        else:
+            if file.endswith('.csv') and file.startswith('parameters_'):
+                files.append(file)
+
+    dfs = []
+    for file in files:
+
+        if truncated:
+            input_name = file.split('10_continuous_strides_parameters_')[1].split('.')[0]
+        else:
+            input_name = file.split('parameters_')[1].split('.')[0]
+
+        path = os.path.join(pathname, file)
+        df = pd.read_csv(path)
+        df['id'] = input_name
+
+        dfs.append(df)
+
+    res = pd.concat(dfs).groupby('id').agg(['mean','std'])
+    res = res.drop(['Unnamed: 0','stride_start (frame)','stride_end (frame)'], axis=1, errors='ignore')
+    if truncated:  
+        res.to_csv(os.path.join(pathname, 'averaged_truncated_results.csv'))
+    else:
+        res.to_csv(os.path.join(pathname, 'averaged_results.csv'))
+    
+def convert_to_binary(A):
+    
+    list_valid = [0 if np.isnan(i) else 1 for i in A]
+    
+    return list_valid
+
+
+def findLongestSequence(A, k):
+    '''
+    Function to find the maximum sequence of continuous 1's by replacing
+    at most `k` zeroes by 1 using sliding window technique
+    '''
+    left = 0        # represents the current window's starting index
+    count = 0       # stores the total number of zeros in the current window
+    window = 0      # stores the maximum number of continuous 1's found
+                    # so far (including `k` zeroes)
+    leftIndex = 0   # stores the left index of maximum window found so far
+
+    for right in range(len(A)):
+        if A[right] == 0:
+            count = count + 1
+        while count > k:
+            if A[left] == 0:
+                count = count - 1
+            left = left + 1
+            
+        if right - left + 1 > window:
+            window = right - left + 1
+            leftIndex = left
+    
+    return leftIndex, leftIndex + window - 1
+
+
+def return_ten_central(pd_dataframe_parameters, plot=False, pd_dataframe_coords=None, bodyparts=None, is_stance=[], filename=''):
+    valid_list = convert_to_binary(pd_dataframe_parameters['cycle duration (s)'])
+    start, end = findLongestSequence(valid_list, 0)
+    start_stride = int(np.mean([start, end]))-5
+    end_stride = start_stride+10
+    if plot:
+        x_coords, y_coords = collect_filtered_coords(pd_dataframe_coords, bodyparts)
+        start_frame = int(pd_dataframe_parameters.iloc[start_stride]['stride_start (frame)'])
+        end_frame = int(pd_dataframe_parameters.iloc[end_stride]['stride_end (frame)'])
+        continuous_stickplot(pd_dataframe_coords, bodyparts, is_stance, x_coords, y_coords, start_frame, end_frame, filename)
+
+    return pd_dataframe_parameters.iloc[start_stride:end_stride, :]
+
+
 def extract_parameters(frame_rate, pd_dataframe, cutoff_f, bodypart, cm_speed = None, px_to_cm_speed_ratio = 0.4806, plot = False):
     '''
     pd_dataframe: contains raw coordinates (not adjusted for treadmill movement, unfiltered)
@@ -266,22 +351,15 @@ def extract_parameters(frame_rate, pd_dataframe, cutoff_f, bodypart, cm_speed = 
 
     pixels_per_cm = 1 / (cm_speed / px_speed / frame_rate)
 
-    correction = np.arange(0, len(pd_dataframe), 1)
-    correction = correction * px_speed
+    bodyparts = ['toe', 'mtp', 'ankle', 'knee', 'hip', 'iliac crest']
+    pd_dataframe = treadmill_correction(pd_dataframe, bodyparts, px_speed)
 
-    toe_x = -(pd_dataframe['toe x'] - correction)
-    mtp_x = -(pd_dataframe['mtp x'] - correction)
-    ankle_x = -(pd_dataframe['ankle x'] - correction)
-    knee_x = -(pd_dataframe['knee x'] - correction)
-    hip_x = -(pd_dataframe['hip x'] - correction)
-    crest_x = -(pd_dataframe['iliac crest x'] - correction)
-    
-    smooth_toe_x = butterworth_filter(toe_x, frame_rate, cutoff_f)
-    smooth_mtp_x = butterworth_filter(mtp_x, frame_rate, cutoff_f)
-    smooth_ankle_x = butterworth_filter(ankle_x, frame_rate, cutoff_f)
-    smooth_knee_x = butterworth_filter(knee_x, frame_rate, cutoff_f)
-    smooth_hip_x = butterworth_filter(hip_x, frame_rate, cutoff_f)
-    smooth_crest_x = butterworth_filter(crest_x, frame_rate, cutoff_f)
+    smooth_toe_x = butterworth_filter(pd_dataframe['toe x'], frame_rate, cutoff_f)
+    smooth_mtp_x = butterworth_filter(pd_dataframe['mtp x'], frame_rate, cutoff_f)
+    smooth_ankle_x = butterworth_filter(pd_dataframe['ankle x'], frame_rate, cutoff_f)
+    smooth_knee_x = butterworth_filter(pd_dataframe['knee x'], frame_rate, cutoff_f)
+    smooth_hip_x = butterworth_filter(pd_dataframe['hip x'], frame_rate, cutoff_f)
+    smooth_crest_x = butterworth_filter(pd_dataframe['iliac crest x'], frame_rate, cutoff_f)
 
     smooth_toe_y = butterworth_filter(pd_dataframe['toe y'], frame_rate, cutoff_f)
     smooth_mtp_y = butterworth_filter(pd_dataframe['mtp y'], frame_rate, cutoff_f)
@@ -653,7 +731,10 @@ def extract_parameters(frame_rate, pd_dataframe, cutoff_f, bodypart, cm_speed = 
                     dtw_xy_plane_10_means.append(np.nan)
                     dtw_xy_plane_10_sds.append(np.nan)
                 
-    
+    for bodypart in bodyparts:
+        for coord in ['x', 'y']:
+            pd_dataframe[f'{bodypart} {coord}'] = butterworth_filter(pd_dataframe[f'{bodypart} {coord}'], frame_rate, cutoff_f)
+        
     return pd.DataFrame(data=np.array([
                             starts,
                             ends,
@@ -749,85 +830,69 @@ def extract_parameters(frame_rate, pd_dataframe, cutoff_f, bodypart, cm_speed = 
                                 'DTW distance y plane 10 strides SD',
                                 'DTW distance xy plane 10 strides mean',
                                 'DTW distance xy plane 10 strides SD',
-                                ])
+                                ]), pd_dataframe, is_stance, bodyparts
 
 
-def make_parameters_output(pathname, parameters):
+def collect_filtered_coords(filt_corrected_df, bodyparts):
 
-    parameters.to_csv(pathname)
+    x_coords = filt_corrected_df[[f'{bodyparts[0]} x', f'{bodyparts[1]} x', f'{bodyparts[2]} x', f'{bodyparts[3]} x', f'{bodyparts[4]} x', f'{bodyparts[5]} x']]
+    y_coords = filt_corrected_df[[f'{bodyparts[0]} y', f'{bodyparts[1]} y', f'{bodyparts[2]} y', f'{bodyparts[3]} y', f'{bodyparts[4]} y', f'{bodyparts[5]} y']]
 
+    x_coords.columns = bodyparts
+    y_coords.columns = bodyparts
 
-def make_averaged_output(pathname, truncated=False):
+    x_coords = x_coords.T
+    y_coords = y_coords.T
 
-    files = []
-    for file in os.listdir(pathname):
-        if truncated:
-            if file.endswith('.csv') and file.startswith('10_continuous_strides_parameters_'):
-                files.append(file)
-        else:
-            if file.endswith('.csv') and file.startswith('parameters_'):
-                files.append(file)
-
-    dfs = []
-    for file in files:
-
-        if truncated:
-            input_name = file.split('10_continuous_strides_parameters_')[1].split('.')[0]
-        else:
-            input_name = file.split('parameters_')[1].split('.')[0]
-
-        path = os.path.join(pathname, file)
-        df = pd.read_csv(path)
-        df['id'] = input_name
-
-        dfs.append(df)
-
-    res = pd.concat(dfs).groupby('id').agg(['mean','std'])
-    res = res.drop(['Unnamed: 0','stride_start (frame)','stride_end (frame)'], axis=1, errors='ignore')
-    if truncated:  
-        res.to_csv(os.path.join(pathname, 'averaged_truncated_results.csv'))
-    else:
-        res.to_csv(os.path.join(pathname, 'averaged_results.csv'))
-    
-def convert_to_binary(A):
-    
-    list_valid = [0 if np.isnan(i) else 1 for i in A]
-    
-    return list_valid
+    return x_coords, y_coords
 
 
+def continuous_stickplot(filt_corrected_df, bodyparts, is_stance, x_coords, y_coords, start, end, filename='truncated_stickplot'):
 
+    x_min = min(x_coords.loc[:, start:end].min())
+    x_max = max(x_coords.loc[:, start:end].max())
+    x_range = x_max - x_min
+    y_min = min(y_coords.loc[:, start:end].min())
+    y_max = max(y_coords.loc[:, start:end].max())
+    y_range = y_max - y_min
+    plt.figure(figsize = (x_range // y_range * 5, 5))
 
-def findLongestSequence(A, k):
-    '''
-    Function to find the maximum sequence of continuous 1's by replacing
-    at most `k` zeroes by 1 using sliding window technique
-    '''
-    left = 0        # represents the current window's starting index
-    count = 0       # stores the total number of zeros in the current window
-    window = 0      # stores the maximum number of continuous 1's found
-                    # so far (including `k` zeroes)
-    leftIndex = 0   # stores the left index of maximum window found so far
+    for t in filt_corrected_df.index[start:end]:
+        if t%2 == 0:
+            # plotting every two frames to reduce clutter
+            toe_mtp = pd.DataFrame(pd.concat([x_coords[t].iloc[0:2], y_coords[t].iloc[0:2]], axis=1))
+            mtp_ankle = pd.DataFrame(pd.concat([x_coords[t].iloc[1:3], y_coords[t].iloc[1:3]], axis=1))
+            ankle_knee = pd.DataFrame(pd.concat([x_coords[t].iloc[2:4], y_coords[t].iloc[2:4]], axis=1))
+            knee_hip = pd.DataFrame(pd.concat([x_coords[t].iloc[3:5], y_coords[t].iloc[3:5]], axis=1))
+            hip_crest = pd.DataFrame(pd.concat([x_coords[t].iloc[4:6], y_coords[t].iloc[4:6]], axis=1))
 
-    for right in range(len(A)):
-        if A[right] == 0:
-            count = count + 1
-        while count > k:
-            if A[left] == 0:
-                count = count - 1
-            left = left + 1
+            toe_mtp.columns = ['coord x', 'coord y']
+            mtp_ankle.columns = ['coord x', 'coord y']
+            ankle_knee.columns = ['coord x', 'coord y']
+            knee_hip.columns = ['coord x', 'coord y']
+            hip_crest.columns = ['coord x', 'coord y']
             
-        if right - left + 1 > window:
-            window = right - left + 1
-            leftIndex = left
-    
-    return leftIndex, leftIndex + window - 1
+            if is_stance[t] == 1:
+                plt.plot('coord x', 'coord y', data=toe_mtp, c='#999999')
+                plt.plot('coord x', 'coord y', data=mtp_ankle, c='#999999')
+                plt.plot('coord x', 'coord y', data=ankle_knee, c='#999999')
+                plt.plot('coord x', 'coord y', data=knee_hip, c='#999999')
+                plt.plot('coord x', 'coord y', data=hip_crest, c='#999999')
+            else:
+                plt.plot('coord x', 'coord y', data=toe_mtp, c='#FAAF40')
+                plt.plot('coord x', 'coord y', data=mtp_ankle, c='#FAAF40')
+                plt.plot('coord x', 'coord y', data=ankle_knee, c='#FAAF40')
+                plt.plot('coord x', 'coord y', data=knee_hip, c='#FAAF40')
+                plt.plot('coord x', 'coord y', data=hip_crest, c='#FAAF40')
 
+    plt.xlabel('x coordinate (pixel)')
+    plt.ylabel('y coordinate (pixel)')
+    plt.legend([f'{bodyparts[0]}-{bodyparts[1]}', 
+                f'{bodyparts[1]}-{bodyparts[2]}', 
+                f'{bodyparts[2]}-{bodyparts[3]}', 
+                f'{bodyparts[3]}-{bodyparts[4]}', 
+                f'{bodyparts[4]}-{bodyparts[5]}'])
 
-def return_ten_central(pd_DataFrame):
-    valid_list = convert_to_binary(pd_DataFrame['cycle duration (s)'])
-    start, end = findLongestSequence(valid_list, 0)
-    start_stride = int(np.mean([start, end]))-5
-    end_stride = start_stride+10
-    
-    return pd_DataFrame.iloc[start_stride:end_stride, :]
+    plt.ylim(y_min, y_max)
+    plt.gca().invert_yaxis()
+    plt.savefig(f'./{filename}.svg', format='svg', dpi=1200)

@@ -1,0 +1,13 @@
+name: alma-env
+dependencies:
+  - matplotlib
+  - numpy
+  - pandas
+  - PyYAML
+  - scikit-learn
+  - scipy
+  - seaborn
+  - wxPython
+  - pip:
+    - opencv-python
+    - fastdtw

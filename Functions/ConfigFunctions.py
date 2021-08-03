@@ -1,5 +1,6 @@
 import yaml
 
+
 def load_config(config_path):
 
     config_file = open(config_path)

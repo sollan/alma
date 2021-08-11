@@ -133,7 +133,9 @@ class AnalyzeFootfallPanel(wx.Panel):
 
         if self.video is not None:
             self.has_imported_video = True
-            self.import_video_text.SetLabel(f"Video imported! \n\n{self.video_name}\n\nYou can validate the prediction now.")
+            self.import_video_text.SetLabel(f"Video imported! \n\n{self.video_name}\n\nYou can validate the prediction now.\n\
+NOTE: Make sure to also validate the y-axis value at start and end if you wish to analyze footfall depth, and adjust the start / end timepoints accordingly \n\
+if you wish to analyze footfall duration.")
             self.import_video_button.Disable()
             self.validate_button.Show()
             self.import_new_video_button.Show()
@@ -513,7 +515,7 @@ class AnalyzeFootfallPanel(wx.Panel):
         self.sizer_1_widgets.append(self.method_label)  
         self.method_label.Hide()
 
-        methods = ['Threshold', 'Deviation', 'Baseline']
+        methods = ['Deviation', 'Threshold', 'Baseline']
         self.method_choices = wx.ComboBox(self, choices = methods)
         self.sizer_1.Add(self.method_choices, pos= (8, 2) , flag = wx.LEFT | wx.TOP, border = 25)
         self.sizer_1_widgets.append(self.method_choices)
@@ -615,7 +617,6 @@ class AnalyzeFootfallPanel(wx.Panel):
         else:
             self.bodypart = self.selected_bodyparts[0]
 
-
         self.file_info_button = wx.Button(self, id=wx.ID_ANY, label="Show file information")
         self.file_info_button.Bind(wx.EVT_BUTTON, self.display_info)
         self.sizer_2.Add(self.file_info_button, pos = (7, 0), flag = wx.LEFT | wx.ALIGN_CENTER_VERTICAL | wx.BOTTOM, border=25)
@@ -653,8 +654,7 @@ class AnalyzeFootfallPanel(wx.Panel):
         self.frame_label = wx.StaticText(self, label='Frame')
         self.next_pred_button = wx.Button(self, id=wx.ID_ANY, label="next detected footfall (D) ->")
         self.Bind(wx.EVT_BUTTON, lambda event, new_frame = 'next_pred' : self.SwitchFrame(event, new_frame), self.next_pred_button)
-
-
+        
         self.prev_pred, self.next_pred = FootfallFunctions.find_neighbors(self.n_frame, self.t_pred)
         self.prev_val, self.next_val = FootfallFunctions.find_neighbors(self.n_frame, self.t_val)
 
@@ -771,7 +771,7 @@ class AnalyzeFootfallPanel(wx.Panel):
         self.Fit()
         FootfallFunctions.ControlButton(self)
         FootfallFunctions.ControlPrediction(self)
-
+        
         self.SetSizer(self.sizer_2)
         self.GetParent().Layout()
 
@@ -854,6 +854,12 @@ class AnalyzeFootfallPanel(wx.Panel):
         except:
             # awaiting bodypart selection
             self.pred_text.SetLabel(f"\n{self.pred_text_extra}No footfalls detected! Try selecting a different bodypart or method?\n")
+            
+            self.save_pred_button.Show()
+            self.import_new_csv_button.Show()
+            self.import_video_button.Show()
+            self.import_video_text.Show()
+            self.GetParent().Layout()
             pass
 
 

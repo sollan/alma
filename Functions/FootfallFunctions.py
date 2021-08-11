@@ -35,8 +35,7 @@ def fix_column_names(pd_dataframe):
 def filter_predictions(t_peaks, properties, pd_dataframe, bodypart, likelihood_threshold = 0.1, depth_threshold = 0.8):
     '''
     discard found peaks if the DLC prediction at a certain timepoint is below the set likelihood threshold
-    '''    
-            
+    ''' 
     result = np.where(pd_dataframe.iloc[list(t_peaks)][f'{bodypart} likelihood']>=likelihood_threshold)
     ind_valid_peaks = []
     result = np.array(result[0])
@@ -404,18 +403,26 @@ def plot_labels(pd_dataframe, n_current_frame, method, t_pred, start_pred, end_p
     return figure
 
 
-def find_neighbors(n_current_frame, t_pred, start = None, end = None):     
+def find_neighbors(n_current_frame, t_pred, start = None, end = None):
 
     if len(t_pred) == 0:
         return 0, 0
 
-    elif n_current_frame < t_pred[0]:
+    elif len(t_pred) == 1:
+        if n_current_frame > t_pred[0]:
+            return t_pred[0], 0
+        elif n_current_frame < t_pred[0]:
+            return 0, t_pred[0]
+        elif n_current_frame == t_pred[0]:
+            return 0, 0
+
+    elif n_current_frame < t_pred[0] and len(t_pred) > 1:
         return 0, t_pred[0]
 
-    elif n_current_frame > t_pred[-1]:
+    elif n_current_frame > t_pred[-1] and len(t_pred) > 1:
         return t_pred[-1], 0
 
-    elif n_current_frame in t_pred:
+    elif n_current_frame in t_pred and len(t_pred) > 1:
         if n_current_frame == t_pred[0]:
             return 0, t_pred[1]
         elif n_current_frame == t_pred[-1]:
@@ -474,7 +481,10 @@ def ControlButton(panel):
     panel.to_start_button.Enable()
     panel.to_end_button.Enable()
     
-    if panel.n_frame <= panel.t_val[0]:
+    if panel.n_val == 0:
+        panel.prev_pred_button.Disable()
+        panel.next_pred_button.Disable()
+    elif panel.n_frame <= panel.t_val[0]:
         panel.prev_pred_button.Disable()
     elif panel.n_frame >= panel.t_val[-1]:
         panel.next_pred_button.Disable()

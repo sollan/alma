@@ -32,7 +32,7 @@ def fix_column_names(pd_dataframe):
     return pd_dataframe, bodyparts
 
 
-def filter_predictions(t_peaks, properties, pd_dataframe, bodypart, likelihood_threshold = 0.1, depth_threshold = 0.8):
+def filter_predictions(t_peaks, properties, pd_dataframe, bodypart, likelihood_threshold = 0.1, depth_threshold = 0.5):
     '''
     discard found peaks if the DLC prediction at a certain timepoint is below the set likelihood threshold
     ''' 
@@ -60,15 +60,15 @@ def filter_predictions(t_peaks, properties, pd_dataframe, bodypart, likelihood_t
         prev_x = pd_dataframe.iloc[prev_mid][f'{bodypart} x']
         curr_x = pd_dataframe.iloc[curr_mid][f'{bodypart} x']
         x_diff = np.abs(prev_x - curr_x)
-        if curr_start > prev_end and x_diff >= 30:
+        if curr_start > prev_end and x_diff >= 20:
             # separate footfalls
             ind_valid_peaks.append(result[i])
-        else:
+        elif x_diff < 20:
             # overlapping predictions
             if curr_mid_depth - max_between_footfall >= depth_threshold*prev_depth:
                 # recovered a percentage of prev footfall depth
-                if x_diff >= 30:
-                    # different rung
+                if x_diff >= 10:
+                    # different rung despite short distance between rungs
                     properties['left_bases'][result[i]] = max_between
                     ind_valid_peaks.append(result[i])
                     # not different rung, recovered -> do not count

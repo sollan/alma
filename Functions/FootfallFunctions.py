@@ -32,7 +32,7 @@ def fix_column_names(pd_dataframe):
     return pd_dataframe, bodyparts
 
 
-def filter_predictions(t_peaks, properties, pd_dataframe, bodypart, likelihood_threshold = 0.1, depth_threshold = 0.5):
+def filter_predictions(t_peaks, properties, pd_dataframe, bodypart, likelihood_threshold = 0.1, depth_threshold = 0.8):
     '''
     discard found peaks if the DLC prediction at a certain timepoint is below the set likelihood threshold
     ''' 
@@ -41,47 +41,56 @@ def filter_predictions(t_peaks, properties, pd_dataframe, bodypart, likelihood_t
     result = np.array(result[0])
     ind_valid_peaks.append(result[0])
 
+    for i, t in enumerate(properties['left_bases']):
+        if pd_dataframe.iloc[t][f'{bodypart} likelihood']<likelihood_threshold:
+            properties['left_bases'][i] = t_peaks[i] - 1
+    for i, t in enumerate(properties['right_bases']):
+        if pd_dataframe.iloc[t][f'{bodypart} likelihood']<likelihood_threshold:
+            properties['right_bases'][i] = t_peaks[i] + 1
+    for i, t in enumerate(properties['left_bases']):
+        if pd_dataframe.iloc[t][f'{bodypart} likelihood']<likelihood_threshold:
+            properties['left_bases'][i] = t_peaks[i] - 1
+    for i, t in enumerate(properties['right_bases']):
+        if pd_dataframe.iloc[t][f'{bodypart} likelihood']<likelihood_threshold:
+            properties['right_bases'][i] = t_peaks[i] + 1
+
     for i in range(1, len(result)):
         prev_mid = t_peaks[result[i-1]]
         curr_mid = t_peaks[result[i]]
-
-        # highest point between prev and current footfall (recovered y distance)
-        max_between_footfall = min(pd_dataframe.iloc[prev_mid : curr_mid][pd_dataframe.iloc[prev_mid : curr_mid][f'{bodypart} likelihood'] >= likelihood_threshold][f'{bodypart} y'])
-        max_between = np.where(pd_dataframe.iloc[prev_mid : curr_mid][f'{bodypart} y']==max_between_footfall)[0][0]
+        # highest point between prev and current slip (recovered y distance)
+        max_between_slip = min(pd_dataframe.iloc[prev_mid : curr_mid][pd_dataframe.iloc[prev_mid : curr_mid][f'{bodypart} likelihood'] >= likelihood_threshold][f'{bodypart} y'])
+        max_between = np.where(pd_dataframe.iloc[prev_mid : curr_mid][f'{bodypart} y']==max_between_slip)[0][0]
         max_between = np.array(pd_dataframe.iloc[prev_mid : curr_mid]['bodyparts coords'])[max_between]
-        prev_depth = pd_dataframe.iloc[prev_mid][f'{bodypart} y'] - \
+        prev_depth = pd_dataframe.iloc[t_peaks[result[i-1]]][f'{bodypart} y'] - \
                         pd_dataframe.iloc[properties['left_bases'][result[i-1]]][f'{bodypart} y']
-        prev_mid_depth = pd_dataframe.iloc[prev_mid][f'{bodypart} y']
+        prev_mid_depth = pd_dataframe.iloc[t_peaks[result[i-1]]][f'{bodypart} y'] 
         prev_end = properties['right_bases'][result[i-1]]
         curr_mid_depth = pd_dataframe.iloc[t_peaks[result[i]]][f'{bodypart} y']
         curr_start = properties['left_bases'][result[i]]
-        
-        # x coordinate location compared to prev footfall
-        prev_x = pd_dataframe.iloc[prev_mid][f'{bodypart} x']
-        curr_x = pd_dataframe.iloc[curr_mid][f'{bodypart} x']
-        x_diff = np.abs(prev_x - curr_x)
-        if curr_start > prev_end and x_diff >= 20:
-            # separate footfalls
+        if curr_start > prev_end:
+            # separate slips
             ind_valid_peaks.append(result[i])
-        elif x_diff < 20:
-            # overlapping predictions
-            if curr_mid_depth - max_between_footfall >= depth_threshold*prev_depth:
-                # recovered a percentage of prev footfall depth
-                if x_diff >= 10:
-                    # different rung despite short distance between rungs
-                    properties['left_bases'][result[i]] = max_between
-                    ind_valid_peaks.append(result[i])
-                    # not different rung, recovered -> do not count
+        else:
+            # overlapping
+            if curr_mid_depth - max_between_slip >= depth_threshold*prev_depth:
+                # recovered a percentage of prev slip depth
+                properties['left_bases'][result[i]] = max_between
+                ind_valid_peaks.append(result[i])
             else:
-                # did not recover, mark as same footfall; correct prev end and depth
+                # mark as same slip; correct prev end and depth
                 if curr_mid_depth > prev_mid_depth:
-                    # current prediction is deeper; adjust mid and start of footfall timing
+                    # current prediction is deeper; adjust mid and start of slip timing
                     ind_valid_peaks.pop()
                     ind_valid_peaks.append(result[i])
                     properties['left_bases'][result[i]] = properties['left_bases'][result[i-1]]
                 else:
-                    # prev prediction is deeper; adjust end of footfall timing
+                    # prev prediction is deeper; adjust end of slip timing
                     properties['right_bases'][result[i-1]] = properties['right_bases'][result[i]]
+    
+    t_peaks = t_peaks[ind_valid_peaks]
+    for item in properties:
+        # a dictionary containing prominence, start, end etc.
+        properties[item] = properties[item][ind_valid_peaks]
 
     t_peaks = t_peaks[ind_valid_peaks]
     for item in properties:

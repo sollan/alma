@@ -28,6 +28,7 @@ class AnalyzeStridePanel(wx.Panel):
         self.no_outlier_filter = bool(configs['no_outlier_filter'])
     
         self.stride_widgets = []
+        self.has_input_path = False
         self.has_imported_file = False
         self.dirname = os.getcwd()
 
@@ -100,6 +101,10 @@ class AnalyzeStridePanel(wx.Panel):
             try:
                 self.px_cm_length_ratio_input.Destroy()
                 self.px_cm_length_ratio_input_button.Destroy()
+            except:
+                pass
+
+            try:
                 self.method_label.Destroy()
                 self.method_choices.Destroy()
                 self.method_note_text.Destroy()
@@ -136,12 +141,16 @@ class AnalyzeStridePanel(wx.Panel):
             try:
                 self.px_cm_ratio_input.Destroy()
                 self.px_cm_ratio_input_button.Destroy()
+            except:
+                pass
+            try:
                 self.method_label.Destroy()
                 self.method_choices.Destroy()
                 self.method_note_text.Destroy()
             except:
                 pass
-            
+
+
             self.method_label = wx.StaticText(
                 self, label='Select method for px-to-cm length conversion:')
             self.sizer.Add(self.method_label, pos=(
@@ -307,6 +316,18 @@ class AnalyzeStridePanel(wx.Panel):
                     + "\ne.g., through a regression between the px-to-cm speed ratio at different speeds.")
                 
                 try:
+                    self.px_cm_ratio_input.Destroy()
+                    self.px_cm_ratio_input_button.Destroy()
+                except:
+                    pass
+                
+                try:
+                    self.px_cm_length_ratio_input.Destroy()
+                    self.px_cm_length_ratio_input_button.Destroy()
+                except:
+                    pass
+
+                try:
                     self.cm_speed_input.Show()
                     self.cm_speed_input_button.Show()
                 except:
@@ -316,22 +337,30 @@ class AnalyzeStridePanel(wx.Panel):
 
                     self.cm_speed_input_button = wx.Button(self, id = wx.ID_ANY, label = "Update speed (cm/s)")
                     self.cm_speed_input_button.Bind(wx.EVT_BUTTON, self.UpdateSpeed)
-                    self.sizer.Add(self.cm_speed_input_button, pos = (9, 3), flag = wx.TOP, border = 25)
+                    self.sizer.Add(self.cm_speed_input_button, pos = (9, 3), flag = wx.LEFT | wx.TOP, border = 25)
                     self.stride_widgets.append(self.cm_speed_input_button)
-            else:
+
+            elif self.method_selection == "Fully automated":
 
                 self.method_note_text.SetLabel(
                     f"Using px to cm speed ratio: 1 pixel / frame = {self.px_to_cm_speed_ratio} cm / s.")
+
                 try:
                     self.cm_speed_input.Destroy()
                     self.cm_speed_input_button.Destroy()
-                except AttributeError:
+                except: # doesn't exist
+                    pass
+
+                try:
+                    self.px_cm_length_ratio_input.Destroy()
+                    self.px_cm_length_ratio_input_button.Destroy()
+                except: # doesn't exist
                     pass
 
                 try:
                     self.px_cm_ratio_input.Show()
                     self.px_cm_ratio_input_button.Show()
-                except:
+                except: # doesn't exist
                     self.px_cm_ratio_input = wx.TextCtrl(self, value = str(self.px_to_cm_speed_ratio))
                     self.sizer.Add(self.px_cm_ratio_input, pos= (9, 2), flag = wx.LEFT | wx.TOP, border = 25)
                     self.stride_widgets.append(self.px_cm_ratio_input)
@@ -346,6 +375,19 @@ class AnalyzeStridePanel(wx.Panel):
             self.method_note_text.SetLabel(
                 f"Using a spontaneous overground walking set-up. Parameters will be extracted automatically."
                     + f"\n\nCurrently using a length conversion ratio of {self.pixels_per_cm} pixels / cm (needs to be obtained manually).")
+
+            try:
+                self.cm_speed_input.Destroy()
+                self.cm_speed_input_button.Destroy()
+            except: # doesn't exist
+                pass
+
+            try:
+                self.px_cm_ratio_input.Destroy()
+                self.px_cm_ratio_input.Destroy()
+            except: # doesn't exist
+                pass
+
             try:
                 self.px_cm_length_ratio_input.Show()
                 self.px_cm_length_ratio_input_button.Show()

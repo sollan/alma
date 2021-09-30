@@ -340,13 +340,14 @@ def compute_limb_joint_angles(smooth_toe_x, smooth_toe_y, \
 #         return limb, limb_len_means, limb_len_sds, step_heights, drag_percentages
 
 
-def extract_parameters(frame_rate, pd_dataframe, cutoff_f, bodypart, bodyparts, cm_speed=None, px_to_cm_speed_ratio=0.4806, right_to_left=True):
+def extract_parameters(frame_rate, pd_dataframe, cutoff_f, bodypart, cm_speed=None, px_to_cm_speed_ratio=0.4806, right_to_left=True):
 
     '''
     pd_dataframe: contains raw coordinates (not adjusted for treadmill movement, unfiltered)
     bodypart: which bodypart to use for stride estimation
 
     '''
+    bodyparts = ['toe', 'mtp', 'ankle', 'knee', 'hip', 'iliac crest'] # modify this
     starts = []
     ends = []
 

@@ -415,6 +415,7 @@ def extract_parameters(frame_rate, pd_dataframe, cutoff_f, bodypart, cm_speed=No
         cm_speed = px_speed / px_to_cm_speed_ratio
 
     pixels_per_cm = 1 / (cm_speed / px_speed / frame_rate)
+    uncorrected_toe_x = pd_dataframe['toe x']
     pd_dataframe = treadmill_correction(pd_dataframe, bodyparts, px_speed)
 
     smooth_toe_x = butterworth_filter(pd_dataframe['toe x'], frame_rate, cutoff_f)
@@ -519,7 +520,7 @@ def extract_parameters(frame_rate, pd_dataframe, cutoff_f, bodypart, cm_speed=No
 
     else:
         
-        filtered_bodypart_x = butterworth_filter(pd_dataframe[f'{bodypart} x'], frame_rate, 5)
+        filtered_bodypart_x = butterworth_filter(uncorrected_toe_x, frame_rate, 5)
         filtered_bodypart_x_change = np.diff(filtered_bodypart_x)
 
         # movement direction: x loc decreasing; treadmill direction: x loc increasing

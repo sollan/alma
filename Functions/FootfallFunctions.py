@@ -79,12 +79,6 @@ def filter_predictions(t_peaks, properties, pd_dataframe, bodypart, likelihood_t
         # a dictionary containing prominence, start, end etc.
         properties[item] = properties[item][ind_valid_peaks]
 
-    t_peaks = t_peaks[ind_valid_peaks]
-
-    for item in properties:
-        # a dictionary containing prominence, start, end etc.
-        properties[item] = properties[item][ind_valid_peaks]
-
     for i, t in enumerate(properties['left_bases']):
         if pd_dataframe.iloc[t][f'{bodypart} likelihood']<likelihood_threshold:
             properties['left_bases'][i] = t_peaks[i] - 1

@@ -415,15 +415,14 @@ def extract_parameters(frame_rate, pd_dataframe, cutoff_f, bodypart, cm_speed=No
         cm_speed = px_speed / px_to_cm_speed_ratio
 
     pixels_per_cm = 1 / (cm_speed / px_speed / frame_rate)
-    uncorrected_toe_x = pd_dataframe['toe x']
-    pd_dataframe = treadmill_correction(pd_dataframe, bodyparts, px_speed)
+    pd_dataframe_corrected = treadmill_correction(pd_dataframe, bodyparts, px_speed)
 
-    smooth_toe_x = butterworth_filter(pd_dataframe['toe x'], frame_rate, cutoff_f)
-    smooth_mtp_x = butterworth_filter(pd_dataframe['mtp x'], frame_rate, cutoff_f)
-    smooth_ankle_x = butterworth_filter(pd_dataframe['ankle x'], frame_rate, cutoff_f)
-    smooth_knee_x = butterworth_filter(pd_dataframe['knee x'], frame_rate, cutoff_f)
-    smooth_hip_x = butterworth_filter(pd_dataframe['hip x'], frame_rate, cutoff_f)
-    smooth_crest_x = butterworth_filter(pd_dataframe['iliac crest x'], frame_rate, cutoff_f)
+    smooth_toe_x = butterworth_filter(pd_dataframe_corrected['toe x'], frame_rate, cutoff_f)
+    smooth_mtp_x = butterworth_filter(pd_dataframe_corrected['mtp x'], frame_rate, cutoff_f)
+    smooth_ankle_x = butterworth_filter(pd_dataframe_corrected['ankle x'], frame_rate, cutoff_f)
+    smooth_knee_x = butterworth_filter(pd_dataframe_corrected['knee x'], frame_rate, cutoff_f)
+    smooth_hip_x = butterworth_filter(pd_dataframe_corrected['hip x'], frame_rate, cutoff_f)
+    smooth_crest_x = butterworth_filter(pd_dataframe_corrected['iliac crest x'], frame_rate, cutoff_f)
 
     smooth_toe_y = butterworth_filter(pd_dataframe['toe y'], frame_rate, cutoff_f)
     smooth_mtp_y = butterworth_filter(pd_dataframe['mtp y'], frame_rate, cutoff_f)
@@ -520,7 +519,7 @@ def extract_parameters(frame_rate, pd_dataframe, cutoff_f, bodypart, cm_speed=No
 
     else:
         
-        filtered_bodypart_x = butterworth_filter(uncorrected_toe_x, frame_rate, 5)
+        filtered_bodypart_x = butterworth_filter(pd_dataframe['toe x'], frame_rate, 5)
         filtered_bodypart_x_change = np.diff(filtered_bodypart_x)
 
         # movement direction: x loc decreasing; treadmill direction: x loc increasing

@@ -62,16 +62,6 @@
     dtw_xy_plane_10_means = []
     dtw_xy_plane_10_sds = []
     
-
-#     px_speed, _ = scipy.stats.norm.fit(x_change_filt[x_change_filt>0])
-
-#     if cm_speed is None: 
-#         cm_speed = px_speed / px_to_cm_speed_ratio
-
-#     pixels_per_cm = 45/2.54
-
-#     bodyparts = ['toe', 'mtp', 'ankle', 'knee', 'hip', 'iliac crest']
-#     pd_dataframe = treadmill_correction(pd_dataframe, bodyparts, px_speed)
     for num, direction in enumerate(['L', 'R']):
         
         x_change = np.diff(pd_dataframe[f'toe{direction} x'][pd_dataframe[f'toe{direction} likelihood']>0.5])

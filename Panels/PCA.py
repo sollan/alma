@@ -192,8 +192,21 @@ class PCAPanel(wx.Panel):
 
 
     def PCA(self, e):
-        group_1_file_list = DataAnalysisFunctions.find_files(self.folder1)
-        group_2_file_list = DataAnalysisFunctions.find_files(self.folder2)
+        try:
+            self.PCA_result_text.Hide()
+        except:
+            pass
+
+        if self.folder1 != '':
+            group_1_file_list = DataAnalysisFunctions.find_files(self.folder1)
+        else:
+            self.PCA_result_text.SetLabel('Please enter or confirm the name of group 1!')
+
+        if self.folder2 != '':
+            group_2_file_list = DataAnalysisFunctions.find_files(self.folder2)
+        else:
+            self.PCA_result_text.SetLabel('Please enter or confirm the name of group 2!')
+
         if self.folder3 != '':
             group_3_file_list = DataAnalysisFunctions.find_files(self.folder3)
             file_lists = [group_1_file_list, group_2_file_list, group_3_file_list]
@@ -201,11 +214,15 @@ class PCAPanel(wx.Panel):
         else:
             file_lists = [group_1_file_list, group_2_file_list]
             group_names = [self.group_name_1, self.group_name_2]
+
         combined_df = DataAnalysisFunctions.combine_files(file_lists, group_names, self.output_path, 'average')
 
         DataAnalysisFunctions.PCA(combined_df, self.output_path)
 
-        self.PCA_result_text = wx.StaticText(self, label=f"\nAnalysis completed!")
-        self.sizer.Add(self.PCA_result_text, pos=(8, 2), flag=wx.LEFT | wx.TOP, border=25)
-        self.data_widgets.append(self.PCA_result_text)
+        try:
+            self.PCA_result_text.Show()
+        except:
+            self.PCA_result_text = wx.StaticText(self, label=f"\nAnalysis completed!")
+            self.sizer.Add(self.PCA_result_text, pos=(8, 2), flag=wx.LEFT | wx.TOP, border=25)
+            self.data_widgets.append(self.PCA_result_text)
         self.GetParent().Layout()

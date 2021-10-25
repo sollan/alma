@@ -122,19 +122,32 @@ def PCA(combined_df, output_path):
     x = combined_df.iloc[:, 2:]
     y = combined_df['group']
 
-    pca = sklearn.decomposition.PCA(n_components=2)
+    pca = sklearn.decomposition.PCA(n_components=5)
     pc = pca.fit_transform(x)
-    pc_df = pd.DataFrame(pc, columns = ['PC1', 'PC2'])
+    pc_df = pd.DataFrame(pc, columns = ['PC1', 'PC2', 'PC3', 'PC4', 'PC5'])
     pc_df['Cluster'] = list(y)
 
     plot_pca_clusters(pca, pc_df, output_path)
+    plot_pca_scree_plot(pca, output_path)
 
+
+def plot_pca_scree_plot(pca, output_path):
+
+    pca_components = np.arange(pca.n_components_) + 1
+    plt.figure()
+    plt.plot(pca_components, pca.explained_variance_ratio_, 'ro-', linewidth=2)
+    plt.title('Scree Plot')
+    plt.xlabel('Principal Component')
+    plt.ylabel('Proportion of Variance Explained')
+    plot_name = 'PCA_scree_plot.svg'
+    plt.savefig(os.path.join(output_path, plot_name))
 
 
 def plot_pca_clusters(pca, pc_df, output_path):
 
     explained_ratio_pc1 = round(pca.explained_variance_ratio_[0], 3)
     explained_ratio_pc2 = round(pca.explained_variance_ratio_[1], 3)
+    plt.figure()
     sns.lmplot(x="PC1", 
                 y="PC2",
                 data=pc_df, 
@@ -145,5 +158,5 @@ def plot_pca_clusters(pca, pc_df, output_path):
                 scatter_kws={"s": 80})
     plt.xlabel(f"PC1: explained variance {explained_ratio_pc1}")
     plt.ylabel(f"PC2: explained variance {explained_ratio_pc2}")
-    plot_name = f'PCA_clusters.svg'
+    plot_name = 'PCA_clusters.svg'
     plt.savefig(os.path.join(output_path, plot_name))

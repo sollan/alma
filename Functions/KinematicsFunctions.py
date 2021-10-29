@@ -951,7 +951,9 @@ def extract_spontaneous_parameters(frame_rate, pd_dataframe, cutoff_f, pixels_pe
     dtw_xy_plane_10_means = []
     dtw_xy_plane_10_sds = []
 
-    for direction in ['L', 'R']:
+    is_stances = []
+
+    for direction in ['L', 'R', '']:
         try:
             x_change = np.diff(pd_dataframe[f'toe{direction} x'][pd_dataframe[f'toe{direction} likelihood']>0.5])
 
@@ -1064,15 +1066,19 @@ def extract_spontaneous_parameters(frame_rate, pd_dataframe, cutoff_f, pixels_pe
                 dtw_xy_plane_10_means.append(np.nan)
                 dtw_xy_plane_10_sds.append(np.nan)
 
+                is_stances.append(np.nan)
+
             else:
                 starts = []
                 ends = []
 
                 bodypart_x_change = np.diff(pd_dataframe[f'toe{direction} x'])
 
-                if direction == 'L':
+                if direction == 'L': # toe L: direction right to left
                     is_stance = [i <= 0 for i in bodypart_x_change]
-                else:
+                elif direction == 'R': # toeR: direction left to right
+                    is_stance = [i >= 0 for i in bodypart_x_change]
+                else: # default direction left to right: right side visible
                     is_stance = [i >= 0 for i in bodypart_x_change]
                 for i in range(1, len(is_stance)):
                     if is_stance[i] != is_stance[i-1]:
@@ -1088,6 +1094,8 @@ def extract_spontaneous_parameters(frame_rate, pd_dataframe, cutoff_f, pixels_pe
 
                 starts_all.extend(starts)
                 ends_all.extend(ends)
+
+                is_stances.append(is_stance)
 
                 y = pd_dataframe[f'toe{direction} y'][pd_dataframe[f'toe{direction} likelihood'] > 0.5]
                 y_filt = y[(y < np.mean(y) + 1*np.std(y)) & (y > np.mean(y) - 1*np.std(y))]
@@ -1433,7 +1441,7 @@ def extract_spontaneous_parameters(frame_rate, pd_dataframe, cutoff_f, pixels_pe
                                 'DTW distance y plane 10 strides SD',
                                 'DTW distance xy plane 10 strides mean',
                                 'DTW distance xy plane 10 strides SD',
-                                ]), pd_dataframe, is_stance, bodyparts
+                                ]), pd_dataframe, is_stances, bodyparts
 
 def collect_filtered_coords(filt_corrected_df, bodyparts):
 

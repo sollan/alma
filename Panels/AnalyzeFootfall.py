@@ -155,7 +155,7 @@ if you wish to analyze footfall duration.")
             pathname = save_pred_dialog.GetPath()
 
             try:
-                FootfallFunctions.make_output(pathname, self.df, self.t_pred, self.depth_pred, self.start_pred, self.end_pred, self.bodypart_list_pred, self.frame_rate)
+                FootfallFunctions.make_output(pathname, self.df, self.t_pred, self.depth_pred, self.start_pred, self.end_pred, self.bodypart_list_pred, self.slip_fall_pred, self.frame_rate)
             except IOError:
                 wx.LogError(f"Cannot save current data in file {pathname}. Try another location or filename?")
 

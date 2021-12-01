@@ -202,7 +202,7 @@ def make_averaged_output(pathname, truncated=False):
     files = []
     for file in os.listdir(pathname):
         if truncated:
-            if file.endswith('.csv') and file.startswith('10_continuous_strides_parameters_'):
+            if file.endswith('.csv') and file.startswith('continuous_strides_parameters_'):
                 files.append(file)
         else:
             if file.endswith('.csv') and file.startswith('parameters_'):
@@ -212,7 +212,7 @@ def make_averaged_output(pathname, truncated=False):
     for file in files:
 
         if truncated:
-            input_name = file.split('10_continuous_strides_parameters_')[1].split('.')[0]
+            input_name = file.split('continuous_strides_parameters_')[1].split('.')[0]
         else:
             input_name = file.split('parameters_')[1].split('.')[0]
 
@@ -262,18 +262,25 @@ def findLongestSequence(A, k):
     return leftIndex, leftIndex + window - 1
 
 
-def return_ten_central(pd_dataframe_parameters, plot=False, pd_dataframe_coords=None, bodyparts=None, is_stance=[], filename=''):
+def return_continuous(pd_dataframe_parameters, n_continuous=10, plot=False, pd_dataframe_coords=None, bodyparts=None, is_stance=[], filename=''):
+    
     valid_list = convert_to_binary(pd_dataframe_parameters['cycle duration (s)'])
     start, end = findLongestSequence(valid_list, 0)
-    start_stride = int(np.mean([start, end]))-5
-    end_stride = start_stride+10
-    if plot:
-        x_coords, y_coords = collect_filtered_coords(pd_dataframe_coords, bodyparts)
-        start_frame = int(pd_dataframe_parameters.iloc[start_stride]['stride_start (frame)'])
-        end_frame = int(pd_dataframe_parameters.iloc[end_stride]['stride_end (frame)'])
-        continuous_stickplot(pd_dataframe_coords, bodyparts, is_stance, x_coords, y_coords, start_frame, end_frame, filename)
+    start_stride = int(np.mean([start, end]))-n_continuous//2
+    end_stride = start_stride+n_continuous
+    if end_stride >= end or end-start <= n_continuous: # not enough continuous
+        start_stride = start
+        end_stride = end
+    if end_stride==start_stride:
+        return
+    else:
+        if plot:
+            x_coords, y_coords = collect_filtered_coords(pd_dataframe_coords, bodyparts)
+            start_frame = int(pd_dataframe_parameters.iloc[start_stride]['stride_start (frame)'])
+            end_frame = int(pd_dataframe_parameters.iloc[end_stride]['stride_end (frame)'])
+            continuous_stickplot(pd_dataframe_coords, bodyparts, is_stance, x_coords, y_coords, start_frame, end_frame, filename)
 
-    return pd_dataframe_parameters.iloc[start_stride:end_stride, :]
+        return pd_dataframe_parameters.iloc[start_stride:end_stride, :]
 
 
 def compute_limb_joint_angles(smooth_toe_x, smooth_toe_y, \
@@ -1508,4 +1515,5 @@ def continuous_stickplot(filt_corrected_df, bodyparts, is_stance, x_coords, y_co
 
     plt.ylim(y_min, y_max)
     plt.gca().invert_yaxis()
-    plt.savefig(f'./{filename}.svg', format='svg', dpi=1200)
+    plt.savefig(os.path.join(os.path.dirname(self.output_path), f'{self.filename}.svg'), dpi=1200)
+    plt.close()

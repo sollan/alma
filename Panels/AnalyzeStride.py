@@ -578,7 +578,7 @@ class AnalyzeStridePanel(wx.Panel):
 
                     parameters, pd_dataframe_coords, is_stance, bodyparts = KinematicsFunctions.extract_parameters(self.frame_rate, self.df, self.cutoff_f, 'toe', 
                         cm_speed = self.cm_speed, px_to_cm_speed_ratio = self.est_px_to_cm_speed_ratio)
-                    parameters_truncated = KinematicsFunctions.return_ten_central(parameters, True, pd_dataframe_coords, bodyparts, is_stance, f'truncated_stickplot_{file}')
+                    parameters_truncated = KinematicsFunctions.return_continuous(parameters, 10, True, pd_dataframe_coords, bodyparts, is_stance, f'truncated_stickplot_{file}')
                     
                 elif self.method_selection == 'Fully automated':
 
@@ -586,22 +586,18 @@ class AnalyzeStridePanel(wx.Panel):
 
                     parameters, pd_dataframe_coords, is_stance, bodyparts = KinematicsFunctions.extract_parameters(self.frame_rate, self.df, self.cutoff_f, 'toe', 
                         cm_speed = self.est_cm_speed, px_to_cm_speed_ratio = self.px_to_cm_speed_ratio)
-                    parameters_truncated = KinematicsFunctions.return_ten_central(parameters, True, pd_dataframe_coords, bodyparts, is_stance, f'truncated_stickplot_{file}')
+                    parameters_truncated = KinematicsFunctions.return_continuous(parameters, 10, True, pd_dataframe_coords, bodyparts, is_stance, f'truncated_stickplot_{file}')
                 
-                # only treadmill set-up generates truncated output and plot
-                KinematicsFunctions.make_parameters_output(os.path.join(self.output_path, f'10_continuous_strides_parameters_{file}'), parameters_truncated)                    
-
             elif self.analysis_type == "Spontaneous walking":
 
                 parameters, pd_dataframe_coords, is_stance, bodyparts = KinematicsFunctions.extract_spontaneous_parameters(self.frame_rate, self.df, self.cutoff_f, self.pixels_per_cm, self.no_outlier_filter, self.dragging_filter)
-
+                parameters_truncated = KinematicsFunctions.return_continuous(parameters, 5, True, pd_dataframe_coords, bodyparts, is_stance, f'truncated_stickplot')
+            
             KinematicsFunctions.make_parameters_output(os.path.join(self.output_path, f'parameters_{file}'), parameters)
-
-        KinematicsFunctions.make_averaged_output(self.output_path)
-
-        # only treadmill set-up generates truncated output and can be averaged based on truncated results
-        if self.analysis_type == "Treadmill":
-            KinematicsFunctions.make_averaged_output(self.output_path, truncated=True)
+            KinematicsFunctions.make_parameters_output(os.path.join(self.output_path, f'continuous_strides_parameters_{file}'), parameters_truncated)                    
+            
+        KinematicsFunctions.make_averaged_output(self.output_path) # average of all steps per animal
+        KinematicsFunctions.make_averaged_output(self.output_path, truncated=True) # average of continuous steps per animal
 
         self.GetParent().SetStatusText(
             f"\nKinematic parameters have been extracted and saved to {self.output_path}!\n")
@@ -648,13 +644,16 @@ class AnalyzeStridePanel(wx.Panel):
             elif self.method_selection == 'Fully automated':
                 parameters, pd_dataframe_coords, is_stance, bodyparts = KinematicsFunctions.extract_parameters(self.frame_rate, self.df, self.cutoff_f, 'toe', 
                     cm_speed = self.est_cm_speed, px_to_cm_speed_ratio = self.px_to_cm_speed_ratio)
-            parameters_truncated = KinematicsFunctions.return_ten_central(parameters, True, pd_dataframe_coords, bodyparts, is_stance, f'truncated_stickplot')
-            KinematicsFunctions.make_parameters_output(os.path.join(os.path.dirname(self.output_path), f'10_continuous_strides_parameters.csv'), parameters_truncated)
+            parameters_truncated = KinematicsFunctions.return_continuous(parameters, 10, True, pd_dataframe_coords, bodyparts, is_stance, f'truncated_stickplot')
 
         elif self.analysis_type == "Spontaneous walking":
             parameters, pd_dataframe_coords, is_stance, bodyparts = KinematicsFunctions.extract_spontaneous_parameters(self.frame_rate, self.df, self.cutoff_f, self.pixels_per_cm, self.no_outlier_filter, self.dragging_filter)
+            parameters_truncated = KinematicsFunctions.return_continuous(parameters, 5, True, pd_dataframe_coords, bodyparts, is_stance, f'truncated_stickplot')
+            KinematicsFunctions.make_parameters_output(os.path.join(self.output_path, f'continuous_strides_parameters_{self.filename}'), parameters_truncated)                    
 
         KinematicsFunctions.make_parameters_output(self.output_path, parameters)
+        KinematicsFunctions.make_parameters_output(os.path.join(os.path.dirname(self.output_path), f'continuous_strides_parameters_{self.filename}.csv'), parameters_truncated)
+
 
         self.GetParent().SetStatusText(
             f"\nKinematic parameters have been extracted and saved to {self.output_path}! Ready for between-group analysis\n")

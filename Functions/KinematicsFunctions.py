@@ -263,8 +263,8 @@ def findLongestSequence(A, k):
 
 
 def return_continuous(pd_dataframe_parameters, n_continuous=10, plot=False, pd_dataframe_coords=None, bodyparts=None, is_stance=[], filename=''):
-    
-    valid_list = convert_to_binary(pd_dataframe_parameters['cycle duration (s)'])
+    print(pd_dataframe_parameters['cycle duration (s)'])
+    valid_list = convert_to_binary(np.array(pd_dataframe_parameters['cycle duration (s)'], dtype='float32'))
     start, end = findLongestSequence(valid_list, 0)
     start_stride = int(np.mean([start, end]))-n_continuous//2
     end_stride = start_stride+n_continuous
@@ -274,12 +274,14 @@ def return_continuous(pd_dataframe_parameters, n_continuous=10, plot=False, pd_d
     if end_stride==start_stride:
         return
     else:
-        if plot:
-            x_coords, y_coords = collect_filtered_coords(pd_dataframe_coords, bodyparts)
-            start_frame = int(pd_dataframe_parameters.iloc[start_stride]['stride_start (frame)'])
-            end_frame = int(pd_dataframe_parameters.iloc[end_stride]['stride_end (frame)'])
-            continuous_stickplot(pd_dataframe_coords, bodyparts, is_stance, x_coords, y_coords, start_frame, end_frame, filename)
-
+        try:
+            if plot:
+                x_coords, y_coords = collect_filtered_coords(pd_dataframe_coords, bodyparts)
+                start_frame = int(pd_dataframe_parameters.iloc[start_stride]['stride_start (frame)'])
+                end_frame = int(pd_dataframe_parameters.iloc[end_stride]['stride_end (frame)'])
+                continuous_stickplot(pd_dataframe_coords, bodyparts, is_stance, x_coords, y_coords, start_frame, end_frame, filename)
+        except IndexError:
+            print(is_stance, len(is_stance), y_coords, len(y_coords))
         return pd_dataframe_parameters.iloc[start_stride:end_stride, :]
 
 
@@ -963,7 +965,7 @@ def extract_spontaneous_parameters(frame_rate, pd_dataframe, cutoff_f, pixels_pe
     for direction in ['L', 'R', '']:
         if f'toe{direction} x' in pd_dataframe.columns:
             x_change = np.diff(pd_dataframe[f'toe{direction} x'][pd_dataframe[f'toe{direction} likelihood']>0.5])
-            print('found', direction)
+            # print('found', direction)
             smooth_toe_x = butterworth_filter(pd_dataframe[f'toe{direction} x'], frame_rate, cutoff_f)
             smooth_mtp_x = butterworth_filter(pd_dataframe[f'mtp{direction} x'], frame_rate, cutoff_f)
             smooth_ankle_x = butterworth_filter(pd_dataframe[f'ankle{direction} x'], frame_rate, cutoff_f)
@@ -1451,7 +1453,7 @@ def extract_spontaneous_parameters(frame_rate, pd_dataframe, cutoff_f, pixels_pe
                                 'DTW distance y plane 10 strides SD',
                                 'DTW distance xy plane 10 strides mean',
                                 'DTW distance xy plane 10 strides SD',
-                                ]), pd_dataframe, is_stances, bodyparts
+                                ]), pd_dataframe, np.array(is_stances).reshape(-1), bodyparts
 
 def collect_filtered_coords(filt_corrected_df, bodyparts):
 
@@ -1515,5 +1517,5 @@ def continuous_stickplot(filt_corrected_df, bodyparts, is_stance, x_coords, y_co
 
     plt.ylim(y_min, y_max)
     plt.gca().invert_yaxis()
-    plt.savefig(os.path.join(os.path.dirname(self.output_path), f'{self.filename}.svg'), dpi=1200)
+    plt.savefig(filename, dpi=1200)
     plt.close()

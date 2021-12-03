@@ -1513,7 +1513,8 @@ def continuous_stickplot(filt_corrected_df, bodyparts, is_stance, x_coords, y_co
                 f'{bodyparts[1]}-{bodyparts[2]}', 
                 f'{bodyparts[2]}-{bodyparts[3]}', 
                 f'{bodyparts[3]}-{bodyparts[4]}', 
-                f'{bodyparts[4]}-{bodyparts[5]}'])
+                f'{bodyparts[4]}-{bodyparts[5]}'], 
+                loc='upper right')
 
     plt.ylim(y_min, y_max)
     plt.gca().invert_yaxis()

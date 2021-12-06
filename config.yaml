@@ -8,5 +8,5 @@ threshold: ''                   # for threshold method in ladder rung
 cm_speed: ''                    # for semi-automated kinematics analysis
 px_to_cm_speed_ratio: 0.4806    # for fully automated kinematics analysis
 pixels_per_cm: 17.7165          # for spontaneous walking kinematics analysis
-no_outlier_filter: True         # for spontaneous walking kinematics analysis, outlier filter requires more testing (True to get parameters for all step cycles)
+no_outlier_filter: False         # for spontaneous walking kinematics analysis, outlier filter requires more testing (True to get parameters for all step cycles)
 dragging_filter: False          # for spontaneous walking kinematics analysis, dragging filter requires more testing (False to get parameters also for potentially 100% dragging mice)

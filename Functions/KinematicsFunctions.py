@@ -894,7 +894,7 @@ def extract_parameters(frame_rate, pd_dataframe, cutoff_f, bodypart, cm_speed=No
                                     ]), pd_dataframe, is_stance, bodyparts
 
 
-def extract_spontaneous_parameters(frame_rate, pd_dataframe, cutoff_f, pixels_per_cm=17.7165, no_outlier_filter=True, dragging_filter=False):
+def extract_spontaneous_parameters(frame_rate, pd_dataframe, cutoff_f, pixels_per_cm=49.143, no_outlier_filter=False, dragging_filter=False):
     '''
     pd_dataframe: contains raw coordinates (not adjusted for treadmill movement, unfiltered)
     bodypart: which bodypart to use for stride estimation
@@ -1082,13 +1082,14 @@ def extract_spontaneous_parameters(frame_rate, pd_dataframe, cutoff_f, pixels_pe
                 ends = []
 
                 bodypart_x_change = np.diff(pd_dataframe[f'toe{direction} x'])
+                is_stance = [abs(i) <= 0.001 for i in bodypart_x_change]
 
-                if direction == 'L': # toe L: direction right to left
-                    is_stance = [i <= 0 for i in bodypart_x_change]
-                elif direction == 'R': # toeR: direction left to right
-                    is_stance = [i >= 0 for i in bodypart_x_change]
-                else: # default direction left to right: right side visible
-                    is_stance = [i >= 0 for i in bodypart_x_change]
+                # if direction == 'L': # toe L: direction right to left
+                #     is_stance = [i <= 0 for i in bodypart_x_change]
+                # elif direction == 'R': # toeR: direction left to right
+                #     is_stance = [i >= 0 for i in bodypart_x_change]
+                # else: # default direction left to right: right side visible
+                #     is_stance = [i >= 0 for i in bodypart_x_change]
                 for i in range(1, len(is_stance)):
                     if is_stance[i] != is_stance[i-1]:
                         if is_stance[i] and pd_dataframe[f'toe{direction} likelihood'][i] > 0.6:
@@ -1147,8 +1148,7 @@ def extract_spontaneous_parameters(frame_rate, pd_dataframe, cutoff_f, pixels_pe
                         step_height = 0
 
                     if no_outlier_filter or (limb_len_max < 15 and stride_len_cm < 8 and \
-                        cycle_dur_frame > 1 and step_height < 1.5 and step_height > 0):
-
+                        cycle_dur_frame > 1 and step_height < 1.5 and stride_len_cm > 1):
                         starts_included.append(starts[i])
                         ends_included.append(ends[i])
 

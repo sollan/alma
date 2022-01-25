@@ -349,6 +349,546 @@ def compute_limb_joint_angles(smooth_toe_x, smooth_toe_y, \
 #         return limb, limb_len_means, limb_len_sds, step_heights, drag_percentages
 
 
+def extract_extra_parameters(frame_rate, pd_dataframe, hindlimb_parameters, cutoff_f, bodypart, treadmill_y, px_speed=None, cm_speed=None, px_to_cm_speed_ratio=0.4806, right_to_left=True):
+
+    bodyparts = ['nose', 'neck', 'front toe', 'shoulder', 'upper back', 'tail root', 'tail 1', 'tail 2', 'tail tip']
+    # front toe vs toe limb phase
+    starts = []
+    ends = []
+
+    cycle_dur_secs = []
+    cycle_dur_frames = []
+    cycle_vs = []
+    
+    stride_lens = []
+    stance_dur_secs = []
+    swing_dur_secs = []
+    swing_percentages = []
+    stance_percentages = []
+
+    limb_len_means = []
+    limb_len_maxs = []
+    limb_len_mins = []
+    limb_len_sds = []
+    
+    step_heights = []
+    max_v_during_swings = []
+
+    nose_height_maxs = []
+    neck_height_maxs = []
+    shoulder_height_maxs = []
+    upper_back_height_maxs = []
+    tail_root_height_maxs = []
+    tail_1_height_maxs = []
+    tail_2_height_maxs = []
+    tail_tip_height_maxs = []
+
+    nose_height_diffs = []
+    neck_height_diffs = []
+    shoulder_height_diffs = []
+    upper_back_height_diffs = []
+    tail_root_height_diffs = []
+    tail_1_height_diffs = []
+    tail_2_height_diffs = []
+    tail_tip_height_diffs = []
+            
+    shoulder_joint_extensions = []    
+    shoulder_joint_flexions = []
+    shoulder_joint_amplitudes = []
+    shoulder_joint_sds = []
+
+    drag_ts = []
+    drag_percentages = []
+
+    limb_phases = []
+    hindlimb_stride_starts = []
+    stride_start_diffs = []
+    stride_len_diffs = []
+    stride_time_diffs = []
+
+    dtw_x_plane_5_means = [] # dynamic time warping: measures spatial variability
+    dtw_x_plane_5_sds = []
+    dtw_y_plane_5_means = []
+    dtw_y_plane_5_sds = []
+    dtw_xy_plane_5_means = []
+    dtw_xy_plane_5_sds = []
+
+    dtw_x_plane_10_means = []
+    dtw_x_plane_10_sds = []
+    dtw_y_plane_10_means = []
+    dtw_y_plane_10_sds = []
+    dtw_xy_plane_10_means = []
+    dtw_xy_plane_10_sds = []
+    
+    x_change = np.diff(pd_dataframe[f'{bodypart} x'][pd_dataframe[f'{bodypart} likelihood']>0.5])
+    x_change_filt = x_change[(x_change < np.mean(x_change) + 1*np.std(x_change)) & (x_change > np.mean(x_change) - 1*np.std(x_change))]
+
+    # px_speed, _ = scipy.stats.norm.fit(x_change_filt[x_change_filt>0])
+
+    # if cm_speed is None: 
+        # cm_speed = px_speed / px_to_cm_speed_ratio
+
+    pixels_per_cm = 1 / (cm_speed / px_speed / frame_rate)
+    pd_dataframe_corrected = treadmill_correction(pd_dataframe, bodyparts, px_speed)
+
+    smooth_nose_x = butterworth_filter(pd_dataframe_corrected['nose x'], frame_rate, cutoff_f)
+    smooth_neck_x = butterworth_filter(pd_dataframe_corrected['neck x'], frame_rate, cutoff_f)
+    smooth_front_toe_x = butterworth_filter(pd_dataframe_corrected['front toe x'], frame_rate, cutoff_f)
+    smooth_shoulder_x = butterworth_filter(pd_dataframe_corrected['shoulder x'], frame_rate, cutoff_f)
+    smooth_upper_back_x = butterworth_filter(pd_dataframe_corrected['upper back x'], frame_rate, cutoff_f)
+    
+    smooth_tail_root_x = butterworth_filter(pd_dataframe_corrected['tail root x'], frame_rate, cutoff_f)
+    smooth_tail_1_x = butterworth_filter(pd_dataframe_corrected['tail 1 x'], frame_rate, cutoff_f) # one third of tail from root
+    smooth_tail_2_x = butterworth_filter(pd_dataframe_corrected['tail 2 x'], frame_rate, cutoff_f) # two thirds of tail from root
+    smooth_tail_tip_x = butterworth_filter(pd_dataframe_corrected['tail tip x'], frame_rate, cutoff_f)
+
+    smooth_nose_y = butterworth_filter(pd_dataframe_corrected['nose y'], frame_rate, cutoff_f)
+    smooth_neck_y = butterworth_filter(pd_dataframe_corrected['neck y'], frame_rate, cutoff_f)
+    smooth_front_toe_y = butterworth_filter(pd_dataframe_corrected['front toe y'], frame_rate, cutoff_f)
+    smooth_shoulder_y = butterworth_filter(pd_dataframe_corrected['shoulder y'], frame_rate, cutoff_f)
+    smooth_upper_back_y = butterworth_filter(pd_dataframe_corrected['upper back y'], frame_rate, cutoff_f)
+    
+    smooth_tail_root_y = butterworth_filter(pd_dataframe_corrected['tail root y'], frame_rate, cutoff_f)
+    smooth_tail_1_y = butterworth_filter(pd_dataframe_corrected['tail 1 y'], frame_rate, cutoff_f) # one third of tail from root
+    smooth_tail_2_y = butterworth_filter(pd_dataframe_corrected['tail 2 y'], frame_rate, cutoff_f) # two thirds of tail from root
+    smooth_tail_tip_y = butterworth_filter(pd_dataframe_corrected['tail tip y'], frame_rate, cutoff_f)
+
+    angles_front_toe_shoulder_neck = find_angles(
+            smooth_front_toe_x, smooth_front_toe_y,
+            smooth_shoulder_x, smooth_shoulder_y,
+            smooth_neck_x, smooth_neck_y
+        )
+
+    elevation_angles = find_angles(
+            smooth_front_toe_x, smooth_front_toe_y, 
+            smooth_shoulder_x, smooth_shoulder_y, 
+            smooth_shoulder_x, np.zeros(len(smooth_shoulder_y))
+        )
+    elevation_angle_change = np.diff(elevation_angles)
+
+    limb_lens = find_limb_length(smooth_front_toe_x, smooth_front_toe_y, smooth_shoulder_x, smooth_shoulder_y)
+    velocities = find_euclidean_speed(smooth_front_toe_x, smooth_front_toe_y, frame_rate)
+    
+    filtered_bodypart_x = butterworth_filter(pd_dataframe['front toe x'], frame_rate, 5)
+    filtered_bodypart_x_change = np.diff(filtered_bodypart_x)
+
+    #for synchronicity
+    hindlimb_starts = hindlimb_parameters['stride_start (frame)']
+    hindlimb_stride_lens = hindlimb_parameters['stride length (cm)']
+    hindlimb_stride_time = hindlimb_parameters['cycle duration (no. frames)']
+    hindlimb_stride_n = 0
+
+    # movement direction: x loc decreasing; treadmill direction: x loc increasing
+    # x loc change > 0 -> treadmill movement dominates (limb is stable)
+    if right_to_left:
+        is_stance = [i >= 0 for i in filtered_bodypart_x_change]
+    else:
+        is_stance = [i <= 0 for i in filtered_bodypart_x_change]
+    for i in range(1, len(is_stance)):
+        if is_stance[i] != is_stance[i-1]:
+            if is_stance[i]:
+                starts.append(i)
+    for i in range(1,len(starts)):
+        ends.append(starts[i]-1)
+    ends.append(len(is_stance))
+
+    starts_included = []
+    ends_included = []
+
+    for i in range(len(starts)):
+        
+        stride_len = find_stride_len(smooth_front_toe_x, starts[i], ends[i]) # in pixel
+        stride_len_cm = stride_len / pixels_per_cm
+        limb_len_max = max(limb_lens[starts[i] : ends[i]]) / pixels_per_cm
+        cycle_dur_frame = ends[i] - starts[i]
+        cycle_v = stride_len / cycle_dur_frame * frame_rate # (px / frames) * (frames/s) = px/s
+
+        # find swing / stance based on elevation angle?
+        # alternative: find swing / stance based on front toe x rate of change
+        stance_dur_frame, swing_perc, stance_perc = find_swing_stance(elevation_angle_change, starts[i], ends[i])
+        swing_dur_sec = (cycle_dur_frame - stance_dur_frame) / frame_rate
+            
+        if swing_dur_sec and stance_dur_frame > 0:
+            # min: image y axis starts from top
+            # distance between the min and max (the lowest point of toe y may not
+            # always correspond to treadmill y)
+            step_height = -(min(smooth_front_toe_y[starts[i]+stance_dur_frame:ends[i]]) - \
+                            max(smooth_front_toe_y[starts[i]:starts[i]+stance_dur_frame])) / pixels_per_cm
+        elif swing_dur_sec and stance_dur_frame == 0:
+            step_height = -(min(smooth_front_toe_y[starts[i]+stance_dur_frame:ends[i]]) - \
+                            smooth_front_toe_y[starts[i]]) / pixels_per_cm
+        else:
+            # no swing phase!
+            step_height = 0
+        
+        # does extracted stride seem accurate? (e.g., due to mislabeled bodypart position)
+        # extreme limb length
+        # extreme stride length
+        # single frame "cycle" duration
+        # extreme step height
+        if limb_len_max < 15 and stride_len_cm < 8 and stride_len > 0 and \
+            cycle_dur_frame > 1 and step_height < 1.5 and step_height > 0:
+            
+            starts_included.append(starts[i])
+            ends_included.append(ends[i])
+            
+            limb_len_means.append(np.mean(limb_lens[starts[i] : ends[i]]) / pixels_per_cm)
+            limb_len_maxs.append(limb_len_max)
+            limb_len_mins.append(min(limb_lens[starts[i] : ends[i]]) / pixels_per_cm)
+            limb_len_sds.append(np.std(limb_lens[starts[i] : ends[i]]) / pixels_per_cm)
+
+            cycle_dur_secs.append(cycle_dur_frame / frame_rate)
+            cycle_dur_frames.append(cycle_dur_frame)
+
+            stride_lens.append(stride_len_cm)
+            
+            step_heights.append(step_height)
+
+            nose_height_max = (treadmill_y - min(smooth_nose_y[starts[i]:ends[i]])) / pixels_per_cm
+            neck_height_max = (treadmill_y - min(smooth_neck_y[starts[i]:ends[i]])) / pixels_per_cm
+            shoulder_height_max = (treadmill_y - min(smooth_shoulder_y[starts[i]:ends[i]])) / pixels_per_cm
+            upper_back_height_max = (treadmill_y - min(smooth_upper_back_y[starts[i]:ends[i]])) / pixels_per_cm
+            tail_root_height_max = (treadmill_y - min(smooth_tail_root_y[starts[i]:ends[i]])) / pixels_per_cm
+            tail_1_height_max = (treadmill_y - min(smooth_tail_1_y[starts[i]:ends[i]])) / pixels_per_cm
+            tail_2_height_max = (treadmill_y - min(smooth_tail_2_y[starts[i]:ends[i]])) / pixels_per_cm
+            tail_tip_height_max = (treadmill_y - min(smooth_tail_tip_y[starts[i]:ends[i]])) / pixels_per_cm
+
+            nose_height_diff = (max(smooth_nose_y[starts[i]:ends[i]]) - min(smooth_nose_y[starts[i]:ends[i]])) / pixels_per_cm
+            neck_height_diff = (max(smooth_neck_y[starts[i]:ends[i]]) - min(smooth_neck_y[starts[i]:ends[i]])) / pixels_per_cm
+            shoulder_height_diff = (max(smooth_shoulder_y[starts[i]:ends[i]]) - min(smooth_shoulder_y[starts[i]:ends[i]])) / pixels_per_cm
+            upper_back_height_diff = (max(smooth_upper_back_y[starts[i]:ends[i]]) - min(smooth_upper_back_y[starts[i]:ends[i]])) / pixels_per_cm
+            tail_root_height_diff = (max(smooth_tail_root_y[starts[i]:ends[i]]) - min(smooth_tail_root_y[starts[i]:ends[i]])) / pixels_per_cm
+            tail_1_height_diff = (max(smooth_tail_1_y[starts[i]:ends[i]]) - min(smooth_tail_1_y[starts[i]:ends[i]])) / pixels_per_cm
+            tail_2_height_diff = (max(smooth_tail_2_y[starts[i]:ends[i]]) - min(smooth_tail_2_y[starts[i]:ends[i]])) / pixels_per_cm
+            tail_tip_height_diff = (max(smooth_tail_tip_y[starts[i]:ends[i]]) - min(smooth_tail_tip_y[starts[i]:ends[i]])) / pixels_per_cm
+            
+            nose_height_maxs.append(nose_height_max)
+            neck_height_maxs.append(neck_height_max)
+            shoulder_height_maxs.append(shoulder_height_max)
+            upper_back_height_maxs.append(upper_back_height_max)
+            tail_root_height_maxs.append(tail_root_height_max)
+            tail_1_height_maxs.append(tail_1_height_max)
+            tail_2_height_maxs.append(tail_2_height_max)
+            tail_tip_height_maxs.append(tail_tip_height_max)
+
+            nose_height_diffs.append(nose_height_diff)
+            neck_height_diffs.append(neck_height_diff)
+            shoulder_height_diffs.append(shoulder_height_diff)
+            upper_back_height_diffs.append(upper_back_height_diff)
+            tail_root_height_diffs.append(tail_root_height_diff)
+            tail_1_height_diffs.append(tail_1_height_diff)
+            tail_2_height_diffs.append(tail_2_height_diff)
+            tail_tip_height_diffs.append(tail_tip_height_diff)
+
+            cycle_vs.append(cycle_v / pixels_per_cm) # (px/s) / (px/cm) = cm/s
+            # or use averaged v from euclidean distance between every two frames? 
+            # (that would consider the entire trajectory of a stride, including vertical movement / lift,
+            # not just the distance between start and end point)
+
+            stance_dur_secs.append(stance_dur_frame / frame_rate)
+            swing_dur_secs.append(swing_dur_sec)
+            swing_percentages.append(swing_perc)
+            stance_percentages.append(stance_perc)
+                
+            if stance_dur_frame == cycle_dur_frame:
+                max_v_during_swings.append(np.nan)
+            else:
+                max_v_during_swings.append(max(velocities[starts[i]:ends[i]]) / pixels_per_cm)
+
+                shoulder_joint_extension = max(angles_front_toe_shoulder_neck[starts[i] : ends[i]])
+                shoulder_joint_flexion = min(angles_front_toe_shoulder_neck[starts[i] : ends[i]])
+                shoulder_joint_amplitude = shoulder_joint_extension - shoulder_joint_flexion
+
+                shoulder_joint_sds.append(np.std(angles_front_toe_shoulder_neck[starts[i] : ends[i]]))
+                shoulder_joint_extensions.append(shoulder_joint_extension)
+                shoulder_joint_flexions.append(shoulder_joint_flexion)
+                shoulder_joint_amplitudes.append(shoulder_joint_amplitude)
+
+                drag, drag_percent = find_drag(smooth_front_toe_y, stance_dur_frame, treadmill_y, starts[i], ends[i])
+                drag_ts.append(drag/frame_rate)
+                if swing_dur_sec and stance_dur_frame > 0:
+                    drag_percentages.append((drag/frame_rate) / swing_dur_sec)    
+                elif swing_dur_sec and stance_dur_frame == 0:
+                    drag_percentages.append(np.nan)
+                else:
+                    # no swing phase detected!
+                    drag_percentages.append(1)
+
+            # for synchronicity
+
+            # find the hindlimb stride that immediately follows forelimb stride
+            while hindlimb_starts[hindlimb_stride_n] < starts[i]:
+                hindlimb_stride_n += 1 
+            if hindlimb_stride_lens[hindlimb_stride_n] is not np.nan:
+                stride_start_diff = hindlimb_starts[hindlimb_stride_n] - starts[i] # no. frames
+                limb_phase = (stride_start_diff) / cycle_dur_frame # divided by forelimb stride time
+                stride_len_diff = np.abs(hindlimb_stride_lens[hindlimb_stride_n] - stride_len_cm)
+                stride_time_diff = np.abs(hindlimb_stride_time[hindlimb_stride_n] - cycle_dur_frame) # no. frames
+
+                stride_start_diffs.append(stride_start_diff / frame_rate) # s
+                limb_phases.append(limb_phase)
+                hindlimb_stride_starts.append(hindlimb_starts[hindlimb_stride_n]) # no. frames
+                stride_len_diffs.append(stride_len_diff) # cm
+                stride_time_diffs.append(stride_time_diff / frame_rate) # s
+
+                
+        else:
+            
+            cycle_dur_secs.append(np.nan)
+            cycle_dur_frames.append(np.nan)
+            stride_lens.append(np.nan)
+            cycle_vs.append(np.nan)
+            stance_dur_secs.append(np.nan)
+            swing_dur_secs.append(np.nan)
+            swing_percentages.append(np.nan)
+            stance_percentages.append(np.nan)
+            limb_len_means.append(np.nan)
+            limb_len_maxs.append(np.nan)
+            limb_len_mins.append(np.nan)
+            limb_len_sds.append(np.nan)
+            step_heights.append(np.nan) 
+            max_v_during_swings.append(np.nan)
+            nose_height_maxs.append(np.nan)
+            neck_height_maxs.append(np.nan)
+            shoulder_height_maxs.append(np.nan)
+            upper_back_height_maxs.append(np.nan)
+            tail_root_height_maxs.append(np.nan)
+            tail_1_height_maxs.append(np.nan)
+            tail_2_height_maxs.append(np.nan)
+            tail_tip_height_maxs.append(np.nan)
+            nose_height_diffs.append(np.nan)
+            neck_height_diffs.append(np.nan)
+            shoulder_height_diffs.append(np.nan)
+            upper_back_height_diffs.append(np.nan)
+            tail_root_height_diffs.append(np.nan)
+            tail_1_height_diffs.append(np.nan)
+            tail_2_height_diffs.append(np.nan)
+            tail_tip_height_diffs.append(np.nan)
+            shoulder_joint_sds.append(np.nan)
+            shoulder_joint_extensions.append(np.nan)
+            shoulder_joint_flexions.append(np.nan)
+            shoulder_joint_amplitudes.append(np.nan)
+            drag_ts.append(np.nan)
+            drag_percentages.append(np.nan)
+            stride_start_diffs.append(np.nan)
+            limb_phases.append(np.nan)
+            hindlimb_stride_starts.append(np.nan)
+            stride_len_diffs.append(np.nan)
+            stride_time_diffs.append(np.nan)
+
+        starts_included = np.array(starts_included)
+        ends_included = np.array(ends_included)
+        
+        for i in range(len(starts)):
+            
+            if starts[i] not in starts_included:
+                
+                dtw_x_plane_5_means.append(np.nan)
+                dtw_x_plane_5_sds.append(np.nan)
+                dtw_y_plane_5_means.append(np.nan)
+                dtw_y_plane_5_sds.append(np.nan)
+                dtw_xy_plane_5_means.append(np.nan)
+                dtw_xy_plane_5_sds.append(np.nan)
+                dtw_x_plane_10_means.append(np.nan)
+                dtw_x_plane_10_sds.append(np.nan)
+                dtw_y_plane_10_means.append(np.nan)
+                dtw_y_plane_10_sds.append(np.nan)
+                dtw_xy_plane_10_means.append(np.nan)
+                dtw_xy_plane_10_sds.append(np.nan)
+                
+            else:
+                included_index = int(np.where(starts[i] == starts_included)[0])                
+                
+                if included_index <= len(starts_included)-5:
+                    
+                    toe_xs = parse_stride_lists(smooth_front_toe_x, starts_included, ends_included, included_index, 5, True)
+                    pairwise_dtw_res_x_5 = pairwise_dtw(toe_xs)
+                    dtw_x_plane_5_mean = np.mean(pairwise_dtw_res_x_5)
+                    dtw_x_plane_5_sd = np.std(pairwise_dtw_res_x_5)
+
+                    toe_ys = parse_stride_lists(smooth_front_toe_y, starts_included, ends_included, included_index, 5, True)
+                    pairwise_dtw_res_y_5 = pairwise_dtw(toe_ys)
+                    dtw_y_plane_5_mean = np.mean(pairwise_dtw_res_y_5)
+                    dtw_y_plane_5_sd = np.std(pairwise_dtw_res_y_5)
+
+                    toe_xys = [np.append(toe_xs[j], toe_ys[j]).reshape(2,-1).T for j in range(5)]
+                    pairwise_dtw_res_xy_5 = pairwise_dtw(toe_xys)
+                    dtw_xy_plane_5_mean = np.mean(pairwise_dtw_res_xy_5)
+                    dtw_xy_plane_5_sd = np.std(pairwise_dtw_res_xy_5)
+
+                    if included_index <= len(starts_included)-10:
+                        toe_xs = parse_stride_lists(smooth_front_toe_x, starts_included, ends_included, included_index, 10, True)
+                        pairwise_dtw_res_x_10 = pairwise_dtw(toe_xs)
+                        dtw_x_plane_10_mean = np.mean(pairwise_dtw_res_x_10)
+                        dtw_x_plane_10_sd = np.std(pairwise_dtw_res_x_10)
+
+                        toe_ys = parse_stride_lists(smooth_front_toe_y, starts_included, ends_included, included_index, 10, True)
+                        pairwise_dtw_res_y_10 = pairwise_dtw(toe_ys)
+                        dtw_y_plane_10_mean = np.mean(pairwise_dtw_res_y_10)
+                        dtw_y_plane_10_sd = np.std(pairwise_dtw_res_y_10)
+
+                        toe_xys = [np.append(toe_xs[j], toe_ys[j]).reshape(2,-1).T for j in range(10)]
+                        pairwise_dtw_res_xy_10 = pairwise_dtw(toe_xys)
+                        dtw_xy_plane_10_mean = np.mean(pairwise_dtw_res_xy_10)
+                        dtw_xy_plane_10_sd = np.std(pairwise_dtw_res_xy_10)
+
+                        dtw_x_plane_10_means.append(dtw_x_plane_10_mean)
+                        dtw_x_plane_10_sds.append(dtw_x_plane_10_sd)
+                        dtw_y_plane_10_means.append(dtw_y_plane_10_mean)
+                        dtw_y_plane_10_sds.append(dtw_y_plane_10_sd)
+                        dtw_xy_plane_10_means.append(dtw_xy_plane_10_mean)
+                        dtw_xy_plane_10_sds.append(dtw_xy_plane_10_sd)
+                    else:
+                        dtw_x_plane_10_means.append(np.nan)
+                        dtw_x_plane_10_sds.append(np.nan)
+                        dtw_y_plane_10_means.append(np.nan)
+                        dtw_y_plane_10_sds.append(np.nan)
+                        dtw_xy_plane_10_means.append(np.nan)
+                        dtw_xy_plane_10_sds.append(np.nan)
+
+                    dtw_x_plane_5_means.append(dtw_x_plane_5_mean)
+                    dtw_x_plane_5_sds.append(dtw_x_plane_5_sd)
+                    dtw_y_plane_5_means.append(dtw_y_plane_5_mean)
+                    dtw_y_plane_5_sds.append(dtw_y_plane_5_sd)
+                    dtw_xy_plane_5_means.append(dtw_xy_plane_5_mean)
+                    dtw_xy_plane_5_sds.append(dtw_xy_plane_5_sd)
+                    
+                else:
+                    
+                    dtw_x_plane_5_means.append(np.nan)
+                    dtw_x_plane_5_sds.append(np.nan)
+                    dtw_y_plane_5_means.append(np.nan)
+                    dtw_y_plane_5_sds.append(np.nan)
+                    dtw_xy_plane_5_means.append(np.nan)
+                    dtw_xy_plane_5_sds.append(np.nan)
+                    dtw_x_plane_10_means.append(np.nan)
+                    dtw_x_plane_10_sds.append(np.nan)
+                    dtw_y_plane_10_means.append(np.nan)
+                    dtw_y_plane_10_sds.append(np.nan)
+                    dtw_xy_plane_10_means.append(np.nan)
+                    dtw_xy_plane_10_sds.append(np.nan)
+                
+        for bodypart in bodyparts:
+            for coord in ['x', 'y']:
+                pd_dataframe[f'{bodypart} {coord}'] = butterworth_filter(pd_dataframe[f'{bodypart} {coord}'], frame_rate, cutoff_f)
+            
+        return pd.DataFrame(data=np.array([
+                                starts,
+                                ends,
+                                cycle_dur_secs,
+                                cycle_dur_frames,
+                                cycle_vs,
+                                stride_lens, 
+                                stance_dur_secs, 
+                                swing_dur_secs,
+                                swing_percentages, 
+                                stance_percentages, 
+                                limb_len_means,
+                                limb_len_maxs,
+                                limb_len_mins,
+                                limb_len_sds,
+                                step_heights,
+                                max_v_during_swings,
+                                nose_height_maxs,
+                                neck_height_maxs,
+                                shoulder_height_maxs,
+                                upper_back_height_maxs,
+                                tail_root_height_maxs,
+                                tail_1_height_maxs,
+                                tail_2_height_maxs,
+                                tail_tip_height_maxs,
+                                nose_height_diffs,
+                                neck_height_diffs,
+                                shoulder_height_diffs,
+                                upper_back_height_diffs,
+                                tail_root_height_diffs,
+                                tail_1_height_diffs,
+                                tail_2_height_diffs,
+                                tail_tip_height_diffs,
+                                shoulder_joint_sds,
+                                shoulder_joint_extensions,
+                                shoulder_joint_flexions,
+                                shoulder_joint_amplitudes,
+                                drag_ts, 
+                                drag_percentages,
+                                stride_start_diffs,
+                                limb_phase,
+                                hindlimb_stride_starts,
+                                stride_len_diffs,
+                                stride_time_diffs,
+                                dtw_x_plane_5_means,
+                                dtw_x_plane_5_sds,
+                                dtw_y_plane_5_means,
+                                dtw_y_plane_5_sds,
+                                dtw_xy_plane_5_means,
+                                dtw_xy_plane_5_sds,
+                                dtw_x_plane_10_means,
+                                dtw_x_plane_10_sds,
+                                dtw_y_plane_10_means,
+                                dtw_y_plane_10_sds,
+                                dtw_xy_plane_10_means,
+                                dtw_xy_plane_10_sds        
+                                ]).T, 
+                                columns=[
+                                    'stride_start (frame)',
+                                    'stride_end (frame)',
+                                    'cycle duration (s)',
+                                    'cycle duration (no. frames)',
+                                    'cycle velocity (cm/s)',
+                                    'stride length (cm)', 
+                                    'stance duration (s)', 
+                                    'swing duration (s)',
+                                    'swing percentage (%)', 
+                                    'stance percentage (%)', 
+                                    'mean toe-to-crest distance (cm)',
+                                    'max toe-to-crest distance (cm)',
+                                    'min toe-to-crest distance (cm)',
+                                    'toe-to-crest distance SD (cm)',
+                                    'step height (cm)',
+                                    'max velocity during swing (cm/s)',
+                                    'nose height max (cm)',
+                                    'neck height max (cm)',
+                                    'upper back height max (cm)',
+                                    'tail root height max (cm)',
+                                    'tail one third height max (cm)',
+                                    'tail two thirds height max (cm)',
+                                    'tail tip height max (cm)',
+                                    'nose height change (cm)',
+                                    'neck height change (cm)',
+                                    'shoulder height change (cm)',
+                                    'upper back height change (cm)',
+                                    'tail root height change (cm)',
+                                    'tail one third height change (cm)',
+                                    'tail two thirds height change (cm)',
+                                    'tail tip height change (cm)',
+                                    'shoulder joint SD (deg)',
+                                    'shoulder joint extension (deg)',
+                                    'shoulder joint flexion (deg',
+                                    'shoulder joint amplitude (deg)',
+                                    'drag duration (s)', 
+                                    'drag percentage (%)',
+                                    'fore- and hindlimb stride onset latency (s)',
+                                    'limb phase', # time between fore and hindlimb onset divided by forelimb stride time
+                                    'corresponding hindlimb cycle onset (frame)',
+                                    'fore- and hindlimb stride length difference (cm)',
+                                    'fore- and hindlimb cycle duration difference (s)',
+                                    'DTW distance x plane 5 strides mean',
+                                    'DTW distance x plane 5 strides SD',
+                                    'DTW distance y plane 5 strides mean',
+                                    'DTW distance y plane 5 strides SD',
+                                    'DTW distance xy plane 5 strides mean',
+                                    'DTW distance xy plane 5 strides SD',
+                                    'DTW distance x plane 10 strides mean',
+                                    'DTW distance x plane 10 strides SD',
+                                    'DTW distance y plane 10 strides mean',
+                                    'DTW distance y plane 10 strides SD',
+                                    'DTW distance xy plane 10 strides mean',
+                                    'DTW distance xy plane 10 strides SD',
+                                    ]), pd_dataframe, is_stance, bodyparts
+
+
+
+
 def extract_parameters(frame_rate, pd_dataframe, cutoff_f, bodypart, cm_speed=None, px_to_cm_speed_ratio=0.4806, right_to_left=True):
 
     '''

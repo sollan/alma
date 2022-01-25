@@ -19,6 +19,7 @@ class AnalyzeStridePanel(wx.Panel):
         self.cutoff_f = configs['lowpass_filter_cutoff']
         self.px_to_cm_speed_ratio = configs['px_to_cm_speed_ratio']
         self.analysis_type = "Treadmill"
+        self.extra_bodyparts = False
         self.pixels_per_cm = configs['pixels_per_cm']
         if configs['cm_speed'] == '':
             self.cm_speed = None
@@ -61,6 +62,13 @@ class AnalyzeStridePanel(wx.Panel):
         self.analysis_type_rbox.Bind(wx.EVT_RADIOBOX, self.onAnalysisTypeRadioBox)
         self.sizer.Add(self.analysis_type_rbox, pos=(4, 1), flag=wx.LEFT|wx.BOTTOM, border=25)
         self.stride_widgets.append(self.analysis_type_rbox)
+
+        self.extra_bodyparts_checkbox = wx.CheckBox(self, id=wx.ID_ANY,
+            label="Include forelimb, trunk, and tail analysis")
+        self.extra_bodyparts_checkbox.Bind(wx.EVT_CHECKBOX, self.onExtraBodypartsCheckbox)
+        self.sizer.Add(self.extra_bodyparts_checkbox, pos=(5, 1), flag=wx.LEFT|wx.BOTTOM, border=25)
+        self.stride_widgets.append(self.extra_bodyparts_checkbox)
+
         self.import_csv_button = wx.Button(self, id=wx.ID_ANY, label="Import")
         self.sizer.Add(self.import_csv_button,
                             pos=(6, 0), flag=wx.LEFT, border=25)
@@ -150,7 +158,6 @@ class AnalyzeStridePanel(wx.Panel):
             except:
                 pass
 
-
             self.method_label = wx.StaticText(
                 self, label='Select method for px-to-cm length conversion:')
             self.sizer.Add(self.method_label, pos=(
@@ -180,6 +187,13 @@ class AnalyzeStridePanel(wx.Panel):
 
 
         return self.analysis_type_rbox.GetStringSelection()
+
+    def onExtraBodypartsCheckbox(self, e):
+
+        if self.extra_bodyparts_checkbox.GetValue():
+            self.extra_bodyparts = True
+        else:
+            self.extra_bodyparts = False
 
 
     def ImportKinematicsCSV(self, e):

@@ -197,24 +197,32 @@ def make_parameters_output(pathname, parameters):
     parameters.to_csv(pathname)
 
 
-def make_averaged_output(pathname, truncated=False):
+def make_averaged_output(pathname, truncated=False, hindlimb=True):
 
     files = []
-    for file in os.listdir(pathname):
-        if truncated:
-            if file.endswith('.csv') and file.startswith('continuous_strides_parameters_'):
-                files.append(file)
+    if truncated:
+        if hindlimb:
+            keyword = 'continuous_strides_parameters_'
+            res_name = 'averaged_truncated_results.csv'
         else:
-            if file.endswith('.csv') and file.startswith('parameters_'):
-                files.append(file)
+            keyword = 'continuous_strides_extra_parameters_'
+            res_name = 'averaged_truncated_extra_parameter_results.csv'
+    else:
+        if hindlimb:
+            keyword = 'parameters'
+            res_name = 'averaged_results.csv'
+        else:
+            keyword = 'extra_parameters'
+            res_name = 'averaged_extra_parameter_results.csv'
+
+    for file in os.listdir(pathname):
+        if file.endswith('.csv') and file.startswith(keyword):
+            files.append(file)
 
     dfs = []
     for file in files:
 
-        if truncated:
-            input_name = file.split('continuous_strides_parameters_')[1].split('.')[0]
-        else:
-            input_name = file.split('parameters_')[1].split('.')[0]
+        input_name = file.split(keyword)[1].split('.')[0]
 
         path = os.path.join(pathname, file)
         df = pd.read_csv(path)
@@ -224,11 +232,9 @@ def make_averaged_output(pathname, truncated=False):
 
     res = pd.concat(dfs).groupby('id').agg(['mean','std'])
     res = res.drop(['Unnamed: 0','stride_start (frame)','stride_end (frame)'], axis=1, errors='ignore')
-    if truncated:  
-        res.to_csv(os.path.join(pathname, 'averaged_truncated_results.csv'))
-    else:
-        res.to_csv(os.path.join(pathname, 'averaged_results.csv'))
+    res.to_csv(os.path.join(pathname, 'averaged_truncated_results.csv'))
     
+
 def convert_to_binary(A):
     
     list_valid = [0 if np.isnan(i) else 1 for i in A]
@@ -349,7 +355,7 @@ def compute_limb_joint_angles(smooth_toe_x, smooth_toe_y, \
 #         return limb, limb_len_means, limb_len_sds, step_heights, drag_percentages
 
 
-def extract_extra_parameters(frame_rate, pd_dataframe, hindlimb_parameters, cutoff_f, bodypart, treadmill_y, px_speed=None, cm_speed=None, px_to_cm_speed_ratio=0.4806, right_to_left=True):
+def extract_extra_parameters(frame_rate, pd_dataframe, hindlimb_parameters, cutoff_f, bodypart, treadmill_y, px_speed=None, cm_speed=None, right_to_left=True):
 
     bodyparts = ['nose', 'neck', 'front toe', 'shoulder', 'upper back', 'tail root', 'tail 1', 'tail 2', 'tail tip']
     # front toe vs toe limb phase
@@ -1431,7 +1437,7 @@ def extract_parameters(frame_rate, pd_dataframe, cutoff_f, bodypart, cm_speed=No
                                     'DTW distance y plane 10 strides SD',
                                     'DTW distance xy plane 10 strides mean',
                                     'DTW distance xy plane 10 strides SD',
-                                    ]), pd_dataframe, is_stance, bodyparts
+                                    ]), pd_dataframe, is_stance, bodyparts, px_speed, cm_speed, treadmill_y
 
 
 def extract_spontaneous_parameters(frame_rate, pd_dataframe, cutoff_f, pixels_per_cm=49.143, no_outlier_filter=False, dragging_filter=False):
@@ -1894,7 +1900,7 @@ def extract_spontaneous_parameters(frame_rate, pd_dataframe, cutoff_f, pixels_pe
         else:
             pass
 
-    print(starts_all)
+    # print(starts_all)
 
     return pd.DataFrame(data=np.array([
                             limbs,

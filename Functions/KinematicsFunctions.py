@@ -54,12 +54,16 @@ def treadmill_correction(pd_dataframe, bodyparts, px_speed = 8.09):
     return pd_dataframe
 
 
-def estimate_speed(pd_dataframe, bodypart, cm_speed, px_to_cm_speed_ratio, frame_rate):
+def estimate_speed(pd_dataframe, bodypart, cm_speed, px_to_cm_speed_ratio, frame_rate, right_to_left = True):
 
     x_change = np.diff(pd_dataframe[f'{bodypart} x'][pd_dataframe[f'{bodypart} likelihood']>0.5])
     x_change_filt = x_change[(x_change < np.mean(x_change) + 1*np.std(x_change)) & (x_change > np.mean(x_change) - 1*np.std(x_change))]
 
-    px_speed, _ = scipy.stats.norm.fit(x_change_filt[x_change_filt>0])
+    if right_to_left:
+        px_speed, _ = scipy.stats.norm.fit(x_change_filt[x_change_filt>0])
+    else:
+        px_speed, _ = scipy.stats.norm.fit(x_change_filt[x_change_filt<0])
+        px_speed = - px_speed
 
     if cm_speed is None: 
         cm_speed = px_speed / px_to_cm_speed_ratio

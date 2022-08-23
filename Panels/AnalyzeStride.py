@@ -26,6 +26,7 @@ class AnalyzeStridePanel(wx.Panel):
             self.cm_speed = configs['cm_speed']
         self.dragging_filter = bool(configs['dragging_filter'])
         self.no_outlier_filter = bool(configs['no_outlier_filter'])
+        self.right_to_left = bool(configs['right_to_left'])
     
         self.stride_widgets = []
         self.has_input_path = False
@@ -440,7 +441,7 @@ class AnalyzeStridePanel(wx.Panel):
 
                 if self.method_selection == 'Semi-automated':
 
-                    self.est_cm_speed, self.est_px_speed, self.est_pixels_per_cm, self.est_px_to_cm_speed_ratio = KinematicsFunctions.estimate_speed(self.df, 'toe', self.cm_speed, None, self.frame_rate)
+                    self.est_cm_speed, self.est_px_speed, self.est_pixels_per_cm, self.est_px_to_cm_speed_ratio = KinematicsFunctions.estimate_speed(self.df, 'toe', self.cm_speed, None, self.frame_rate, self.right_to_left)
 
                     self.method_note_text.SetLabel(
                         f"Recorded: {self.cm_speed} cm / s;"
@@ -452,7 +453,7 @@ class AnalyzeStridePanel(wx.Panel):
                 
                 elif self.method_selection == 'Fully automated':
 
-                    self.est_cm_speed, self.est_px_speed, self.est_pixels_per_cm, self.est_px_to_cm_speed_ratio = KinematicsFunctions.estimate_speed(self.df, 'toe', None, self.px_to_cm_speed_ratio, self.frame_rate)
+                    self.est_cm_speed, self.est_px_speed, self.est_pixels_per_cm, self.est_px_to_cm_speed_ratio = KinematicsFunctions.estimate_speed(self.df, 'toe', None, self.px_to_cm_speed_ratio, self.frame_rate, self.right_to_left)
 
                     self.method_note_text.SetLabel(
                         f'Recorded: 1 px / frame = {self.px_to_cm_speed_ratio} cm / s.'
@@ -575,18 +576,18 @@ class AnalyzeStridePanel(wx.Panel):
             
                 if self.method_selection == 'Semi-automated':
 
-                    self.est_cm_speed, self.est_px_speed, self.est_pixels_per_cm, self.est_px_to_cm_speed_ratio = KinematicsFunctions.estimate_speed(self.df, 'toe', self.cm_speed, None, self.frame_rate)
+                    self.est_cm_speed, self.est_px_speed, self.est_pixels_per_cm, self.est_px_to_cm_speed_ratio = KinematicsFunctions.estimate_speed(self.df, 'toe', self.cm_speed, None, self.frame_rate, self.right_to_left)
 
                     parameters, pd_dataframe_coords, is_stance, bodyparts = KinematicsFunctions.extract_parameters(self.frame_rate, self.df, self.cutoff_f, 'toe', 
-                        cm_speed = self.cm_speed, px_to_cm_speed_ratio = self.est_px_to_cm_speed_ratio)
+                        cm_speed = self.cm_speed, px_to_cm_speed_ratio = self.est_px_to_cm_speed_ratio, right_to_left = self.right_to_left)
                     parameters_truncated = KinematicsFunctions.return_continuous(parameters, 10, True, pd_dataframe_coords, bodyparts, is_stance, plot_path)
                     
                 elif self.method_selection == 'Fully automated':
 
-                    self.est_cm_speed, self.est_px_speed, self.est_pixels_per_cm, self.est_px_to_cm_speed_ratio = KinematicsFunctions.estimate_speed(self.df, 'toe', None, self.px_to_cm_speed_ratio, self.frame_rate)
+                    self.est_cm_speed, self.est_px_speed, self.est_pixels_per_cm, self.est_px_to_cm_speed_ratio = KinematicsFunctions.estimate_speed(self.df, 'toe', None, self.px_to_cm_speed_ratio, self.frame_rate, self.right_to_left)
 
                     parameters, pd_dataframe_coords, is_stance, bodyparts = KinematicsFunctions.extract_parameters(self.frame_rate, self.df, self.cutoff_f, 'toe', 
-                        cm_speed = self.est_cm_speed, px_to_cm_speed_ratio = self.px_to_cm_speed_ratio)
+                        cm_speed = self.est_cm_speed, px_to_cm_speed_ratio = self.px_to_cm_speed_ratio, right_to_left = self.right_to_left)
                     parameters_truncated = KinematicsFunctions.return_continuous(parameters, 10, True, pd_dataframe_coords, bodyparts, is_stance, plot_path)
                 
             elif self.analysis_type == "Spontaneous walking":
@@ -642,10 +643,10 @@ class AnalyzeStridePanel(wx.Panel):
         if self.analysis_type == "Treadmill":
             if self.method_selection == 'Semi-automated':
                 parameters, pd_dataframe_coords, is_stance, bodyparts = KinematicsFunctions.extract_parameters(self.frame_rate, self.df, self.cutoff_f, 'toe', 
-                    cm_speed = self.cm_speed, px_to_cm_speed_ratio = self.est_px_to_cm_speed_ratio)
+                    cm_speed = self.cm_speed, px_to_cm_speed_ratio = self.est_px_to_cm_speed_ratio, right_to_left = self.right_to_left)
             elif self.method_selection == 'Fully automated':
                 parameters, pd_dataframe_coords, is_stance, bodyparts = KinematicsFunctions.extract_parameters(self.frame_rate, self.df, self.cutoff_f, 'toe', 
-                    cm_speed = self.est_cm_speed, px_to_cm_speed_ratio = self.px_to_cm_speed_ratio)
+                    cm_speed = self.est_cm_speed, px_to_cm_speed_ratio = self.px_to_cm_speed_ratio, right_to_left = self.right_to_left)
             parameters_truncated = KinematicsFunctions.return_continuous(parameters, 10, True, pd_dataframe_coords, bodyparts, is_stance, plot_path)
 
         elif self.analysis_type == "Spontaneous walking":

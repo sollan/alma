@@ -119,7 +119,7 @@ class AnalyzeStridePanel(wx.Panel):
             self.stride_widgets.append(self.method_label)
             self.method_label.Show()
 
-            methods = ['Semi-automated', 'Fully automated']
+            methods = ['', 'Semi-automated', 'Fully automated']
             self.method_choices = wx.ComboBox(self, choices=methods)
             self.sizer.Add(self.method_choices, pos=(
                 8, 2), flag=wx.LEFT | wx.TOP, border=25)
@@ -151,30 +151,34 @@ class AnalyzeStridePanel(wx.Panel):
             except:
                 pass
 
+            if self.pixels_per_cm == '':
+                wx.MessageBox('For spontaneous walking analysis, please supply a value for "pixels_per_cm" in the config.yaml file!',
+                    'Error',
+                    wx.OK|wx.ICON_INFORMATION)
+            else:
+                self.method_label = wx.StaticText(
+                    self, label='Select method for px-to-cm length conversion:')
+                self.sizer.Add(self.method_label, pos=(
+                    8, 1), flag=wx.LEFT | wx.TOP, border=25)
+                self.stride_widgets.append(self.method_label)
+                self.method_label.Show()
 
-            self.method_label = wx.StaticText(
-                self, label='Select method for px-to-cm length conversion:')
-            self.sizer.Add(self.method_label, pos=(
-                8, 1), flag=wx.LEFT | wx.TOP, border=25)
-            self.stride_widgets.append(self.method_label)
-            self.method_label.Show()
+                methods = ['Manual input']
+                self.method_choices = wx.ComboBox(self, choices=methods)
+                self.sizer.Add(self.method_choices, pos=(
+                    8, 2), flag=wx.LEFT | wx.TOP, border=25)
+                self.stride_widgets.append(self.method_choices)
+                self.method_choices.Bind(wx.EVT_COMBOBOX, self.OnMethod)
+                self.method_choices.Show()
 
-            methods = ['Manual input']
-            self.method_choices = wx.ComboBox(self, choices=methods)
-            self.sizer.Add(self.method_choices, pos=(
-                8, 2), flag=wx.LEFT | wx.TOP, border=25)
-            self.stride_widgets.append(self.method_choices)
-            self.method_choices.Bind(wx.EVT_COMBOBOX, self.OnMethod)
-            self.method_choices.Show()
-
-            self.method_note_text = wx.StaticText(
-                self, 
-                label=f"Using a spontaneous overground walking set-up. Parameters will be extracted automatically."
-                        + f"\n\nCurrently using a length conversion ratio of {self.pixels_per_cm} pixels / cm (needs to be obtained manually).")
-            self.sizer.Add(self.method_note_text, pos=(9, 1),
-                                flag=wx.LEFT | wx.TOP, border=25)
-            self.stride_widgets.append(self.method_note_text)
-            self.method_note_text.Show()
+                self.method_note_text = wx.StaticText(
+                    self, 
+                    label=f"Using a spontaneous overground walking set-up. Parameters will be extracted automatically."
+                            + f"\n\nCurrently using a length conversion ratio of {self.pixels_per_cm} pixels / cm (needs to be obtained manually).")
+                self.sizer.Add(self.method_note_text, pos=(9, 1),
+                                    flag=wx.LEFT | wx.TOP, border=25)
+                self.stride_widgets.append(self.method_note_text)
+                self.method_note_text.Show()
 
         self.SetSizer(self.sizer)
         self.GetParent().Layout()
@@ -208,15 +212,21 @@ class AnalyzeStridePanel(wx.Panel):
                 configs = ConfigFunctions.load_config('./config.yaml')
                 self.cutoff_f = configs['lowpass_filter_cutoff']
                 
+                self.onAnalysisTypeRadioBox(self)
+
                 if self.analysis_type == 'Treadmill':
                     self.px_to_cm_speed_ratio = configs['px_to_cm_speed_ratio']
                     if configs['cm_speed'] == '':
                         self.cm_speed = 1
                     else:
                         self.cm_speed = configs['cm_speed']
-                elif self.analysis_type == 'Spontaneous walking':
+                if self.pixels_per_cm != '':
                     self.pixels_per_cm = configs['pixels_per_cm']
-
+                elif self.analysis_type == 'Spontaneous walking':
+                    wx.MessageBox('For spontaneous walking, please be sure to supply a pxl-cm conversion ratio in the config file!',
+                        'Note',
+                        wx.OK|wx.ICON_INFORMATION)
+                    
                 self.method_label.Show()
                 self.method_choices.Show()
                 self.method_note_text.Show()
@@ -268,8 +278,12 @@ class AnalyzeStridePanel(wx.Panel):
                             self.cm_speed = None
                         else:   
                             self.cm_speed = configs['cm_speed']
-                    elif self.analysis_type == 'Spontaneous walking':
+                    if self.pixels_per_cm != '':
                         self.pixels_per_cm = configs['pixels_per_cm']
+                    elif self.analysis_type == 'Spontaneous walking':
+                        wx.MessageBox('For spontaneous walking, please be sure to supply a pxl-cm conversion ratio in the config file!',
+                            'Note',
+                            wx.OK|wx.ICON_INFORMATION)
 
                     self.method_label.Show()
                     self.method_choices.Show()
@@ -305,7 +319,7 @@ class AnalyzeStridePanel(wx.Panel):
 
 
     def OnMethod(self, e):
-
+        
         if self.analysis_type == "Treadmill":
             self.method_selection = self.method_choices.GetValue()
 
@@ -370,6 +384,28 @@ class AnalyzeStridePanel(wx.Panel):
                     self.px_cm_ratio_input_button.Bind(wx.EVT_BUTTON, self.UpdateRatio)
                     self.sizer.Add(self.px_cm_ratio_input_button, pos = (9, 3), flag = wx.LEFT | wx.TOP, border = 25)
                     self.stride_widgets.append(self.px_cm_ratio_input_button)
+
+            else:
+                try:
+                    self.px_cm_ratio_input.Show()
+                    self.px_cm_ratio_input_button.Show()
+                except:
+                    pass
+                try:
+                    self.cm_speed_input.Destroy()
+                    self.cm_speed_input_button.Destroy()
+                except:
+                    pass
+                try:
+                    self.px_cm_length_ratio_input.Destroy()
+                    self.px_cm_length_ratio_input_button.Destroy()
+                except:
+                    pass
+
+                self.method_note_text.SetLabel("\nNote: please use semi-automated function when running kinematic analysis on a new experimental set-up."
+                    + "\nThe pixel/frame speed and the corresponding px-to-cm speed ratio will be estimated and displayed. "
+                    + "\nThe ratio can then be re-used for fully automated analysis, or for finding a more precise relationship, "
+                    + "\ne.g., through a regression between the px-to-cm speed ratio at different speeds.")
         
         elif self.analysis_type == "Spontaneous walking":
 

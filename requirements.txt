@@ -1,6 +1,6 @@
 fastdtw>=0.3.4
 matplotlib>=3.2.1
-numpy<=1.19.5
+numpy>=1.22
 opencv-python==4.2.0.34
 pandas>=1.0.3
 PyYAML>=5.4

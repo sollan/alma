@@ -1,5 +1,8 @@
 # Automated Limb Motion Analysis (ALMA)
 
+### Check out our paper:
+#### Aljovic, A., Zhao, S., Chahin, M. _et al._ A deep learning-based toolbox for Automated Limb Motion Analysis (ALMA) in murine models of neurological disorders. _Commun Biol_ 5, 131 (2022). https://doi.org/10.1038/s42003-022-03077-6
+
 ![](https://github.com/sollan/slip_detector/blob/master/Screenshots/ALMA.PNG)
 
 A behavioral data analysis toolbox for motor research in rodents. 

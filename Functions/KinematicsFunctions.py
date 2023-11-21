@@ -556,9 +556,13 @@ def extract_parameters(frame_rate, pd_dataframe, cutoff_f, bodypart, cm_speed=No
         gm = GaussianMixture(n_components=2, random_state=0).fit(np.array(b).reshape(-1,1))
         # the Gaussian with larger mean corresponds to y coord during stance phase
         # use this mean as threshold to detect dragging during swing phase
-        stance_threshold = max(gm.means_)
+        stance_threshold = max(gm.means_).item()
+        
+        # index of the Gaussian that corresponds to the stance phase y-coord
+        # in the Gaussian mixture model results
+        ind_stance_gaussian = np.argmax(gm.means_)
         # use this plus SD (i.e., lower in space) as treadmill y coord, to calculate step height
-        treadmill_y = float(stance_threshold + np.sqrt(gm.covariances_[np.where(gm.means_ == stance_threshold)]))
+        treadmill_y = float(stance_threshold + np.sqrt(gm.covariances_[ind_stance_gaussian].item()))
 
         starts_included = []
         ends_included = []
@@ -725,7 +729,7 @@ def extract_parameters(frame_rate, pd_dataframe, cutoff_f, bodypart, cm_speed=No
                 dtw_xy_plane_10_sds.append(np.nan)
                 
             else:
-                included_index = int(np.where(starts[i] == starts_included)[0])                
+                included_index = int(np.array(np.where(starts[i] == starts_included)[0]).item())                
                 
                 if included_index <= len(starts_included)-5:
                     

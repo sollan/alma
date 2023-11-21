@@ -12,20 +12,28 @@ A behavioral data analysis toolbox for motor research in rodents.
 The program has been tested on Windows, Mac, and Linux systems with Python 3.8, and should function even on low-end laptops. However, at least 8 GB RAM is recommended. Kinematic parameter extraction, particularly dynamic time warping, is computation-intensive and time-consuming, which will vary depending on your data size and hardware.
 
 0. Installation prerequisites: 
-Python 3, pip, (virtual environment is recommended)
+Python 3 (the dependency versions have been verified against Python __3.8__ and __3.10__, see details below), pip / (mini)conda ([Miniconda documentation](https://docs.conda.io/projects/miniconda/en/latest/#})), (virtual environment / environment manager is recommended)
 1. Download / clone this repository to your computer.
 2. Open a terminal and navigate to the folder. 
 ```bash
 cd Downloads/alma
 ```
-3. Install dependencies. The dependencies have been tested for Python 3.8. 
+3. Install dependencie in a __Python 3.8__ environment:
 ```bash
 pip install -r requirements.txt
 ```
+
+Alternatively, you can install in a __Python 3.10__ environment. The dependency list is provided for the Conda installer but can easily be adapted to use `pip install` instead:
+```
+conda env create -f conda_env_python_3_10.yml
+conda activate venv_python_3_10
+```
+
 4. Ready to go! (Check the command for the correct python version, which could be py, python3, python, ...)
 ```bash
 python ./alma.py
 ```
+Note that if using a Conda environment, you may need to run `pythonw` instead of `python`.
 
 ### Troubleshoot
 

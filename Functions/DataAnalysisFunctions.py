@@ -9,8 +9,10 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import os
 
-
-mpl.style.use('seaborn')
+if mpl.__version__ < "3.6": 
+    mpl.style.use('seaborn')
+else:
+    mpl.style.use('seaborn-v0_8')
 
 def find_files(folder):
     '''

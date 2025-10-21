@@ -46,7 +46,7 @@ python ./alma.py
 
 ### Demo data
 
-We provide a demo kinematic video and the corresponding DLC CSV in the repository so you can quickly try the full pipeline end‑to‑end.
+We provide a [demo kinematic video and the corresponding DLC CSV](https://github.com/sollan/alma/tree/master/Resources) in the repository so you can quickly try the full pipeline end‑to‑end.
 
 ### Important: Data quality requirements
 

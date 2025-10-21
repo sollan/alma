@@ -2,8 +2,9 @@ import pandas as pd
 from scipy.signal import find_peaks
 import numpy as np
 import matplotlib as mpl
-from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 import cv2
+
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 
 
 def read_file(file):
@@ -151,14 +152,24 @@ def find_footfalls(pd_dataframe, bodypart, axis, panel = None, method = 'Baselin
 
 
 def calculate_depths(pd_dataframe, bodypart, starts, ends, t_peaks):
-    if ends is []:
-        depth = np.array(pd_dataframe[f'{bodypart} y'][t_peaks]) - \
-              np.array(pd_dataframe[f'{bodypart} y'][starts])
+    # Check for NaN values in indices
+    if pd.isna(starts) or pd.isna(t_peaks):
+        return np.nan
+    
+    if ends is [] or pd.isna(ends):
+        try:
+            depth = np.array(pd_dataframe[f'{bodypart} y'][int(t_peaks)]) - \
+                  np.array(pd_dataframe[f'{bodypart} y'][int(starts)])
+        except (KeyError, ValueError, TypeError):
+            return np.nan
     else:
-        depth = ((np.array(pd_dataframe[f'{bodypart} y'][t_peaks]) - \
-                np.array(pd_dataframe[f'{bodypart} y'][starts])) + \
-                (np.array(pd_dataframe[f'{bodypart} y'][t_peaks]) - \
-                np.array(pd_dataframe[f'{bodypart} y'][ends]))) / 2
+        try:
+            depth = ((np.array(pd_dataframe[f'{bodypart} y'][int(t_peaks)]) - \
+                    np.array(pd_dataframe[f'{bodypart} y'][int(starts)])) + \
+                    (np.array(pd_dataframe[f'{bodypart} y'][int(t_peaks)]) - \
+                    np.array(pd_dataframe[f'{bodypart} y'][int(ends)]))) / 2
+        except (KeyError, ValueError, TypeError):
+            return np.nan
     
     return depth
 
@@ -251,20 +262,23 @@ def make_output(pathname, pd_dataframe, t_footfalls, depth_footfalls, start_foot
                 slip_or_falls.append(slip_falls[i])
                 try:
                     depths.append(calculate_depths(pd_dataframe, bodypart, start_footfalls[i], end_footfalls[i], t_footfalls[i]))
-                except TypeError:
-                    # missing start and end?
+                except (TypeError, KeyError, ValueError):
+                    # missing start/end or invalid index
                     depths.append(np.nan)
                 try:
-                    duration.append(round((end_footfalls[i] - start_footfalls[i]) / frame_rate, 3))
-                except TypeError:
+                    if pd.isna(start_footfalls[i]) or pd.isna(end_footfalls[i]):
+                        duration.append(np.nan)
+                    else:
+                        duration.append(round((end_footfalls[i] - start_footfalls[i]) / frame_rate, 3))
+                except (TypeError, ValueError):
                     duration.append(np.nan)
-                try: 
-                    starts.append(start_footfalls[i])
-                except TypeError:
+                try:
+                    starts.append(int(start_footfalls[i]) if not pd.isna(start_footfalls[i]) else np.nan)
+                except (TypeError, ValueError):
                     starts.append(np.nan)
                 try:
-                    ends.append(end_footfalls[i])
-                except TypeError:
+                    ends.append(int(end_footfalls[i]) if not pd.isna(end_footfalls[i]) else np.nan)
+                except (TypeError, ValueError):
                     ends.append(np.nan)
 
         df_output = pd.DataFrame({'time (frame)': ts,
@@ -337,6 +351,7 @@ def plot_frame(video_file, n_frame, width, height, frame_rate, pd_dataframe, bod
         
     except cv2.error:
         print(f'Frame {n_frame} cannot be displayed! (cv2 error)')
+        return None
 
 
 def plot_labels(pd_dataframe, n_current_frame, method, t_pred, start_pred, end_pred, width, height, bodypart, bodypart_list, selected_bodyparts, axis, likelihood_threshold, confirmed, zoom=True):
@@ -346,29 +361,28 @@ def plot_labels(pd_dataframe, n_current_frame, method, t_pred, start_pred, end_p
         figure = mpl.figure.Figure(figsize=(width, height), tight_layout=True, facecolor='none')
     axes = figure.add_subplot(111)
     axes.margins(x = 0)
-    axes.xaxis.set_label_position('top') 
+    axes.xaxis.set_label_position('top')
+    axes.set_xlabel('Frame', fontsize=10)
+    axes.set_ylabel('Y Position (pixels)', fontsize=10)
 
+    # Plot all bodyparts in light blue
     for bp in selected_bodyparts:
-        axes.scatter(pd_dataframe['bodyparts coords'], pd_dataframe[f'{bp} {axis}'], s = 0.1, color = 'steelblue')
+        axes.scatter(pd_dataframe['bodyparts coords'], pd_dataframe[f'{bp} {axis}'], s = 0.5, color = 'steelblue', alpha=0.3)
 
-    axes.scatter(pd_dataframe['bodyparts coords'], pd_dataframe[f'{bodypart} {axis}'], s = 1)
-    axes.scatter(pd_dataframe['bodyparts coords'].iloc[n_current_frame], pd_dataframe[f'{bodypart} {axis}'].iloc[n_current_frame], marker = 'x', c = 'r')
+    # Plot current bodypart
+    axes.plot(pd_dataframe['bodyparts coords'], pd_dataframe[f'{bodypart} {axis}'], linewidth=0.8, color='darkblue', alpha=0.6)
+    
+    # Highlight current frame with larger marker
+    axes.scatter(pd_dataframe['bodyparts coords'].iloc[n_current_frame], 
+                pd_dataframe[f'{bodypart} {axis}'].iloc[n_current_frame], 
+                marker = 'o', s=100, c = 'red', zorder=10, edgecolors='darkred', linewidths=2)
 
+    # Find current footfall if on one
+    current_footfall_index = None
     if n_current_frame in t_pred:
-        index = t_pred.index(n_current_frame)
-        try:
-            if bodypart_list[index] == bodypart:
-                axes.scatter(start_pred[index], pd_dataframe[f'{bodypart} {axis}'].iloc[start_pred[index]], s = 5, color = 'r')
-                axes.scatter(end_pred[index], pd_dataframe[f'{bodypart} {axis}'].iloc[end_pred[index]], s = 5, color = 'r')
-                axes.annotate('Start', (start_pred[index], pd_dataframe[f'{bodypart} {axis}'].iloc[start_pred[index]]))
-                axes.annotate('End', (end_pred[index], pd_dataframe[f'{bodypart} {axis}'].iloc[end_pred[index]]))
-        except TypeError:
-            # user hasn't selected start and end time for added footfalls!
-            pass
-
-    axes.scatter(pd_dataframe[pd_dataframe[f'{bodypart} likelihood'] < likelihood_threshold]['bodyparts coords'], \
-        pd_dataframe[pd_dataframe[f'{bodypart} likelihood'] < likelihood_threshold][f'{bodypart} {axis}'], s = 1, c = '0.7')
-    axes.invert_yaxis()
+        current_footfall_index = t_pred.index(n_current_frame)
+    
+    # Plot all confirmed footfalls with numbers
     count_footfalls = 0
     for i, t in enumerate(t_pred):
         bp = bodypart_list[i]
@@ -376,10 +390,66 @@ def plot_labels(pd_dataframe, n_current_frame, method, t_pred, start_pred, end_p
             bp = bodypart
         if confirmed[i]: 
             count_footfalls += 1
-            c = 'g'
-            axes.annotate(str(count_footfalls), (t, pd_dataframe[f'{bp} {axis}'][t]), color = c)
+            # Mark the footfall peak
+            axes.scatter(t, pd_dataframe[f'{bp} {axis}'][t], s=60, color='green', marker='v', zorder=5, edgecolors='darkgreen', linewidths=1)
+            axes.annotate(str(count_footfalls), (t, pd_dataframe[f'{bp} {axis}'][t]), 
+                         color='green', fontweight='bold', fontsize=11, 
+                         xytext=(0, -15), textcoords='offset points', ha='center')
+            
+            # Draw start and end markers if they exist
+            try:
+                if not np.isnan(start_pred[i]) and bodypart_list[i] == bodypart:
+                    start_frame = int(start_pred[i])
+                    axes.scatter(start_frame, pd_dataframe[f'{bodypart} {axis}'].iloc[start_frame], 
+                               s=40, color='orange', marker='<', zorder=6, edgecolors='darkorange', linewidths=1)
+                    # Draw span line from start to peak
+                    axes.plot([start_frame, t], 
+                             [pd_dataframe[f'{bodypart} {axis}'].iloc[start_frame], pd_dataframe[f'{bp} {axis}'][t]], 
+                             color='orange', linewidth=2, alpha=0.5, linestyle='--')
+                    
+                if not np.isnan(end_pred[i]) and bodypart_list[i] == bodypart:
+                    end_frame = int(end_pred[i])
+                    axes.scatter(end_frame, pd_dataframe[f'{bodypart} {axis}'].iloc[end_frame], 
+                               s=40, color='purple', marker='>', zorder=6, edgecolors='indigo', linewidths=1)
+                    # Draw span line from peak to end
+                    axes.plot([t, end_frame], 
+                             [pd_dataframe[f'{bp} {axis}'][t], pd_dataframe[f'{bodypart} {axis}'].iloc[end_frame]], 
+                             color='purple', linewidth=2, alpha=0.5, linestyle='--')
+                    
+            except (TypeError, ValueError, IndexError):
+                pass
         else:
+            # Unconfirmed footfalls in gray
+            axes.scatter(t, pd_dataframe[f'{bp} {axis}'][t], s=40, color='gray', marker='v', alpha=0.5, zorder=4)
+
+    # Highlight current footfall's start and end if active
+    if current_footfall_index is not None:
+        try:
+            if bodypart_list[current_footfall_index] == bodypart:
+                start_idx = start_pred[current_footfall_index]
+                end_idx = end_pred[current_footfall_index]
+                
+                if not np.isnan(start_idx):
+                    start_frame = int(start_idx)
+                    axes.axvline(x=start_frame, color='orange', linestyle=':', linewidth=2, alpha=0.7)
+                    axes.text(start_frame, axes.get_ylim()[0], 'START', 
+                             rotation=90, va='bottom', ha='right', color='orange', fontweight='bold', fontsize=9)
+                    
+                if not np.isnan(end_idx):
+                    end_frame = int(end_idx)
+                    axes.axvline(x=end_frame, color='purple', linestyle=':', linewidth=2, alpha=0.7)
+                    axes.text(end_frame, axes.get_ylim()[0], 'END', 
+                             rotation=90, va='bottom', ha='left', color='purple', fontweight='bold', fontsize=9)
+        except (TypeError, ValueError, IndexError):
             pass
+
+    # Plot low likelihood points in light gray
+    low_likelihood_mask = pd_dataframe[f'{bodypart} likelihood'] < likelihood_threshold
+    axes.scatter(pd_dataframe[low_likelihood_mask]['bodyparts coords'], 
+                pd_dataframe[low_likelihood_mask][f'{bodypart} {axis}'], 
+                s = 2, c = '0.8', alpha=0.5, zorder=1)
+    
+    axes.invert_yaxis()
 
     if zoom:
         x_max = len(pd_dataframe)
@@ -390,7 +460,19 @@ def plot_labels(pd_dataframe, n_current_frame, method, t_pred, start_pred, end_p
         else:
             axes.set_xlim(n_current_frame-300, n_current_frame+300)
 
-        axes.set_ylim(pd_dataframe[f'{bodypart} {axis}'].iloc[n_current_frame]+100, pd_dataframe[f'{bodypart} {axis}'].iloc[n_current_frame]-100)
+        y_current = pd_dataframe[f'{bodypart} {axis}'].iloc[n_current_frame]
+        axes.set_ylim(y_current+100, y_current-100)
+    
+    # Add legend
+    from matplotlib.lines import Line2D
+    legend_elements = [
+        Line2D([0], [0], marker='o', color='w', markerfacecolor='red', markersize=10, label='Current Frame'),
+        Line2D([0], [0], marker='v', color='w', markerfacecolor='green', markersize=8, label='Confirmed Footfall'),
+        Line2D([0], [0], marker='v', color='w', markerfacecolor='gray', markersize=8, label='Unconfirmed'),
+        Line2D([0], [0], marker='<', color='w', markerfacecolor='orange', markersize=8, label='Start'),
+        Line2D([0], [0], marker='>', color='w', markerfacecolor='purple', markersize=8, label='End'),
+    ]
+    axes.legend(handles=legend_elements, loc='upper right', fontsize=8, framealpha=0.9)
 
     return figure
 
@@ -463,92 +545,128 @@ def find_confirmed_neighbors(n_current_frame, t_val, confirmed = None, start = N
 
 
 def ControlButton(panel):
+    """Control button states for PySide6"""
     
-    panel.prev_pred_button.Enable()
-    panel.next_pred_button.Enable()
-    panel.prev10_button.Enable()
-    panel.next10_button.Enable()
-    panel.prev_button.Enable()
-    panel.next_button.Enable()
-    panel.to_start_button.Enable()
-    panel.to_end_button.Enable()
+    def enable_button(btn):
+        btn.setEnabled(True)
     
+    def disable_button(btn):
+        btn.setEnabled(False)
+    
+    # Enable all buttons by default
+    enable_button(panel.prev_pred_button)
+    enable_button(panel.next_pred_button)
+    enable_button(panel.prev10_button)
+    enable_button(panel.next10_button)
+    enable_button(panel.prev_button)
+    enable_button(panel.next_button)
+    enable_button(panel.to_start_button)
+    enable_button(panel.to_end_button)
+    
+    # Disable based on state
     if panel.n_val == 0:
-        panel.prev_pred_button.Disable()
-        panel.next_pred_button.Disable()
+        disable_button(panel.prev_pred_button)
+        disable_button(panel.next_pred_button)
     elif panel.n_frame <= panel.t_val[0]:
-        panel.prev_pred_button.Disable()
+        disable_button(panel.prev_pred_button)
     elif panel.n_frame >= panel.t_val[-1]:
-        panel.next_pred_button.Disable()
+        disable_button(panel.next_pred_button)
     
     if panel.n_frame < 10:
-        panel.prev10_button.Disable()
+        disable_button(panel.prev10_button)
         if panel.n_frame == 0:
-            panel.prev_button.Disable()
+            disable_button(panel.prev_button)
     elif panel.n_frame > len(panel.df) - 10:
-        panel.next10_button.Disable()
+        disable_button(panel.next10_button)
         if panel.n_frame == len(panel.df):
-            panel.next_button.Disable()
+            disable_button(panel.next_button)
 
     if panel.n_frame not in panel.t_val:
-        panel.to_start_button.Disable()
-        panel.to_end_button.Disable()
+        disable_button(panel.to_start_button)
+        disable_button(panel.to_end_button)
     else:
         index = panel.t_val.index(panel.n_frame)
         if panel.start_val[index] is np.nan:
-            panel.to_start_button.Disable()
+            disable_button(panel.to_start_button)
         if panel.end_val[index] is np.nan:
-            panel.to_end_button.Disable()
+            disable_button(panel.to_end_button)
 
 
 def ControlPrediction(panel):
-
+    """Update checkbox states for PySide6"""
+    
+    def set_checkbox(checkbox, value):
+        checkbox.setChecked(value)
+    
     if panel.n_frame in panel.t_val:
         index = panel.t_val.index(panel.n_frame)
-        panel.val_check_box.SetValue(panel.confirmed[index])
+        set_checkbox(panel.val_check_box, panel.confirmed[index])
     else:
-        panel.val_check_box.SetValue(False)
+        set_checkbox(panel.val_check_box, False)
 
     if panel.n_frame in panel.start_val:
-        panel.start_check_box.SetValue(True)
+        set_checkbox(panel.start_check_box, True)
     else:
-        panel.start_check_box.SetValue(False)
+        set_checkbox(panel.start_check_box, False)
 
     if panel.n_frame in panel.end_val:
-        panel.end_check_box.SetValue(True)
+        set_checkbox(panel.end_check_box, True)
     else:
-        panel.end_check_box.SetValue(False)
+        set_checkbox(panel.end_check_box, False)
 
 
 def DisplayPlots(panel, set_bodypart = True):
-
+    """Update frame and graph displays - works with both wxPython and PySide6"""
+    
     if panel.n_frame in panel.t_val and set_bodypart:
         panel.bodypart = panel.bodypart_list_val[panel.t_val.index(panel.n_frame)]
-        panel.bodypart_to_plot.SetValue(panel.bodypart)
+        panel.bodypart_to_plot.setCurrentText(panel.bodypart)
         
     try:
+        # Create new frame plot
         frame = plot_frame(panel.video, panel.n_frame, 
-        6,3, int(panel.frame_rate), panel.df, panel.bodypart, panel.zoom_image)
-        frame_canvas  = FigureCanvas(panel, -1, frame)
-        panel.frame_canvas.Hide()
-        panel.sizer_2.Replace(panel.frame_canvas, frame_canvas)
-        panel.frame_canvas = frame_canvas
-        panel.sizer_2_widgets.append(panel.frame_canvas)  
-        panel.frame_canvas.Show()
-
-        graph = plot_labels(panel.df, panel.n_frame, panel.method_selection, panel.t_val, panel.start_val, 
-            panel.end_val, (panel.window_width-60) // 100, (panel.window_height // 3) // 100, panel.bodypart, panel.bodypart_list_val, panel.selected_bodyparts, 'y', panel.likelihood_threshold, panel.confirmed, panel.zoom)
-        graph_canvas = FigureCanvas(panel, -1, graph)
-        panel.graph_canvas.Hide()
-        panel.sizer_2.Replace(panel.graph_canvas, graph_canvas)
-        panel.graph_canvas = graph_canvas
-        panel.sizer_2_widgets.append(panel.graph_canvas)
-        panel.graph_canvas.Show()     
-        panel.Fit()
-
-        panel.SetSizer(panel.sizer_2)
-        ControlPrediction(panel)
-        panel.GetParent().Layout()
+                          6, 3, int(panel.frame_rate), panel.df, panel.bodypart, panel.zoom_image)
         
-    except AttributeError:
-        pass
+        # Check if using interactive timeline (PyQtGraph) or old matplotlib
+        if hasattr(panel, 'interactive_timeline'):
+            # Update interactive timeline widget
+            panel.interactive_timeline.set_current_bodypart(panel.bodypart)
+            panel.interactive_timeline.set_detection_data(panel.t_val, panel.start_val, panel.end_val, 
+                                                         panel.bodypart_list_val, panel.confirmed, panel.slip_fall_val)
+            panel.interactive_timeline.set_current_frame(panel.n_frame, panel.likelihood_threshold)
+            panel.interactive_timeline.update_plot()
+            
+            # Update frame canvas
+            panel.frame_canvas.figure.clear()
+            panel.frame_canvas.figure = frame
+            for ax in frame.axes:
+                panel.frame_canvas.figure._axstack.add(ax)
+            panel.frame_canvas.draw()
+            
+            panel.update()
+        else:
+            # Fallback to old matplotlib approach
+            graph = plot_labels(panel.df, panel.n_frame, panel.method_selection, panel.t_val, panel.start_val, 
+                               panel.end_val, (panel.window_width-60) // 100, (panel.window_height // 3) // 100, 
+                               panel.bodypart, panel.bodypart_list_val, panel.selected_bodyparts, 'y', 
+                               panel.likelihood_threshold, panel.confirmed, panel.zoom)
+            
+            # PySide6 approach - replace canvas figures
+            panel.frame_canvas.figure.clear()
+            panel.frame_canvas.figure = frame
+            for ax in frame.axes:
+                panel.frame_canvas.figure._axstack.add(ax)
+            panel.frame_canvas.draw()
+            
+            panel.graph_canvas.figure.clear()
+            panel.graph_canvas.figure = graph
+            for ax in graph.axes:
+                panel.graph_canvas.figure._axstack.add(ax)
+            panel.graph_canvas.draw()
+            
+            panel.update()
+        
+        ControlPrediction(panel)
+        
+    except AttributeError as e:
+        print(f"DisplayPlots error: {e}")

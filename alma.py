@@ -1,41 +1,48 @@
-import wx
+import sys
+from PySide6.QtWidgets import QApplication, QMainWindow, QStackedWidget, QMenuBar, QStatusBar
+from PySide6.QtCore import Qt
 from Panels import Start, AnalyzeStride, AnalyzeFootfall, RandomForest, PCA
 
 
-class HomeFrame(wx.Frame):
+class HomeFrame(QMainWindow):
 
     def __init__(self, *args, **kw):
         
         super(HomeFrame, self).__init__(*args, **kw)
 
+        # Create stacked widget for panel management
+        self.stacked_widget = QStackedWidget()
+        self.setCentralWidget(self.stacked_widget)
+
+        # Create panels
         self.StartPanel = Start.StartPanel(self)
-        self.StartPanel.Hide()
-
         self.AnalyzeFootfallPanel = AnalyzeFootfall.AnalyzeFootfallPanel(self)
-        self.AnalyzeFootfallPanel.Hide()
-
         self.AnalyzeStridePanel = AnalyzeStride.AnalyzeStridePanel(self)
-        self.AnalyzeStridePanel.Hide()
-
         self.RandomForestPanel = RandomForest.RandomForestPanel(self)
-        self.RandomForestPanel.Hide()
-
         self.PCAPanel = PCA.PCAPanel(self)
-        self.PCAPanel.Hide()
 
-        self.current_panel = self.StartPanel
+        # Add panels to stacked widget
+        self.stacked_widget.addWidget(self.StartPanel)
+        self.stacked_widget.addWidget(self.AnalyzeFootfallPanel)
+        self.stacked_widget.addWidget(self.AnalyzeStridePanel)
+        self.stacked_widget.addWidget(self.RandomForestPanel)
+        self.stacked_widget.addWidget(self.PCAPanel)
 
-        self.main_sizer = wx.GridBagSizer(0, 0)
-        self.main_sizer.SetEmptyCellSize((0, 0))
-        self.main_sizer.Add(self.current_panel, pos=(0, 0), span = (5, 5), flag=wx.EXPAND)
-        self.SetSizer(self.main_sizer)
+        # Set current panel to Start
+        self.stacked_widget.setCurrentWidget(self.StartPanel)
+
+        # Set uniform background for main window
+        self.setStyleSheet("""
+            QMainWindow {
+                background-color: #f5f7fa;
+            }
+            QStackedWidget {
+                background-color: #f5f7fa;
+            }
+        """)
 
         self.makeMenuBar()
-        self.CreateStatusBar()
-        self.SetStatusText("Welcome!")
-
-        self.current_panel.Show()
-        self.Layout()
+        self.statusBar().showMessage("Welcome!")
 
 
     def makeMenuBar(self):
@@ -43,54 +50,61 @@ class HomeFrame(wx.Frame):
         more functions / menu items can be added
         for additional features
         """
+        from PySide6.QtWidgets import QMenuBar, QMenu
+        from PySide6.QtGui import QAction
 
-        limb_motion_menu = wx.Menu()
-        start_item = limb_motion_menu.Append(-1, "&Start \tCtrl-S")
-        analyze_footfall_item = limb_motion_menu.Append(-1, "&Footfall detection\tCtrl-L",
-                "Detect footfalls and validate results")
-        analyze_stride_item = limb_motion_menu.Append(-1, "&Gait kinematic data extraction\tCtrl-K",
-                "Extract gait kinematic parameters with bodypart coordinate data")
-        #################################
-        analysis_menu = wx.Menu()
-        random_forest_item = analysis_menu.Append(-1, "&Random forest classification\tCtrl-R",
-                "Random forest classification using extracted gait kinematic parameters")
-        principal_component_analysis_item = analysis_menu.Append(-1, "&PCA\tCtrl-P",
-                "PCA using extracted gait kinematic parameters")
-        #################################
-        help_menu = wx.Menu()
-        about_item = help_menu.Append(wx.ID_ABOUT)
-        help_item = help_menu.Append(wx.ID_HELP)
-        #################################
-        menu_bar = wx.MenuBar()
-        menu_bar.Append(limb_motion_menu, "&Limb motion analysis")
-        menu_bar.Append(analysis_menu, "&Data analysis")
-        menu_bar.Append(help_menu, "&Help")
-        self.SetMenuBar(menu_bar)        
-        #################################
-        self.Bind(wx.EVT_MENU, self.on_start, start_item)
-        self.Bind(wx.EVT_MENU, self.on_analyze_footfall, analyze_footfall_item)
-        self.Bind(wx.EVT_MENU, self.on_analyze_stride, analyze_stride_item)
+        menu_bar = self.menuBar()
 
-        self.Bind(wx.EVT_MENU, self.on_random_forest, random_forest_item)
-        self.Bind(wx.EVT_MENU, self.on_PCA, principal_component_analysis_item)
+        # Limb motion analysis menu
+        limb_motion_menu = menu_bar.addMenu("&Limb motion analysis")
+        
+        start_action = QAction("&Start", self)
+        start_action.setShortcut("Ctrl+S")
+        start_action.triggered.connect(self.on_start)
+        limb_motion_menu.addAction(start_action)
 
-        self.Bind(wx.EVT_MENU, self.on_about, about_item)
-        self.Bind(wx.EVT_MENU, self.on_help, help_item)
+        footfall_action = QAction("&Footfall detection", self)
+        footfall_action.setShortcut("Ctrl+L")
+        footfall_action.setStatusTip("Detect footfalls and validate results")
+        footfall_action.triggered.connect(self.on_analyze_footfall)
+        limb_motion_menu.addAction(footfall_action)
+
+        stride_action = QAction("&Gait kinematic data extraction", self)
+        stride_action.setShortcut("Ctrl+K")
+        stride_action.setStatusTip("Extract gait kinematic parameters with bodypart coordinate data")
+        stride_action.triggered.connect(self.on_analyze_stride)
+        limb_motion_menu.addAction(stride_action)
+
+        # Data analysis menu
+        analysis_menu = menu_bar.addMenu("&Data analysis")
+        
+        rf_action = QAction("&Random forest classification", self)
+        rf_action.setShortcut("Ctrl+R")
+        rf_action.setStatusTip("Random forest classification using extracted gait kinematic parameters")
+        rf_action.triggered.connect(self.on_random_forest)
+        analysis_menu.addAction(rf_action)
+
+        pca_action = QAction("&PCA", self)
+        pca_action.setShortcut("Ctrl+P")
+        pca_action.setStatusTip("PCA using extracted gait kinematic parameters")
+        pca_action.triggered.connect(self.on_PCA)
+        analysis_menu.addAction(pca_action)
+
+        # Help menu
+        help_menu = menu_bar.addMenu("&Help")
+        
+        about_action = QAction("&About", self)
+        about_action.triggered.connect(self.on_about)
+        help_menu.addAction(about_action)
+
+        help_action = QAction("&Help", self)
+        help_action.triggered.connect(self.on_help)
+        help_menu.addAction(help_action)
     
 
-    def on_start(self, e):
-        
-        self.current_panel.Hide()
-        self.main_sizer.Replace(self.current_panel, self.StartPanel)
-
-        self.SetSizer(self.main_sizer)
-
-        self.current_panel = self.StartPanel
-        self.current_panel.Show()
-        self.SetStatusText('Welcome!')
-
-        self.Layout()
-        self.Refresh()
+    def on_start(self):
+        self.stacked_widget.setCurrentWidget(self.StartPanel)
+        self.statusBar().showMessage('Welcome!')
     
 
     def on_quit(self, e):
@@ -98,79 +112,37 @@ class HomeFrame(wx.Frame):
         self.Close(True)
 
     
-    def on_analyze_footfall(self, e):
-
-        self.current_panel.Hide()
-
-        self.main_sizer.Replace(self.current_panel, self.AnalyzeFootfallPanel)
-        self.SetSizer(self.main_sizer)
-
-        self.current_panel = self.AnalyzeFootfallPanel
-        self.current_panel.Show()
-
-        self.SetStatusText('Ready for automated footfall analysis')
-        self.Layout()
-        self.Refresh() # refresh to show slider in right proportion
+    def on_analyze_footfall(self):
+        self.stacked_widget.setCurrentWidget(self.AnalyzeFootfallPanel)
+        self.statusBar().showMessage('Ready for automated footfall analysis')
 
 
-    def on_analyze_stride(self, e):
-
-        self.current_panel.Hide()
-
-        self.main_sizer.Replace(self.current_panel, self.AnalyzeStridePanel)
-        self.SetSizer(self.main_sizer)
-
-        self.current_panel = self.AnalyzeStridePanel
-        self.current_panel.Show()
-
-        self.SetStatusText('Ready for automated kinematic analysis')
-        self.Layout()
-        self.Refresh()
+    def on_analyze_stride(self):
+        self.stacked_widget.setCurrentWidget(self.AnalyzeStridePanel)
+        self.statusBar().showMessage('Ready for automated kinematic analysis')
 
 
-    def on_random_forest(self, e):
-
-        self.current_panel.Hide()
-
-        self.main_sizer.Replace(self.current_panel, self.RandomForestPanel)
-        self.SetSizer(self.main_sizer)
-
-        self.current_panel = self.RandomForestPanel
-        self.current_panel.Show()
-
-        self.SetStatusText('Run random forest classification on extracted gait kinematic parameters')
-        self.Layout()
-        self.Refresh() # refresh to show slider in right proportion
+    def on_random_forest(self):
+        self.stacked_widget.setCurrentWidget(self.RandomForestPanel)
+        self.statusBar().showMessage('Run random forest classification on extracted gait kinematic parameters')
 
 
-    def on_PCA(self, e):
-
-        self.current_panel.Hide()
-
-        self.main_sizer.Replace(self.current_panel, self.PCAPanel)
-        self.SetSizer(self.main_sizer)
-
-        self.current_panel = self.PCAPanel
-        self.current_panel.Show()
-
-        self.SetStatusText('Run PCA on extracted gait kinematic parameters')
-        self.Layout()
-        self.Refresh() # refresh to show slider in right proportion
+    def on_PCA(self):
+        self.stacked_widget.setCurrentWidget(self.PCAPanel)
+        self.statusBar().showMessage('Run PCA on extracted gait kinematic parameters')
 
 
-    def on_about(self, e):
-        
-        wx.MessageBox( "This is a toolbox for fully automated (rodent) "\
-                        "limb motion analysis with markerless bodypart tracking data. "\
-                        "Compatible with csv output from DeepLabCut.",
-                        "About ALMA",
-                        wx.OK|wx.ICON_INFORMATION)
+    def on_about(self):
+        from PySide6.QtWidgets import QMessageBox
+        QMessageBox.information(self, "About ALMA", 
+                               "This is a toolbox for fully automated (rodent) "
+                               "limb motion analysis with markerless bodypart tracking data. "
+                               "Compatible with csv output from DeepLabCut.")
 
-    def on_help(self, event):
-
-        wx.MessageBox("Please go to our GitHub Wiki for help or email us :)",
-                        "Support",
-                        wx.OK|wx.ICON_INFORMATION)
+    def on_help(self):
+        from PySide6.QtWidgets import QMessageBox
+        QMessageBox.information(self, "Support", 
+                               "Please go to our GitHub Wiki for help or email us :)")
 
 
 if __name__ == '__main__':
@@ -180,7 +152,13 @@ if __name__ == '__main__':
     configs = ConfigFunctions.load_config('./config.yaml')
     window_width, window_height = configs['window_width'], configs['window_height']
 
-    app = wx.App(redirect = True)
-    home_frame = HomeFrame(None, title='ALMA - Automated Limb Motion Analysis', size=(window_width, window_height))
-    home_frame.Show()
-    app.MainLoop()
+    app = QApplication(sys.argv)
+    home_frame = HomeFrame()
+    home_frame.setWindowTitle('ALMA - Automated Limb Motion Analysis')
+    # Set both the size and minimum size to respect config values
+    home_frame.resize(window_width, window_height)
+    home_frame.setMinimumSize(window_width, window_height)
+    # Uncomment the next line to make the window non-resizable (fixed size):
+    # home_frame.setFixedSize(window_width, window_height)
+    home_frame.show()
+    sys.exit(app.exec())

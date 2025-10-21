@@ -8,8 +8,9 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import os
+from packaging import version
 
-if mpl.__version__ < "3.6": 
+if version.parse(mpl.__version__) < version.parse("3.6"): 
     mpl.style.use('seaborn')
 else:
     mpl.style.use('seaborn-v0_8')

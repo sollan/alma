@@ -1,6 +1,6 @@
 # Automated Limb Motion Analysis (ALMA) v2.0
 
-## What's New in v2.0
+## What is new in ALMA v2.0
 
 - **Modern UI/UX:** Redesigned interface with card-based layouts, step-by-step wizards, and improved visual feedback
 - **Interactive timeline:** Pyqtgraph-based interactive timeline for footfall detection, with zoom, pan, and click-to-jump functionality

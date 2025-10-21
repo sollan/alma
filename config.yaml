@@ -1,8 +1,8 @@
-# GUI settings
-window_height: 1100             # height of the GUI window - adjust to fit your screen resolution
-window_width: 1400              # width of the GUI window
+# GUI default settings
+window_height: 700             # height of the GUI window - adjust to fit your screen resolution
+window_width: 1100              # width of the GUI window
 # video specs
-frame_rate: 119.88              # frame rate of your video data (n. frames per second)
+frame_rate: 120
 # ladder rung analysis
 likelihood_threshold: 0.1       # threshold of bodypart coordinate estimation likelihood, highlight estimates above threshold for ladder rung user validation
 depth_threshold: 0.8            # percentage of recovery relative to depth of previous footfall / slip
@@ -10,9 +10,20 @@ threshold: ''                   # for threshold method in ladder rung
 # kinematics analysis
 lowpass_filter_cutoff: 6        # cutoff frequency for Butterworth filter applied to bodypart coordinate estimation in kinematics analysis
 pixels_per_cm: ''               # provide px - cm ratio of the video, if known
-cm_speed: ''                    # only for semi-automated kinematics analysis
-px_to_cm_speed_ratio: 0.4806    # only for fully automated kinematics analysis
-right_to_left: False            # direction of walking (False if animal walks from left to right)
+cm_speed: ''                    # treadmill speed in cm/s (required for treadmill analysis)
+right_to_left: False            # direction of walking: "auto" (detect automatically), True (right-to-left), False (left-to-right)
 no_outlier_filter: False        # only for spontaneous walking setup (requires more testing; True to get parameters for all step cycles)
 dragging_filter: False          # only for spontaneous walking setup (requires more testing; False to get parameters also for potentially 100% dragging mice)
+drag_clearance_cm: 0.1          # minimum toe clearance above ground (cm) to not count as dragging
+drag_min_consecutive_frames: 4  # minimum consecutive frames of ground contact to count as dragging (reduces noise)
+# Camera-independent calibration (makes analysis robust to camera distance changes)
+auto_calibrate_spatial: True    # use animal body as reference scale (recommended: True for camera-distance independence)
+reference_segment: 'ankle_toe'  # body segment for calibration: 'ankle_toe' (1.5cm), 'hip_knee' (2.5cm), 'knee_ankle' (2.0cm), 'ankle_mtp' (0.8cm)
+reference_length_cm: 1.5        # known length of reference segment in cm (ankle-toe: 1.5cm mouse; leave as '' to use defaults)
+
+# stride filtering thresholds (applied to both treadmill and spontaneous analyses)
+step_height_min_cm: 0.0         # include strides with step height >= this (cm)
+step_height_max_cm: 2         # include strides with step height <= this (cm)
+stride_length_min_cm: 0.0       # include strides with stride length >= this (cm)
+stride_length_max_cm: 8.0       # include strides with stride length <= this (cm)
 

@@ -39,12 +39,7 @@ conda activate venv_python_3_10
 
 4. Launch ALMA:
 
-**On Windows/Linux:**
-```bash
-python ./alma.py
-```
-
-**On macOS:**
+**On Windows/Linux/macOS:**
 ```bash
 python ./alma.py
 ```

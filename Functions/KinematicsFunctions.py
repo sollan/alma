@@ -23,12 +23,12 @@ def detect_bodypart_mapping(bodyparts_detected):
     '''
     standard_bodyparts = ['toe', 'mtp', 'ankle', 'knee', 'hip', 'iliac crest']
     bodypart_aliases = {
-        'toe': ['toe', 'toer', 'toel', 'toe_r', 'toe_l'],
+        'toe': ['toe', 'toer', 'toel', 'toe_r', 'toe_l', 'back_toe'],
         'mtp': ['mtp', 'mtpr', 'mtpl', 'mtp_r', 'mtp_l'],
         'ankle': ['ankle', 'ankler', 'anklel', 'ankle_r', 'ankle_l'],
         'knee': ['knee', 'kneer', 'kneel', 'knee_r', 'knee_l'],
         'hip': ['hip', 'hipr', 'hipl', 'hip_r', 'hip_l'],
-        'iliac crest': ['iliac crest', 'crest', 'crestr', 'crestl', 'crest_r', 'crest_l', 
+        'iliac crest': ['iliac crest', 'iliac_crest', 'crest', 'crestr', 'crestl', 'crest_r', 'crest_l',
                         'iliac crestr', 'iliac crestl', 'iliacr', 'iliacl']
     }
     
@@ -36,7 +36,7 @@ def detect_bodypart_mapping(bodyparts_detected):
     found_bodyparts = []
     
     for detected in bodyparts_detected:
-        detected_lower = detected.lower()
+        detected_lower = detected.strip().lower()
         for standard, aliases in bodypart_aliases.items():
             if detected_lower in aliases:
                 mapping[detected] = standard
@@ -63,11 +63,11 @@ def fix_column_names(pd_dataframe, custom_mapping=None):
 
     for column in col_names:
         if column.endswith(' y'):
-            bodyparts_raw.append(column.strip(' y'))
+            bodyparts_raw.append(column[:-2])
     
     if custom_mapping is not None:
         bodypart_mapping = custom_mapping
-        bodyparts_standard = list(set(custom_mapping.values()))
+        bodyparts_standard = list(dict.fromkeys(custom_mapping.values()))
     else:
         bodypart_mapping, bodyparts_standard = detect_bodypart_mapping(bodyparts_raw)
     
@@ -331,7 +331,14 @@ Functions to calculate kinematic parameters
 def angle(vector1, vector2):
     length1 = math.sqrt(vector1[0] * vector1[0] + vector1[1] * vector1[1])
     length2 = math.sqrt(vector2[0] * vector2[0] + vector2[1] * vector2[1])
-    return math.acos((vector1[0] * vector2[0] + vector1[1] * vector2[1])/ (length1 * length2))
+    if length1 == 0 or length2 == 0:
+        return np.nan  # Coincident landmarks do not define a joint angle.
+    cosine = (vector1[0] * vector2[0] + vector1[1] * vector2[1]) / (length1 * length2)
+    if not math.isfinite(cosine):
+        return np.nan
+    # Roundoff for nearly collinear vectors can put the cosine just outside
+    # acos's domain. Preserve the existing calculation inside that domain.
+    return math.acos(max(-1.0, min(1.0, cosine)))
 
 
 def find_angles(x1, y1, x_center, y_center, x2, y2):
@@ -553,19 +560,16 @@ def find_drag(toe_y, stance_dur, threshold, start, end, clearance_px=0, min_cons
     is_drag_raw = toe_y[swing_start:swing_end] >= (ground_level - clearance_px)
     
     # Require at least min_consecutive_frames consecutive frames to reduce noise
-    is_drag = is_drag_raw.copy()
-    if len(is_drag) >= min_consecutive_frames:
-        # Check for runs of at least min_consecutive_frames consecutive dragging frames
-        for i in range(len(is_drag) - min_consecutive_frames + 1):
-            if all(is_drag_raw[i:i+min_consecutive_frames]):
-                # Mark this window as dragging
-                is_drag[i:i+min_consecutive_frames] = True
-            else:
-                # If not all frames in window are dragging, mark as not dragging
-                is_drag[i] = False
-        # Handle remaining frames
-        for i in range(len(is_drag) - min_consecutive_frames + 1, len(is_drag)):
-            is_drag[i] = False
+    # Retain whole qualifying runs, including their last frames. Short runs
+    # must be rejected even when the entire swing is shorter than the minimum.
+    if not isinstance(min_consecutive_frames, (int, np.integer)) or min_consecutive_frames < 1:
+        raise ValueError('Consecutive drag frames must be a positive integer.')
+    is_drag = np.zeros(len(is_drag_raw), dtype=bool)
+    transitions = np.diff(np.r_[False, is_drag_raw, False].astype(np.int8))
+    for run_start, run_end in zip(np.flatnonzero(transitions == 1),
+                                  np.flatnonzero(transitions == -1)):
+        if run_end - run_start >= min_consecutive_frames:
+            is_drag[run_start:run_end] = True
     
     drag_frames = np.sum(is_drag)
     drag_fraction = drag_frames / swing_length if swing_length > 0 else 0
@@ -737,7 +741,11 @@ def findLongestSequence(A, k):
     return leftIndex, leftIndex + window - 1
 
 
-def return_continuous(pd_dataframe_parameters, n_continuous=10, plot=False, pd_dataframe_coords=None, bodyparts=None, is_stance=[], filename='', drag_masks=None, starts=None, drag_min_consecutive_frames=4):
+def return_continuous(pd_dataframe_parameters, n_continuous=10, plot=False, pd_dataframe_coords=None, bodyparts=None, is_stance=[], filename='', drag_masks=None, starts=None, drag_min_consecutive_frames=4, coordinate_source='analysis'):
+    if pd_dataframe_parameters.attrs.get('analysis_report', {}).get('analysis_type') == 'spontaneous':
+        from Functions.RunwayAnalysis import plot_continuous
+        return plot_continuous(pd_dataframe_parameters, pd_dataframe_coords, is_stance,
+                               drag_masks or [], n_continuous, filename, plot, coordinate_source)
     # Check if parameters DataFrame is empty or contains only NaN values
     if pd_dataframe_parameters.empty or pd_dataframe_parameters.isnull().all().all():
         # Parameters DataFrame is empty or contains only NaN values - skipping continuous analysis
@@ -846,7 +854,35 @@ def compute_limb_joint_angles(smooth_toe_x, smooth_toe_y, \
 
 
 def extract_parameters(frame_rate, pd_dataframe, cutoff_f, bodypart, cm_speed=None, right_to_left=True,
-                      step_height_min_cm=0.0, step_height_max_cm=1.5, stride_length_min_cm=0.0, stride_length_max_cm=8.0, drag_clearance_cm=0.3, drag_min_consecutive_frames=4):
+                      step_height_min_cm=0.0, step_height_max_cm=1.5, stride_length_min_cm=0.0, stride_length_max_cm=8.0, drag_clearance_cm=0.3, drag_min_consecutive_frames=4,
+                      calibration_method='belt_motion', pixels_per_cm=None,
+                      reference_segment=None, reference_length_cm=None):
+    """Validate treadmill input and run the existing calculation on a private copy.
+
+    The default belt-motion calibration preserves existing results. Explicit
+    manual/reference choices change the spatial scale. Diagnostics are attached
+    to the parameter DataFrame in attrs['analysis_report'].
+    """
+    from Functions.TreadmillValidation import prepare_input, attach_report, resolve_calibration
+    limits = dict(step_height_min_cm=step_height_min_cm, step_height_max_cm=step_height_max_cm,
+                  stride_length_min_cm=stride_length_min_cm, stride_length_max_cm=stride_length_max_cm,
+                  drag_clearance_cm=drag_clearance_cm, drag_min_consecutive_frames=drag_min_consecutive_frames)
+    working, report = prepare_input(pd_dataframe, frame_rate, cutoff_f, bodypart,
+                                    cm_speed, right_to_left, limits)
+    calibration = resolve_calibration(working, calibration_method, pixels_per_cm,
+                                      reference_segment, reference_length_cm)
+    report['settings']['calibration_method'] = calibration_method
+    if calibration is not None:
+        report['settings']['spatial_calibration'] = calibration.copy()
+    result = _extract_treadmill_parameters(frame_rate, working, cutoff_f, bodypart,
+                                         cm_speed=cm_speed, right_to_left=right_to_left,
+                                         _spatial_calibration=calibration, **limits)
+    return attach_report(result, report)
+
+
+def _extract_treadmill_parameters(frame_rate, pd_dataframe, cutoff_f, bodypart, cm_speed=None, right_to_left=True,
+                      step_height_min_cm=0.0, step_height_max_cm=1.5, stride_length_min_cm=0.0, stride_length_max_cm=8.0, drag_clearance_cm=0.3, drag_min_consecutive_frames=4,
+                      _spatial_calibration=None):
 
     '''
     pd_dataframe: contains raw coordinates (not adjusted for treadmill movement, unfiltered)
@@ -915,7 +951,11 @@ def extract_parameters(frame_rate, pd_dataframe, cutoff_f, bodypart, cm_speed=No
     dtw_xy_plane_10_sds = []
     
     x_change = np.diff(pd_dataframe[f'{bodypart} x'][pd_dataframe[f'{bodypart} likelihood']>0.5])
+    if len(x_change) == 0 or not np.any(x_change):
+        raise ValueError('No usable toe movement to estimate treadmill calibration. Check the tracking and recording segment.')
     x_change_filt = x_change[(x_change < np.mean(x_change) + 1*np.std(x_change)) & (x_change > np.mean(x_change) - 1*np.std(x_change))]
+    if len(x_change_filt) == 0:
+        raise ValueError('No usable treadmill-motion samples after filtering. Check toe tracking and the recording segment.')
 
     # Auto-detect walking direction if not specified
     if right_to_left == "auto" or right_to_left is None:
@@ -934,9 +974,13 @@ def extract_parameters(frame_rate, pd_dataframe, cutoff_f, bodypart, cm_speed=No
     # Right-to-left: mouse moves left (negative), treadmill moves right (positive during stance)
     # Left-to-right: mouse moves right (positive), treadmill moves left (negative during stance)
     if right_to_left:
-        px_speed, _ = scipy.stats.norm.fit(x_change_filt[x_change_filt>0])
+        belt_samples = x_change_filt[x_change_filt>0]
     else:
-        px_speed, _ = scipy.stats.norm.fit(x_change_filt[x_change_filt<0])
+        belt_samples = x_change_filt[x_change_filt<0]
+    if len(belt_samples) == 0:
+        raise ValueError('No treadmill-motion samples match the selected walking direction. Check direction and toe tracking.')
+    px_speed, _ = scipy.stats.norm.fit(belt_samples)
+    if not right_to_left:
         px_speed = -px_speed  # Make positive for consistency
 
     if cm_speed is None: 
@@ -944,6 +988,18 @@ def extract_parameters(frame_rate, pd_dataframe, cutoff_f, bodypart, cm_speed=No
         raise ValueError("cm_speed must be provided for treadmill analysis")
 
     pixels_per_cm = 1 / (cm_speed / px_speed / frame_rate)
+    calibration_details = {'method': 'belt_motion'}
+    if _spatial_calibration is not None:
+        calibration_details = _spatial_calibration.copy()
+        pixels_per_cm = calibration_details['pixels_per_cm']
+    pd_dataframe.attrs['_treadmill_calibration'] = {
+        **calibration_details, 'pixels_per_frame': float(px_speed),
+        'pixels_per_cm': float(pixels_per_cm), 'right_to_left': bool(right_to_left),
+        'motion_correction': 'tracked_belt_motion_in_pixels',
+        'tracking_implied_belt_speed_cm_s': float(px_speed * frame_rate / pixels_per_cm),
+    }
+    intervals = []
+    pd_dataframe.attrs['_treadmill_intervals'] = intervals
     pd_dataframe_corrected = treadmill_correction(pd_dataframe, bodyparts, px_speed, right_to_left)
 
     smooth_toe_x = butterworth_filter(pd_dataframe_corrected['toe x'], frame_rate, cutoff_f)
@@ -1155,6 +1211,10 @@ def extract_parameters(frame_rate, pd_dataframe, cutoff_f, bodypart, cm_speed=No
             # Use forward movement cycles instead of stance/swing phases
             is_stance, starts, ends, treadmill_y = _detect_dragging_movement_cycles(pd_dataframe, frame_rate, cutoff_f, right_to_left)
 
+        if not starts:
+            from Functions.TreadmillValidation import PARAMETER_COLUMNS
+            return pd.DataFrame(columns=PARAMETER_COLUMNS), pd_dataframe, is_stance, bodyparts, [], []
+
         starts_included = []
         ends_included = []
         
@@ -1180,12 +1240,32 @@ def extract_parameters(frame_rate, pd_dataframe, cutoff_f, bodypart, cm_speed=No
                 # no swing phase!
                 step_height = 0
         
-            # For dragging mice, be more lenient with step height (they can't lift their feet)
-            # But still require some forward movement
+            # A minimum of zero retains zero-height dragging steps. A positive
+            # user-selected minimum must be honored, rather than ignored.
             include_stride = (
                 (stride_len_cm >= stride_length_min_cm) and (stride_len_cm <= stride_length_max_cm) and
-                (step_height >= 0) and (step_height <= step_height_max_cm)  # Allow 0 step height for dragging
+                (step_height >= step_height_min_cm) and (step_height <= step_height_max_cm)
             )
+            rejection_reasons = []
+            if not np.isfinite(stride_len_cm) or not np.isfinite(step_height):
+                rejection_reasons.append('non_finite_measurement')
+            if stride_len_cm < stride_length_min_cm:
+                rejection_reasons.append('stride_length_below_minimum')
+            if stride_len_cm > stride_length_max_cm:
+                rejection_reasons.append('stride_length_above_maximum')
+            if step_height < 0:
+                rejection_reasons.append('negative_step_height')
+            if step_height < step_height_min_cm:
+                rejection_reasons.append('step_height_below_minimum')
+            if step_height > step_height_max_cm:
+                rejection_reasons.append('step_height_above_maximum')
+            intervals.append({
+                'start_frame': int(starts[i]), 'end_frame': int(ends[i]),
+                'stride_length_cm': float(stride_len_cm) if np.isfinite(stride_len_cm) else None,
+                'step_height_cm': float(step_height) if np.isfinite(step_height) else None,
+                'retained': bool(include_stride), 'rejection_reasons': rejection_reasons,
+                'ends_at_recording_boundary': bool(ends[i] == len(pd_dataframe) - 1),
+            })
             if include_stride:
                 
                 starts_included.append(starts[i])
@@ -1496,664 +1576,32 @@ def extract_parameters(frame_rate, pd_dataframe, cutoff_f, bodypart, cm_speed=No
                                     ]), pd_dataframe, is_stance, bodyparts, drag_masks, starts
 
 
-def extract_spontaneous_parameters(frame_rate, pd_dataframe, cutoff_f, pixels_per_cm=49.143, no_outlier_filter=False, dragging_filter=False,
-                                   step_height_min_cm=0.0, step_height_max_cm=1.5, stride_length_min_cm=0.0, stride_length_max_cm=8.0, drag_clearance_cm=0.3, drag_min_consecutive_frames=4):
-    '''
-    pd_dataframe: contains raw coordinates (not adjusted for treadmill movement, unfiltered)
-    bodypart: which bodypart to use for stride estimation
-    '''
+def extract_spontaneous_parameters(frame_rate, pd_dataframe, cutoff_f, pixels_per_cm=None, no_outlier_filter=False, dragging_filter=False,
+                                   step_height_min_cm=0.0, step_height_max_cm=1.5, stride_length_min_cm=0.0, stride_length_max_cm=8.0,
+                                   drag_clearance_cm=0.3, drag_min_consecutive_frames=4, confidence_threshold=0.6,
+                                   max_gap_s=0.02, min_body_speed=0.25, min_contact_s=0.03, min_swing_s=0.02,
+                                   right_to_left='auto', contact_smoothing_s=0.025, min_stride_progress=0.05,
+                                   joint_interpolation='none', joint_max_gap_s=0.02,
+                                   joint_max_interpolated_fraction=0.1, joint_max_segment_change=0.35,
+                                   joint_cutoff_f=None):
+    """Score complete runway cycles; measured spatial calibration is required.
 
-    bodyparts = ['toe', 'mtp', 'ankle', 'knee', 'hip', 'iliac crest'] # should be modified to detect names / change this manually on error!
-    starts_all = []
-    ends_all = []
-    limbs = []
+    Missing joints affect only their dependent metrics. Detection thresholds
+    use seconds and relative body scale, preserving the original frame axis.
+    """
+    from Functions.RunwayAnalysis import analyze_runway
+    return analyze_runway(frame_rate, pd_dataframe, cutoff_f, pixels_per_cm,
+        no_outlier_filter=no_outlier_filter, dragging_filter=dragging_filter,
+        step_height_min_cm=step_height_min_cm, step_height_max_cm=step_height_max_cm,
+        stride_length_min_cm=stride_length_min_cm, stride_length_max_cm=stride_length_max_cm,
+        drag_clearance_cm=drag_clearance_cm, drag_min_consecutive_frames=drag_min_consecutive_frames,
+        confidence_threshold=confidence_threshold, max_gap_s=max_gap_s, min_body_speed=min_body_speed,
+        min_contact_s=min_contact_s, min_swing_s=min_swing_s, right_to_left=right_to_left,
+        contact_smoothing_s=contact_smoothing_s, min_stride_progress=min_stride_progress,
+        joint_interpolation=joint_interpolation, joint_max_gap_s=joint_max_gap_s,
+        joint_max_interpolated_fraction=joint_max_interpolated_fraction,
+        joint_max_segment_change=joint_max_segment_change, joint_cutoff_f=joint_cutoff_f)
 
-    cycle_dur_secs = []
-    cycle_dur_frames = []
-    cycle_vs = []
-    
-    stride_lens = []
-    stance_dur_secs = []
-    swing_dur_secs = []
-    swing_percentages = []
-    stance_percentages = []
-
-    limb_len_means = []
-    limb_len_maxs = []
-    limb_len_mins = []
-    limb_len_sds = []
-    
-    step_heights = []
-    max_v_during_swings = []
-    
-    mtp_joint_extensions = []
-    ankle_joint_extensions = []
-    knee_joint_extensions = []
-    hip_joint_extensions = []
-    
-    mtp_joint_flexions = []
-    ankle_joint_flexions = []
-    knee_joint_flexions = []
-    hip_joint_flexions = []
-    
-    mtp_joint_amplitudes = []
-    ankle_joint_amplitudes = []
-    knee_joint_amplitudes = []
-    hip_joint_amplitudes = []
-    
-    mtp_joint_sds = []
-    ankle_joint_sds = []
-    knee_joint_sds = []
-    hip_joint_sds = []
-    
-    drag_ts = []
-    drag_percentages = []
-
-    dtw_x_plane_5_means = [] # dynamic time warping: measures spatial variability
-    dtw_x_plane_5_sds = []
-    dtw_y_plane_5_means = []
-    dtw_y_plane_5_sds = []
-    dtw_xy_plane_5_means = []
-    dtw_xy_plane_5_sds = []
-
-    dtw_x_plane_10_means = []
-    dtw_x_plane_10_sds = []
-    dtw_y_plane_10_means = []
-    dtw_y_plane_10_sds = []
-    dtw_xy_plane_10_means = []
-    dtw_xy_plane_10_sds = []
-
-    is_stances = []
-
-    for direction in ['L', 'R', '']:
-        if f'toe{direction} x' in pd_dataframe.columns:
-            x_change = np.diff(pd_dataframe[f'toe{direction} x'][pd_dataframe[f'toe{direction} likelihood']>0.5])
-            # print('found', direction)
-            smooth_toe_x = butterworth_filter(pd_dataframe[f'toe{direction} x'], frame_rate, cutoff_f)
-            smooth_mtp_x = butterworth_filter(pd_dataframe[f'mtp{direction} x'], frame_rate, cutoff_f)
-            smooth_ankle_x = butterworth_filter(pd_dataframe[f'ankle{direction} x'], frame_rate, cutoff_f)
-            smooth_knee_x = butterworth_filter(pd_dataframe[f'knee{direction} x'], frame_rate, cutoff_f)
-            smooth_hip_x = butterworth_filter(pd_dataframe[f'hip{direction} x'], frame_rate, cutoff_f)
-            smooth_crest_x = butterworth_filter(pd_dataframe[f'iliac crest{direction} x'], frame_rate, cutoff_f)
-
-            smooth_toe_y = butterworth_filter(pd_dataframe[f'toe{direction} y'], frame_rate, cutoff_f)
-            smooth_mtp_y = butterworth_filter(pd_dataframe[f'mtp{direction} y'], frame_rate, cutoff_f)
-            smooth_ankle_y = butterworth_filter(pd_dataframe[f'ankle{direction} y'], frame_rate, cutoff_f)
-            smooth_knee_y = butterworth_filter(pd_dataframe[f'knee{direction} y'], frame_rate, cutoff_f)
-            smooth_hip_y = butterworth_filter(pd_dataframe[f'hip{direction} y'], frame_rate, cutoff_f)
-            smooth_crest_y = butterworth_filter(pd_dataframe[f'iliac crest{direction} y'], frame_rate, cutoff_f)
-
-            angles_toe_mtp_ankle = find_angles(
-                    smooth_toe_x, smooth_toe_y, 
-                    smooth_mtp_x, smooth_mtp_y, 
-                    smooth_ankle_x, smooth_ankle_y
-                )
-            angles_mtp_ankle_knee = find_angles(
-                    smooth_mtp_x, smooth_mtp_y, 
-                    smooth_ankle_x, smooth_ankle_y,
-                    smooth_knee_x, smooth_knee_y
-                )
-            angles_ankle_knee_hip = find_angles(
-                    smooth_ankle_x, smooth_ankle_y,
-                    smooth_knee_x, smooth_knee_y,
-                    smooth_hip_x, smooth_hip_y
-                )
-            angles_knee_hip_crest = find_angles(
-                    smooth_knee_x, smooth_knee_y,
-                    smooth_hip_x, smooth_hip_y,
-                    smooth_crest_x, smooth_crest_y
-                )
-            elevation_angles = find_angles(
-                    smooth_mtp_x, smooth_mtp_y, 
-                    smooth_crest_x, smooth_crest_y, 
-                    smooth_crest_x, np.zeros(len(smooth_crest_y))
-                )
-            elevation_angle_change = np.diff(elevation_angles)
-
-            limb_lens = find_limb_length(smooth_toe_x, smooth_toe_y, smooth_hip_x, smooth_hip_y)
-            velocities = find_euclidean_speed(smooth_toe_x, smooth_toe_y, frame_rate)
-
-            # Check if there's any meaningful forward movement at all
-            if dragging_filter and \
-                len(np.where(np.abs(elevation_angle_change) < 1)[0])/len(elevation_angle_change) > 0.95:
-
-                # No meaningful elevation angle change - mouse may be stationary or severely impaired
-                limbs.append(direction)
-                starts_all.append(np.nan)
-                ends_all.append(np.nan)
-                cycle_dur_secs.append(np.nan)
-                cycle_dur_frames.append(np.nan)
-                stride_lens.append(np.nan)
-                cycle_vs.append(np.nan)
-                stance_dur_secs.append(np.nan)
-                swing_dur_secs.append(np.nan)
-                swing_percentages.append(np.nan)
-                stance_percentages.append(np.nan)
-                limb_len_means.append(np.mean(limb_lens) / pixels_per_cm)
-                limb_len_maxs.append(np.nan)
-                limb_len_mins.append(np.nan)
-                limb_len_sds.append(np.std(limb_lens) / pixels_per_cm)
-                step_heights.append(0) 
-                max_v_during_swings.append(np.nan)
-
-                mtp_joint_extensions.append(np.nan)
-                mtp_joint_flexions.append(np.nan)
-                mtp_joint_amplitudes.append(np.nan)
-
-                ankle_joint_extensions.append(np.nan)
-                ankle_joint_flexions.append(np.nan)
-                ankle_joint_amplitudes.append(np.nan)
-
-                knee_joint_extensions.append(np.nan)
-                knee_joint_flexions.append(np.nan)
-                knee_joint_amplitudes.append(np.nan)
-
-                hip_joint_extensions.append(np.nan)
-                hip_joint_flexions.append(np.nan)
-                hip_joint_amplitudes.append(np.nan)
-
-                mtp_joint_sds.append(np.nan)
-                ankle_joint_sds.append(np.nan)
-                knee_joint_sds.append(np.nan)
-                hip_joint_sds.append(np.nan)
-
-                drag_ts.append(np.nan)
-                drag_percentages.append(1)
-                dtw_x_plane_5_means.append(np.nan)
-                dtw_x_plane_5_sds.append(np.nan)
-                dtw_y_plane_5_means.append(np.nan)
-                dtw_y_plane_5_sds.append(np.nan)
-                dtw_xy_plane_5_means.append(np.nan)
-                dtw_xy_plane_5_sds.append(np.nan)
-                dtw_x_plane_10_means.append(np.nan)
-                dtw_x_plane_10_sds.append(np.nan)
-                dtw_y_plane_10_means.append(np.nan)
-                dtw_y_plane_10_sds.append(np.nan)
-                dtw_xy_plane_10_means.append(np.nan)
-                dtw_xy_plane_10_sds.append(np.nan)
-
-                is_stances.append(np.nan)
-
-            else:
-                starts = []
-                ends = []
-
-                # Try normal stride detection first
-                bodypart_x_change = np.diff(pd_dataframe[f'toe{direction} x'])
-                is_stance = [abs(i) <= 0.001 for i in bodypart_x_change]
-
-                # if direction == 'L': # toe L: direction right to left
-                #     is_stance = [i <= 0 for i in bodypart_x_change]
-                # elif direction == 'R': # toeR: direction left to right
-                #     is_stance = [i >= 0 for i in bodypart_x_change]
-                # else: # default direction left to right: right side visible
-                #     is_stance = [i >= 0 for i in bodypart_x_change]
-                for i in range(1, len(is_stance)):
-                    if is_stance[i] != is_stance[i-1]:
-                        if is_stance[i] and pd_dataframe[f'toe{direction} likelihood'][i] > 0.6:
-                            if len(starts) == 0:
-                                starts.append(i)
-                            elif abs(pd_dataframe[f'toe{direction} x'][starts[-1]] - pd_dataframe[f'toe{direction} x'][i])>20:
-                                starts.append(i)
-                for i in range(1, len(starts)):
-                    ends.append(starts[i]-1)
-
-                ends.append(len(is_stance))
-
-                starts_all.extend(starts)
-                ends_all.extend(ends)
-
-                is_stances.append(is_stance)
-
-                y = pd_dataframe[f'toe{direction} y'][pd_dataframe[f'toe{direction} likelihood'] > 0.5]
-                y_filt = y[(y < np.mean(y) + 1*np.std(y)) & (y > np.mean(y) - 1*np.std(y))]
-                _, b = np.histogram(y_filt, bins=100, density=True)
-                # fit 2 Gaussians to the pdf of toe y coord
-                gm = GaussianMixture(n_components=2, random_state=0).fit(np.array(b).reshape(-1,1))
-                # the Gaussian with larger mean corresponds to y coord during stance phase
-                # use this mean as threshold to detect dragging during swing phase
-                stance_threshold = max(gm.means_).item()
-                # use this plus SD (i.e., lower in space) as treadmill y coord, to calculate step height
-                ind_stance_gaussian = np.argmax(gm.means_)
-                treadmill_y = float(stance_threshold + np.sqrt(gm.covariances_[ind_stance_gaussian].item()))
-
-                starts_included = []
-                ends_included = []
-
-                for i in range(len(starts)):
-                    limbs.append(direction)
-
-                    stride_len = abs(find_stride_len(smooth_toe_x, starts[i], ends[i])) # in pixel
-                    stride_len_cm = stride_len / pixels_per_cm
-                    limb_len_max = max(limb_lens[starts[i] : ends[i]]) / pixels_per_cm
-                    # limb_len_max = max(limb_lens[starts[i] : ends[i]])
-                    cycle_dur_frame = ends[i] - starts[i]
-                    cycle_v = stride_len_cm / cycle_dur_frame * frame_rate # (px / frames) * (frames/s) = px/s
-
-                    stance_dur_frame, swing_perc, stance_perc = find_swing_stance(elevation_angle_change, starts[i], ends[i])
-                    swing_dur_sec = (cycle_dur_frame - stance_dur_frame) / frame_rate
-
-                    if swing_dur_sec and stance_dur_frame > 0:
-                    # min: image y axis starts from top
-                    # step_height = -(min(smooth_toe_y[starts[i]+stance_dur_frame:ends[i]]) - \
-                    # max(smooth_toe_y[starts[i]:starts[i]+stance_dur_frame])) / pixels_per_cm
-                        step_height = -(min(smooth_toe_y[starts[i]:ends[i]]) - \
-                                        max(smooth_toe_y[starts[i]:ends[i]])) / pixels_per_cm
-                    elif swing_dur_sec and stance_dur_frame == 0:
-                        step_height = -(min(smooth_toe_y[starts[i]+stance_dur_frame:ends[i]]) - \
-                                        smooth_toe_y[starts[i]]) / pixels_per_cm
-                    else:
-                        # no swing phase!
-                        step_height = 0
-
-                    if no_outlier_filter or (
-                        (stride_len_cm >= stride_length_min_cm) and (stride_len_cm <= stride_length_max_cm) and
-                        (step_height >= step_height_min_cm) and (step_height <= step_height_max_cm)
-                    ):
-                        starts_included.append(starts[i])
-                        ends_included.append(ends[i])
-
-                        limb_len_means.append(np.mean(limb_lens[starts[i] : ends[i]]) / pixels_per_cm)
-                        limb_len_maxs.append(limb_len_max)
-                        limb_len_mins.append(min(limb_lens[starts[i] : ends[i]]) / pixels_per_cm)
-                        limb_len_sds.append(np.std(limb_lens[starts[i] : ends[i]]) / pixels_per_cm)
-                        cycle_dur_secs.append(cycle_dur_frame / frame_rate)
-                        cycle_dur_frames.append(cycle_dur_frame)
-
-                        stride_lens.append(stride_len_cm)
-
-                        step_heights.append(step_height)
-
-                        cycle_vs.append(cycle_v) # (px/s) / (px/cm) = cm/s
-                        # or use averaged v from euclidean distance between every two frames? 
-                        # (that would consider the entire trajectory of a stride, including vertical movement / lift,
-                        # not just the distance between start and end point)
-
-                        stance_dur_secs.append(stance_dur_frame / frame_rate)
-                        swing_dur_secs.append(swing_dur_sec)
-                        swing_percentages.append(swing_perc)
-                        stance_percentages.append(stance_perc)
-
-                        if stance_dur_frame == cycle_dur_frame:
-                            max_v_during_swings.append(np.nan)
-                        else:
-                            max_v_during_swings.append(max(velocities[starts[i]:ends[i]]) / pixels_per_cm)
-
-                        mtp_joint_extension = max(angles_toe_mtp_ankle[starts[i] : ends[i]])
-                        ankle_joint_extension = max(angles_mtp_ankle_knee[starts[i] : ends[i]])
-                        knee_joint_extension = max(angles_ankle_knee_hip[starts[i] : ends[i]])
-                        hip_joint_extension = max(angles_knee_hip_crest[starts[i] : ends[i]])
-
-                        mtp_joint_flexion = min(angles_toe_mtp_ankle[starts[i] : ends[i]])
-                        ankle_joint_flexion = min(angles_mtp_ankle_knee[starts[i] : ends[i]])
-                        knee_joint_flexion = min(angles_ankle_knee_hip[starts[i] : ends[i]])
-                        hip_joint_flexion = min(angles_knee_hip_crest[starts[i] : ends[i]])
-
-                        mtp_joint_amplitude = mtp_joint_extension - mtp_joint_flexion
-                        ankle_joint_amplitude = ankle_joint_extension - ankle_joint_flexion
-                        knee_joint_amplitude = knee_joint_extension - knee_joint_flexion
-                        hip_joint_amplitude = hip_joint_extension - hip_joint_flexion
-
-                        mtp_joint_sds.append(np.std(angles_toe_mtp_ankle[starts[i] : ends[i]]))
-                        ankle_joint_sds.append(np.std(angles_mtp_ankle_knee[starts[i] : ends[i]]))
-                        knee_joint_sds.append(np.std(angles_ankle_knee_hip[starts[i] : ends[i]]))
-                        hip_joint_sds.append(np.std(angles_knee_hip_crest[starts[i] : ends[i]]))
-
-                        mtp_joint_extensions.append(mtp_joint_extension)
-                        mtp_joint_flexions.append(mtp_joint_flexion)
-                        mtp_joint_amplitudes.append(mtp_joint_amplitude)
-
-                        ankle_joint_extensions.append(ankle_joint_extension)
-                        ankle_joint_flexions.append(ankle_joint_flexion)
-                        ankle_joint_amplitudes.append(ankle_joint_amplitude)
-
-                        knee_joint_extensions.append(knee_joint_extension)
-                        knee_joint_flexions.append(knee_joint_flexion)
-                        knee_joint_amplitudes.append(knee_joint_amplitude)
-
-                        hip_joint_extensions.append(hip_joint_extension)
-                        hip_joint_flexions.append(hip_joint_flexion)
-                        hip_joint_amplitudes.append(hip_joint_amplitude)
-
-                        drag_clearance_px = drag_clearance_cm * pixels_per_cm
-                        drag, drag_percent, drag_mask = find_drag(smooth_toe_y, stance_dur_frame, treadmill_y, starts[i], ends[i], drag_clearance_px, drag_min_consecutive_frames)
-                        drag_ts.append(drag/frame_rate)
-                        if direction == 'L':
-                            drag_masks_left.append(drag_mask)
-                        elif direction == 'R':
-                            drag_masks_right.append(drag_mask)
-                        if swing_dur_sec and stance_dur_frame > 0:
-                            drag_percentages.append((drag/frame_rate) / swing_dur_sec)    
-                        elif swing_dur_sec and stance_dur_frame == 0:
-                            drag_percentages.append(np.nan)
-                        else:
-                            # no swing phase detected!
-                            drag_percentages.append(1)
-
-                    else:
-
-                        cycle_dur_secs.append(np.nan)
-                        cycle_dur_frames.append(np.nan)
-                        stride_lens.append(np.nan)
-                        cycle_vs.append(np.nan)
-                        stance_dur_secs.append(np.nan)
-                        swing_dur_secs.append(np.nan)
-                        swing_percentages.append(np.nan)
-                        stance_percentages.append(np.nan)
-                        limb_len_means.append(np.nan)
-                        limb_len_maxs.append(np.nan)
-                        limb_len_mins.append(np.nan)
-                        limb_len_sds.append(np.nan)
-                        step_heights.append(np.nan) 
-                        max_v_during_swings.append(np.nan)
-                        mtp_joint_extensions.append(np.nan)
-                        mtp_joint_flexions.append(np.nan)
-                        mtp_joint_amplitudes.append(np.nan)
-                        ankle_joint_extensions.append(np.nan)
-                        ankle_joint_flexions.append(np.nan)
-                        ankle_joint_amplitudes.append(np.nan)
-                        knee_joint_extensions.append(np.nan)
-                        knee_joint_flexions.append(np.nan)
-                        knee_joint_amplitudes.append(np.nan)
-                        hip_joint_extensions.append(np.nan)
-                        hip_joint_flexions.append(np.nan)
-                        hip_joint_amplitudes.append(np.nan)
-                        mtp_joint_sds.append(np.nan)
-                        ankle_joint_sds.append(np.nan)
-                        knee_joint_sds.append(np.nan)
-                        hip_joint_sds.append(np.nan)
-                        drag_ts.append(np.nan)
-                        drag_percentages.append(np.nan)
-
-                starts_included = np.array(starts_included)
-                ends_included = np.array(ends_included)
-            
-            for i in range(len(starts)):
-                
-                if starts[i] not in starts_included:
-                    
-                    dtw_x_plane_5_means.append(np.nan)
-                    dtw_x_plane_5_sds.append(np.nan)
-                    dtw_y_plane_5_means.append(np.nan)
-                    dtw_y_plane_5_sds.append(np.nan)
-                    dtw_xy_plane_5_means.append(np.nan)
-                    dtw_xy_plane_5_sds.append(np.nan)
-                    dtw_x_plane_10_means.append(np.nan)
-                    dtw_x_plane_10_sds.append(np.nan)
-                    dtw_y_plane_10_means.append(np.nan)
-                    dtw_y_plane_10_sds.append(np.nan)
-                    dtw_xy_plane_10_means.append(np.nan)
-                    dtw_xy_plane_10_sds.append(np.nan)
-                    
-                else:
-                    included_index = int(np.where(starts[i] == starts_included)[0].item())                
-                    
-                    if included_index <= len(starts_included)-5:
-                        
-                        toe_xs = parse_stride_lists(smooth_toe_x, starts_included, ends_included, included_index, 5, True)
-                        pairwise_dtw_res_x_5 = pairwise_dtw(toe_xs)
-                        dtw_x_plane_5_mean = np.mean(pairwise_dtw_res_x_5)
-                        dtw_x_plane_5_sd = np.std(pairwise_dtw_res_x_5)
-
-                        toe_ys = parse_stride_lists(smooth_toe_y, starts_included, ends_included, included_index, 5, True)
-                        pairwise_dtw_res_y_5 = pairwise_dtw(toe_ys)
-                        dtw_y_plane_5_mean = np.mean(pairwise_dtw_res_y_5)
-                        dtw_y_plane_5_sd = np.std(pairwise_dtw_res_y_5)
-
-                        toe_xys = [np.append(toe_xs[j], toe_ys[j]).reshape(2,-1).T for j in range(5)]
-                        pairwise_dtw_res_xy_5 = pairwise_dtw(toe_xys)
-                        dtw_xy_plane_5_mean = np.mean(pairwise_dtw_res_xy_5)
-                        dtw_xy_plane_5_sd = np.std(pairwise_dtw_res_xy_5)
-
-                        if included_index <= len(starts_included)-10:
-                            toe_xs = parse_stride_lists(smooth_toe_x, starts_included, ends_included, included_index, 10, True)
-                            pairwise_dtw_res_x_10 = pairwise_dtw(toe_xs)
-                            dtw_x_plane_10_mean = np.mean(pairwise_dtw_res_x_10)
-                            dtw_x_plane_10_sd = np.std(pairwise_dtw_res_x_10)
-
-                            toe_ys = parse_stride_lists(smooth_toe_y, starts_included, ends_included, included_index, 10, True)
-                            pairwise_dtw_res_y_10 = pairwise_dtw(toe_ys)
-                            dtw_y_plane_10_mean = np.mean(pairwise_dtw_res_y_10)
-                            dtw_y_plane_10_sd = np.std(pairwise_dtw_res_y_10)
-
-                            toe_xys = [np.append(toe_xs[j], toe_ys[j]).reshape(2,-1).T for j in range(10)]
-                            pairwise_dtw_res_xy_10 = pairwise_dtw(toe_xys)
-                            dtw_xy_plane_10_mean = np.mean(pairwise_dtw_res_xy_10)
-                            dtw_xy_plane_10_sd = np.std(pairwise_dtw_res_xy_10)
-
-                            dtw_x_plane_10_means.append(dtw_x_plane_10_mean)
-                            dtw_x_plane_10_sds.append(dtw_x_plane_10_sd)
-                            dtw_y_plane_10_means.append(dtw_y_plane_10_mean)
-                            dtw_y_plane_10_sds.append(dtw_y_plane_10_sd)
-                            dtw_xy_plane_10_means.append(dtw_xy_plane_10_mean)
-                            dtw_xy_plane_10_sds.append(dtw_xy_plane_10_sd)
-                        else:
-                            dtw_x_plane_10_means.append(np.nan)
-                            dtw_x_plane_10_sds.append(np.nan)
-                            dtw_y_plane_10_means.append(np.nan)
-                            dtw_y_plane_10_sds.append(np.nan)
-                            dtw_xy_plane_10_means.append(np.nan)
-                            dtw_xy_plane_10_sds.append(np.nan)
-
-                        dtw_x_plane_5_means.append(dtw_x_plane_5_mean)
-                        dtw_x_plane_5_sds.append(dtw_x_plane_5_sd)
-                        dtw_y_plane_5_means.append(dtw_y_plane_5_mean)
-                        dtw_y_plane_5_sds.append(dtw_y_plane_5_sd)
-                        dtw_xy_plane_5_means.append(dtw_xy_plane_5_mean)
-                        dtw_xy_plane_5_sds.append(dtw_xy_plane_5_sd)
-                        
-                    else:
-                        
-                        dtw_x_plane_5_means.append(np.nan)
-                        dtw_x_plane_5_sds.append(np.nan)
-                        dtw_y_plane_5_means.append(np.nan)
-                        dtw_y_plane_5_sds.append(np.nan)
-                        dtw_xy_plane_5_means.append(np.nan)
-                        dtw_xy_plane_5_sds.append(np.nan)
-                        dtw_x_plane_10_means.append(np.nan)
-                        dtw_x_plane_10_sds.append(np.nan)
-                        dtw_y_plane_10_means.append(np.nan)
-                        dtw_y_plane_10_sds.append(np.nan)
-                        dtw_xy_plane_10_means.append(np.nan)
-                        dtw_xy_plane_10_sds.append(np.nan)
-        # except KeyError:
-        else:
-            pass
-
-    # Debug: cycle detection summary
-    # print(f"starts_all: {len(starts_all)}, ends_all: {len(ends_all)}, cycle_dur_secs: {len(cycle_dur_secs)}")
-    
-    # Check if any gait cycles were detected
-    if len(starts_all) == 0 and len(ends_all) == 0:
-        # No gait cycles detected - returning empty DataFrame
-        # Return empty DataFrame with proper structure
-        empty_df = pd.DataFrame(columns=[
-            'limb (hind left / right)', 'stride_start (frame)', 'stride_end (frame)',
-            'cycle duration (s)', 'cycle duration (no. frames)', 'cycle velocity (cm/s)',
-            'stride length (cm)', 'stance duration (s)', 'swing duration (s)',
-            'swing percentage (%)', 'stance percentage (%)', 'mean toe-to-crest distance (cm)',
-            'max toe-to-crest distance (cm)', 'min toe-to-crest distance (cm)',
-            'std toe-to-crest distance (cm)', 'step height (cm)', 'max velocity during swing (cm/s)',
-            'mtp joint extension (degrees)', 'mtp joint flexion (degrees)', 'mtp joint amplitude (degrees)',
-            'mtp joint std (degrees)', 'ankle joint extension (degrees)', 'ankle joint flexion (degrees)',
-            'ankle joint amplitude (degrees)', 'ankle joint std (degrees)', 'knee joint extension (degrees)',
-            'knee joint flexion (degrees)', 'knee joint amplitude (degrees)', 'knee joint std (degrees)',
-            'hip joint extension (degrees)', 'hip joint flexion (degrees)', 'hip joint amplitude (degrees)',
-            'hip joint std (degrees)', 'drag time (s)', 'drag percentage (%)',
-            'dtw x plane 5 means', 'dtw x plane 5 sds', 'dtw y plane 5 means', 'dtw y plane 5 sds',
-            'dtw xy plane 5 means', 'dtw xy plane 5 sds', 'dtw x plane 10 means', 'dtw x plane 10 sds',
-            'dtw y plane 10 means', 'dtw y plane 10 sds', 'dtw xy plane 10 means', 'dtw xy plane 10 sds'
-        ])
-        return empty_df, pd.DataFrame(), [], bodyparts
-    
-    # Ensure all lists have the same length
-    all_lists = [starts_all, ends_all, cycle_dur_secs, cycle_dur_frames, cycle_vs, stride_lens, 
-                 stance_dur_secs, swing_dur_secs, swing_percentages, stance_percentages,
-                 limb_len_means, limb_len_maxs, limb_len_mins, limb_len_sds, step_heights,
-                 max_v_during_swings, mtp_joint_extensions, mtp_joint_flexions, mtp_joint_amplitudes,
-                 mtp_joint_sds, ankle_joint_extensions, ankle_joint_flexions, ankle_joint_amplitudes,
-                 ankle_joint_sds, knee_joint_extensions, knee_joint_flexions, knee_joint_amplitudes,
-                 knee_joint_sds, hip_joint_extensions, hip_joint_flexions, hip_joint_amplitudes,
-                 hip_joint_sds, drag_ts, drag_percentages, dtw_x_plane_5_means, dtw_x_plane_5_sds,
-                 dtw_y_plane_5_means, dtw_y_plane_5_sds, dtw_xy_plane_5_means, dtw_xy_plane_5_sds,
-                 dtw_x_plane_10_means, dtw_x_plane_10_sds, dtw_y_plane_10_means, dtw_y_plane_10_sds,
-                 dtw_xy_plane_10_means, dtw_xy_plane_10_sds]
-    
-    max_len = max(len(lst) for lst in all_lists)
-    
-    # Pad shorter lists with appropriate values
-    def pad_list(lst, target_len, pad_value=np.nan):
-        return lst + [pad_value] * (target_len - len(lst))
-    
-    # Pad limbs list with empty strings
-    limbs = pad_list(limbs, max_len, "")
-    
-    # Pad all lists
-    starts_all = pad_list(starts_all, max_len)
-    ends_all = pad_list(ends_all, max_len)
-    cycle_dur_secs = pad_list(cycle_dur_secs, max_len)
-    cycle_dur_frames = pad_list(cycle_dur_frames, max_len)
-    cycle_vs = pad_list(cycle_vs, max_len)
-    stride_lens = pad_list(stride_lens, max_len)
-    stance_dur_secs = pad_list(stance_dur_secs, max_len)
-    swing_dur_secs = pad_list(swing_dur_secs, max_len)
-    swing_percentages = pad_list(swing_percentages, max_len)
-    stance_percentages = pad_list(stance_percentages, max_len)
-    limb_len_means = pad_list(limb_len_means, max_len)
-    limb_len_maxs = pad_list(limb_len_maxs, max_len)
-    limb_len_mins = pad_list(limb_len_mins, max_len)
-    limb_len_sds = pad_list(limb_len_sds, max_len)
-    step_heights = pad_list(step_heights, max_len)
-    max_v_during_swings = pad_list(max_v_during_swings, max_len)
-    mtp_joint_extensions = pad_list(mtp_joint_extensions, max_len)
-    mtp_joint_flexions = pad_list(mtp_joint_flexions, max_len)
-    mtp_joint_amplitudes = pad_list(mtp_joint_amplitudes, max_len)
-    mtp_joint_sds = pad_list(mtp_joint_sds, max_len)
-    ankle_joint_extensions = pad_list(ankle_joint_extensions, max_len)
-    ankle_joint_flexions = pad_list(ankle_joint_flexions, max_len)
-    ankle_joint_amplitudes = pad_list(ankle_joint_amplitudes, max_len)
-    ankle_joint_sds = pad_list(ankle_joint_sds, max_len)
-    knee_joint_extensions = pad_list(knee_joint_extensions, max_len)
-    knee_joint_flexions = pad_list(knee_joint_flexions, max_len)
-    knee_joint_amplitudes = pad_list(knee_joint_amplitudes, max_len)
-    knee_joint_sds = pad_list(knee_joint_sds, max_len)
-    hip_joint_extensions = pad_list(hip_joint_extensions, max_len)
-    hip_joint_flexions = pad_list(hip_joint_flexions, max_len)
-    hip_joint_amplitudes = pad_list(hip_joint_amplitudes, max_len)
-    hip_joint_sds = pad_list(hip_joint_sds, max_len)
-    drag_ts = pad_list(drag_ts, max_len)
-    drag_percentages = pad_list(drag_percentages, max_len)
-    dtw_x_plane_5_means = pad_list(dtw_x_plane_5_means, max_len)
-    dtw_x_plane_5_sds = pad_list(dtw_x_plane_5_sds, max_len)
-    dtw_y_plane_5_means = pad_list(dtw_y_plane_5_means, max_len)
-    dtw_y_plane_5_sds = pad_list(dtw_y_plane_5_sds, max_len)
-    dtw_xy_plane_5_means = pad_list(dtw_xy_plane_5_means, max_len)
-    dtw_xy_plane_5_sds = pad_list(dtw_xy_plane_5_sds, max_len)
-    dtw_x_plane_10_means = pad_list(dtw_x_plane_10_means, max_len)
-    dtw_x_plane_10_sds = pad_list(dtw_x_plane_10_sds, max_len)
-    dtw_y_plane_10_means = pad_list(dtw_y_plane_10_means, max_len)
-    dtw_y_plane_10_sds = pad_list(dtw_y_plane_10_sds, max_len)
-    dtw_xy_plane_10_means = pad_list(dtw_xy_plane_10_means, max_len)
-    dtw_xy_plane_10_sds = pad_list(dtw_xy_plane_10_sds, max_len)
-
-    return pd.DataFrame(data=np.array([
-                            limbs,
-                            starts_all,
-                            ends_all,
-                            cycle_dur_secs,
-                            cycle_dur_frames,
-                            cycle_vs,
-                            stride_lens, 
-                            stance_dur_secs, 
-                            swing_dur_secs,
-                            swing_percentages, 
-                            stance_percentages, 
-                            limb_len_means,
-                            limb_len_maxs,
-                            limb_len_mins,
-                            limb_len_sds,
-                            step_heights,
-                            max_v_during_swings,
-                            mtp_joint_extensions,
-                            mtp_joint_flexions,
-                            mtp_joint_amplitudes,
-                            mtp_joint_sds,
-                            ankle_joint_extensions,
-                            ankle_joint_flexions,
-                            ankle_joint_amplitudes,
-                            ankle_joint_sds,
-                            knee_joint_extensions,
-                            knee_joint_flexions,
-                            knee_joint_amplitudes,
-                            knee_joint_sds,
-                            hip_joint_extensions,
-                            hip_joint_flexions,
-                            hip_joint_amplitudes,   
-                            hip_joint_sds,
-                            drag_ts, 
-                            drag_percentages,
-                            dtw_x_plane_5_means,
-                            dtw_x_plane_5_sds,
-                            dtw_y_plane_5_means,
-                            dtw_y_plane_5_sds,
-                            dtw_xy_plane_5_means,
-                            dtw_xy_plane_5_sds,
-                            dtw_x_plane_10_means,
-                            dtw_x_plane_10_sds,
-                            dtw_y_plane_10_means,
-                            dtw_y_plane_10_sds,
-                            dtw_xy_plane_10_means,
-                            dtw_xy_plane_10_sds        
-                            ]).T, 
-                            columns=[
-                                'limb (hind left / right)',
-                                'stride_start (frame)',
-                                'stride_end (frame)',
-                                'cycle duration (s)',
-                                'cycle duration (no. frames)',
-                                'cycle velocity (cm/s)',
-                                'stride length (cm)', 
-                                'stance duration (s)', 
-                                'swing duration (s)',
-                                'swing percentage (%)', 
-                                'stance percentage (%)', 
-                                'mean toe-to-crest distance (cm)',
-                                'max toe-to-crest distance (cm)',
-                                'min toe-to-crest distance (cm)',
-                                'toe-to-crest distance SD (cm)',
-                                'step height (cm)',
-                                'max velocity during swing (cm/s)',
-                                'mtp joint extension (deg)',
-                                'mtp joint flexion (deg)',
-                                'mtp joint amplitude (deg)',
-                                'mtp joint SD (deg)',
-                                'ankle joint extension (deg)',
-                                'ankle joint flexion (deg)',
-                                'ankle joint amplitude (deg)',
-                                'ankle joint SD (deg)',
-                                'knee joint extension (deg)',
-                                'knee joint flexion (deg)',
-                                'knee joint amplitude (deg)',
-                                'knee joint SD (deg)',
-                                'hip joint extension (deg)',
-                                'hip joint flexion (deg)',
-                                'hip joint amplitude (deg)', 
-                                'hip joint SD (deg)', 
-                                'drag duration (s)', 
-                                'drag percentage (%)',
-                                'Variability x plane 5 strides mean',
-                                'Variability x plane 5 strides SD',
-                                'Variability y plane 5 strides mean',
-                                'Variability y plane 5 strides SD',
-                                'Variability xy plane 5 strides mean',
-                                'Variability xy plane 5 strides SD',
-                                'Variability x plane 10 strides mean',
-                                'Variability x plane 10 strides SD',
-                                'Variability y plane 10 strides mean',
-                                'Variability y plane 10 strides SD',
-                                'Variability xy plane 10 strides mean',
-                                'Variability xy plane 10 strides SD',
-                                ]), pd_dataframe, np.array(is_stances).reshape(-1), bodyparts, None, None
 
 def collect_filtered_coords(filt_corrected_df, bodyparts):
 
@@ -2177,7 +1625,8 @@ def continuous_stickplot(filt_corrected_df, bodyparts, is_stance, x_coords, y_co
     y_min = min(y_coords.loc[:, start:end].min())
     y_max = max(y_coords.loc[:, start:end].max())
     y_range = y_max - y_min
-    plt.figure(figsize = (x_range // y_range * 5, 5))
+    width = max(5., min(20., 5. * x_range / max(y_range, 1.)))
+    plt.figure(figsize=(width, 5))
 
     for t in filt_corrected_df.index[start:end]:
         if t%2 == 0:
@@ -2233,7 +1682,8 @@ def continuous_stickplot(filt_corrected_df, bodyparts, is_stance, x_coords, y_co
                 f'{bodyparts[4]}-{bodyparts[5]}'], 
                 loc='upper right')
 
-    plt.ylim(y_min, y_max)
+    plt.ylim((y_min-.5,y_max+.5) if y_min == y_max else (y_min,y_max))
+    plt.gca().set_aspect('equal', adjustable='box')
     plt.gca().invert_yaxis()
     plt.savefig(filename, dpi=1200)
     plt.close()

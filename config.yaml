@@ -12,14 +12,25 @@ lowpass_filter_cutoff: 6        # cutoff frequency for Butterworth filter applie
 pixels_per_cm: ''               # provide px - cm ratio of the video, if known
 cm_speed: ''                    # treadmill speed in cm/s (required for treadmill analysis)
 right_to_left: False            # direction of walking: "auto" (detect automatically), True (right-to-left), False (left-to-right)
-no_outlier_filter: False        # only for spontaneous walking setup (requires more testing; True to get parameters for all step cycles)
-dragging_filter: False          # only for spontaneous walking setup (requires more testing; False to get parameters also for potentially 100% dragging mice)
+no_outlier_filter: False        # runway: bypass only cm range filters, not tracking/bout quality checks
+dragging_filter: False          # runway: opt-in exclusion of >=95% near-ground movement; False preserves dragging cycles
 drag_clearance_cm: 0.1          # minimum toe clearance above ground (cm) to not count as dragging
 drag_min_consecutive_frames: 4  # minimum consecutive frames of ground contact to count as dragging (reduces noise)
-# Camera-independent calibration (makes analysis robust to camera distance changes)
-auto_calibrate_spatial: True    # use animal body as reference scale (recommended: True for camera-distance independence)
-reference_segment: 'ankle_toe'  # body segment for calibration: 'ankle_toe' (1.5cm), 'hip_knee' (2.5cm), 'knee_ankle' (2.0cm), 'ankle_mtp' (0.8cm)
-reference_length_cm: 1.5        # known length of reference segment in cm (ankle-toe: 1.5cm mouse; leave as '' to use defaults)
+# Runway event detection (independent of treadmill analysis)
+runway_confidence_threshold: 0.6
+runway_max_gap_s: 0.02          # internal short gaps bridged for event/foot trajectories; 0 disables bridging
+runway_min_body_speed: 0.25     # median toe-to-body-reference lengths/s, with an adaptive noise floor
+runway_min_contact_s: 0.03      # minimum supported contact duration in seconds
+runway_joint_interpolation: 'none'  # opt-in: 'linear' or 'pchip'; independent of event gaps
+runway_joint_max_gap_s: 0.02
+runway_joint_max_interpolated_fraction: 0.10  # union of filled frames for each metric / interval frames
+runway_joint_max_segment_change: 0.35  # relative deviation from local observed endpoint segment lengths
+runway_joint_filter_cutoff: null  # inherit main cutoff; optional separate cutoff for angles/distances
+runway_stickplot_source: 'tracked'  # unfiltered input positions for review, or 'analysis' for filtered coordinates
+# Measured reference calibration; no anatomical length is assumed by the GUI.
+auto_calibrate_spatial: False   # legacy compatibility key; choose measured calibration explicitly
+reference_segment: 'ankle_toe'  # selected segment still requires its measured length
+reference_length_cm: ''         # no default physical length; enter a measured value in the GUI/API
 
 # stride filtering thresholds (applied to both treadmill and spontaneous analyses)
 step_height_min_cm: 0.0         # include strides with step height >= this (cm)

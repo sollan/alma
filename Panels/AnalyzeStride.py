@@ -7,6 +7,7 @@ from PySide6.QtGui import QFont
 from PySide6.QtCore import Qt, QThread, Signal
 from Functions import ConfigFunctions, KinematicsFunctions
 import os
+import json
 import warnings
 import matplotlib
 matplotlib.use('Agg')  # Use non-interactive backend for threading
@@ -25,6 +26,18 @@ class AnalyzeStridePanel(QWidget):
         self.window_width = configs['window_width']
         self.window_height = configs['window_height']
         self.frame_rate = configs['frame_rate']
+        self.runway_defaults = {
+            'confidence': configs.get('runway_confidence_threshold',.6),
+            'max_gap_s': configs.get('runway_max_gap_s',.02),
+            'min_body_speed': configs.get('runway_min_body_speed',.25),
+            'min_contact_s': configs.get('runway_min_contact_s',.03),
+            'joint_interpolation': configs.get('runway_joint_interpolation','none'),
+            'joint_max_gap_s': configs.get('runway_joint_max_gap_s',.02),
+            'joint_max_interpolated_fraction': configs.get('runway_joint_max_interpolated_fraction',.1),
+            'joint_max_segment_change': configs.get('runway_joint_max_segment_change',.35),
+            'joint_cutoff': configs.get('runway_joint_filter_cutoff'),
+            'stickplot_source': configs.get('runway_stickplot_source','tracked'),
+        }
         self.cutoff_f = configs['lowpass_filter_cutoff']
         self.analysis_type = "Treadmill"
         self.pixels_per_cm = configs['pixels_per_cm']
@@ -67,7 +80,7 @@ class AnalyzeStridePanel(QWidget):
         self.wizard_step = 1
         self.mapping_confirmed = False
         self.analysis_settings = {}
-        self.calibration_method = 'reference'  # 'reference' or 'manual'
+        self.calibration_method = 'belt_motion'
         self.selected_files = []
         self.is_bulk_analysis = False
         self.output_folder = None
@@ -441,18 +454,20 @@ class AnalyzeStridePanel(QWidget):
         speed_input_layout.addWidget(self.treadmill_speed_input)
         speed_layout.addLayout(speed_input_layout)
         
-        speed_help = QLabel("The belt speed of your treadmill in cm/s. Used to calculate stride parameters.")
+        speed_help = QLabel("With belt-motion calibration, this speed sets the inferred spatial scale. With a measured calibration, it is a recorded cross-check: correction still follows tracked belt motion, and the report gives its implied speed in cm/s.")
         speed_help.setStyleSheet("color: #666; font-size: 11px;")
         speed_help.setWordWrap(True)
         speed_layout.addWidget(speed_help)
         
-        # Frame Rate
+        # Frame rate applies to both treadmill and spontaneous recordings.
+        fps_group = QGroupBox("Frame Rate")
+        fps_layout = QVBoxLayout(fps_group)
         fps_input_layout = QHBoxLayout()
         fps_input_layout.addWidget(QLabel("Frame Rate (fps):"))
         self.frame_rate_input = QDoubleSpinBox()
         self.frame_rate_input.setRange(1.0, 1000.0)
         self.frame_rate_input.setValue(self.frame_rate)
-        self.frame_rate_input.setDecimals(1)
+        self.frame_rate_input.setDecimals(2)
         fps_input_layout.addWidget(self.frame_rate_input)
         
         # Load FPS from video button
@@ -460,14 +475,15 @@ class AnalyzeStridePanel(QWidget):
         self.load_fps_button.clicked.connect(self.on_load_fps_from_video)
         fps_input_layout.addWidget(self.load_fps_button)
         
-        speed_layout.addLayout(fps_input_layout)
+        fps_layout.addLayout(fps_input_layout)
         
         fps_help = QLabel("Video frame rate in frames per second. Critical for accurate temporal measurements. Click 'Load from Video' to detect FPS automatically.")
         fps_help.setStyleSheet("color: #666; font-size: 11px;")
         fps_help.setWordWrap(True)
-        speed_layout.addWidget(fps_help)
+        fps_layout.addWidget(fps_help)
         
         scroll_layout.addWidget(self.speed_group)
+        scroll_layout.addWidget(fps_group)
 
         # Spatial Calibration Method Section
         calib_group = QGroupBox("Spatial Calibration Method")
@@ -475,15 +491,22 @@ class AnalyzeStridePanel(QWidget):
         calib_group.setLayout(calib_layout)
         
         self.calib_method_group = QButtonGroup()
-        self.reference_radio = QRadioButton("Reference Body Segment (Recommended)")
-        self.manual_radio = QRadioButton("Manual Pixel-to-CM Ratio")
-        self.reference_radio.setChecked(True)
+        self.belt_radio = QRadioButton("Belt-motion estimate (existing treadmill method)")
+        self.reference_radio = QRadioButton("Measured Reference Body Segment")
+        self.manual_radio = QRadioButton("Measured Pixels per CM")
+        self.belt_radio.setChecked(True)
+        self.calib_method_group.addButton(self.belt_radio, 2)
         self.calib_method_group.addButton(self.reference_radio, 0)
         self.calib_method_group.addButton(self.manual_radio, 1)
         self.calib_method_group.buttonClicked.connect(self.on_calib_method_changed)
         
+        calib_layout.addWidget(self.belt_radio)
         calib_layout.addWidget(self.reference_radio)
         calib_layout.addWidget(self.manual_radio)
+        self.calibration_help = QLabel("Belt-motion estimation uses tracked belt movement, FPS and belt speed to infer the spatial scale. A measured scale changes unit conversion; pixel motion correction still uses tracked belt movement. For spontaneous walking, enter a measured pixels-per-cm ratio.")
+        self.calibration_help.setWordWrap(True)
+        self.calibration_help.setStyleSheet("color: #666; font-size: 11px;")
+        calib_layout.addWidget(self.calibration_help)
         
         # Reference segment settings
         self.reference_settings = QWidget()
@@ -494,23 +517,24 @@ class AnalyzeStridePanel(QWidget):
         ref_segment_layout.addWidget(QLabel("Reference Segment:"))
         self.reference_segment_combo = QComboBox()
         self.reference_segment_combo.addItems([
-            "ankle_toe (1.5cm)", "hip_knee (2.5cm)", 
-            "knee_ankle (2.0cm)", "ankle_mtp (0.8cm)"
+            "ankle_toe (enter measured length)", "hip_knee (enter measured length)",
+            "knee_ankle (enter measured length)", "ankle_mtp (enter measured length)"
         ])
-        self.reference_segment_combo.setCurrentText("ankle_toe (1.5cm)")
+        self.reference_segment_combo.setCurrentIndex(0)
         ref_segment_layout.addWidget(self.reference_segment_combo)
         ref_layout.addLayout(ref_segment_layout)
         
         ref_length_layout = QHBoxLayout()
-        ref_length_layout.addWidget(QLabel("Segment Length (cm):"))
+        ref_length_layout.addWidget(QLabel("Measured Segment Length (cm):"))
         self.reference_length_input = QDoubleSpinBox()
-        self.reference_length_input.setRange(0.1, 10.0)
-        self.reference_length_input.setValue(1.5)
+        self.reference_length_input.setRange(0.0, 10.0)
+        self.reference_length_input.setSpecialValueText("Enter measured length")
+        self.reference_length_input.setValue(0.)
         self.reference_length_input.setDecimals(2)
         ref_length_layout.addWidget(self.reference_length_input)
         ref_layout.addLayout(ref_length_layout)
         
-        ref_help = QLabel("Uses known body segment length for camera-independent calibration. ankle_toe = distance between ankle and toe joint (~1.5cm in mice). Recommended for accuracy across different camera distances.")
+        ref_help = QLabel("Enter a length measured for this animal/setup; no anatomical length is assumed. At least 10 jointly confident frames and a stable segment are required; unreliable calibration produces an error without a fallback. Reference calibration is currently available for treadmill analysis.")
         ref_help.setStyleSheet("color: #666; font-size: 11px;")
         ref_help.setWordWrap(True)
         ref_layout.addWidget(ref_help)
@@ -525,8 +549,9 @@ class AnalyzeStridePanel(QWidget):
         manual_input_layout = QHBoxLayout()
         manual_input_layout.addWidget(QLabel("Pixels per CM:"))
         self.pixels_per_cm_input = QDoubleSpinBox()
-        self.pixels_per_cm_input.setRange(1.0, 1000.0)
-        self.pixels_per_cm_input.setValue(self.pixels_per_cm if self.pixels_per_cm else 50.0)
+        self.pixels_per_cm_input.setRange(0.0, 1000.0)
+        self.pixels_per_cm_input.setSpecialValueText("Enter measured scale")
+        self.pixels_per_cm_input.setValue(self.pixels_per_cm if self.pixels_per_cm else 0.)
         self.pixels_per_cm_input.setDecimals(2)
         manual_input_layout.addWidget(self.pixels_per_cm_input)
         manual_layout.addLayout(manual_input_layout)
@@ -540,6 +565,95 @@ class AnalyzeStridePanel(QWidget):
         self.manual_settings.hide()  # Hide by default
         
         scroll_layout.addWidget(calib_group)
+
+        self.runway_group = QGroupBox("Runway Detection and Kinematics")
+        runway_layout = QVBoxLayout(self.runway_group)
+        self.runway_confidence_input = QDoubleSpinBox()
+        self.runway_confidence_input.setRange(.01,.99)
+        self.runway_confidence_input.setDecimals(2)
+        self.runway_confidence_input.setSingleStep(.05)
+        self.runway_confidence_input.setValue(self.runway_defaults['confidence'])
+        self.runway_gap_input = QDoubleSpinBox()
+        self.runway_gap_input.setRange(0.,100.)
+        self.runway_gap_input.setValue(self.runway_defaults['max_gap_s']*1000)
+        self.runway_body_speed_input = QDoubleSpinBox()
+        self.runway_body_speed_input.setRange(0.,10.)
+        self.runway_body_speed_input.setDecimals(2)
+        self.runway_body_speed_input.setValue(self.runway_defaults['min_body_speed'])
+        self.runway_contact_input = QDoubleSpinBox()
+        self.runway_contact_input.setRange(1.,500.)
+        self.runway_contact_input.setValue(self.runway_defaults['min_contact_s']*1000)
+        for label,control in [
+                ('Tracking confidence threshold:',self.runway_confidence_input),
+                ('Maximum gap bridged for event timing (ms):',self.runway_gap_input),
+                ('Minimum body speed (reference lengths/s):',self.runway_body_speed_input),
+                ('Minimum supported contact duration (ms):',self.runway_contact_input)]:
+            line=QHBoxLayout()
+            line.addWidget(QLabel(label))
+            line.addWidget(control)
+            runway_layout.addLayout(line)
+        self.runway_body_speed_input.setToolTip('One reference length is the median valid toe-to-body-reference distance in this recording. This controls the moving-bout gate; it is not an assumed anatomical body length.')
+        self.joint_interpolation_input = QComboBox()
+        self.joint_interpolation_input.addItem('Observed only (no joint reconstruction)', 'none')
+        self.joint_interpolation_input.addItem('Short-gap linear interpolation', 'linear')
+        self.joint_interpolation_input.addItem('Short-gap PCHIP interpolation', 'pchip')
+        self.joint_interpolation_input.setCurrentIndex(max(0,self.joint_interpolation_input.findData(self.runway_defaults['joint_interpolation'])))
+        self.joint_gap_input = QDoubleSpinBox()
+        self.joint_gap_input.setRange(0.,100.)
+        self.joint_gap_input.setValue(self.runway_defaults['joint_max_gap_s']*1000)
+        self.joint_fraction_input = QDoubleSpinBox()
+        self.joint_fraction_input.setRange(0.,100.)
+        self.joint_fraction_input.setValue(self.runway_defaults['joint_max_interpolated_fraction']*100)
+        self.joint_segment_input = QDoubleSpinBox()
+        self.joint_segment_input.setRange(0.,100.)
+        self.joint_segment_input.setValue(self.runway_defaults['joint_max_segment_change']*100)
+        joint_controls = [self.joint_gap_input,self.joint_fraction_input,self.joint_segment_input]
+        for label,control in [
+                ('Joint coordinate reconstruction:',self.joint_interpolation_input),
+                ('Maximum joint gap to reconstruct (ms):',self.joint_gap_input),
+                ('Maximum reconstructed frames per metric (%):',self.joint_fraction_input),
+                ('Maximum local segment-length deviation (%):',self.joint_segment_input)]:
+            line=QHBoxLayout()
+            line.addWidget(QLabel(label))
+            line.addWidget(control)
+            runway_layout.addLayout(line)
+        def update_joint_controls():
+            enabled=self.joint_interpolation_input.currentData() != 'none'
+            for control in joint_controls: control.setEnabled(enabled)
+        self.joint_interpolation_input.currentIndexChanged.connect(update_joint_controls)
+        update_joint_controls()
+        self.joint_fraction_input.setToolTip('For each angle or distance, the union of reconstructed frames across its required joints must stay within this percentage of the cycle. Other metrics and timing remain available.')
+        self.joint_segment_input.setToolTip('Reconstructed bone lengths are compared with local observed endpoint lengths. No anatomical length is assumed. A nearby observed joint is required for a geometry check.')
+        self.joint_cutoff_checkbox = QCheckBox('Separate joint filter cutoff (Hz):')
+        self.joint_cutoff_input = QDoubleSpinBox()
+        self.joint_cutoff_input.setRange(.1,200.)
+        self.joint_cutoff_input.setValue(self.runway_defaults['joint_cutoff'] or self.cutoff_f)
+        self.joint_cutoff_checkbox.setChecked(self.runway_defaults['joint_cutoff'] is not None)
+        self.joint_cutoff_input.setEnabled(self.joint_cutoff_checkbox.isChecked())
+        self.joint_cutoff_checkbox.toggled.connect(self.joint_cutoff_input.setEnabled)
+        line=QHBoxLayout()
+        line.addWidget(self.joint_cutoff_checkbox)
+        line.addWidget(self.joint_cutoff_input)
+        runway_layout.addLayout(line)
+        self.joint_cutoff_input.setToolTip('Optional filter for joint angles and toe-to-crest distance. Higher cutoffs preserve faster changes and more tracking noise. Stride detection and foot metrics retain the main filter cutoff. Unchecked inherits the main cutoff.')
+        self.stickplot_source_input = QComboBox()
+        self.stickplot_source_input.addItem('Tracked keypoints (unfiltered review)', 'tracked')
+        self.stickplot_source_input.addItem('Analysis coordinates (filtered)', 'analysis')
+        self.stickplot_source_input.setCurrentIndex(max(0,self.stickplot_source_input.findData(self.runway_defaults['stickplot_source'])))
+        line=QHBoxLayout()
+        line.addWidget(QLabel('Stick plot coordinates:'))
+        line.addWidget(self.stickplot_source_input)
+        runway_layout.addLayout(line)
+        runway_help=QLabel('Only complete cycles inside moving bouts are scored. Event gap filling and optional joint reconstruction have separate limits. Joint reconstruction occurs before filtering, uses local geometry/motion checks, and flags estimated metrics and peaks. Dashed bones identify reconstructed endpoints. Long gaps and recording edges remain unavailable. Review estimates against video; likelihood scores are never replaced.')
+        runway_help.setWordWrap(True)
+        runway_help.setStyleSheet('color: #666; font-size: 11px;')
+        runway_layout.addWidget(runway_help)
+        review_help=QLabel('Tracked review draws finite input positions directly; low-confidence bones are gray and dotted. Filter padding never hides a visible tracked point in this view. Analysis plots show the filtered coordinates used for calculations. Changing the plot source does not change measurements.')
+        review_help.setWordWrap(True)
+        review_help.setStyleSheet('color: #666; font-size: 11px;')
+        runway_layout.addWidget(review_help)
+        self.runway_group.hide()
+        scroll_layout.addWidget(self.runway_group)
 
         # Movement Analysis Settings Section
         movement_group = QGroupBox("Movement Analysis Settings")
@@ -558,6 +672,8 @@ class AnalyzeStridePanel(QWidget):
         else:
             self.direction_combo.setCurrentText("Left-to-Right")
         direction_layout.addWidget(self.direction_combo)
+        self._direction_by_mode = {'Treadmill': self.direction_combo.currentText(),
+                                   'Spontaneous walking': 'Auto-detect'}
         movement_layout.addLayout(direction_layout)
         
         direction_help = QLabel("Direction of movement. Auto-detect recommended. Manual override if detection fails.")
@@ -575,14 +691,14 @@ class AnalyzeStridePanel(QWidget):
         drag_layout.addWidget(self.drag_clearance_input)
         movement_layout.addLayout(drag_layout)
         
-        drag_help = QLabel("Minimum toe height above ground (in cm) to NOT count as dragging. Values below this are marked as dragging. Typical: 0.1cm for mice.")
+        drag_help = QLabel("Swing frames with toe clearance below this value count as contact. A larger value includes more contact; this control does not define stride boundaries.")
         drag_help.setStyleSheet("color: #666; font-size: 11px;")
         drag_help.setWordWrap(True)
         movement_layout.addWidget(drag_help)
         
         # Drag Consecutive Frames Threshold
         drag_frames_layout = QHBoxLayout()
-        drag_frames_layout.addWidget(QLabel("Drag Detection Sensitivity (frames):"))
+        drag_frames_layout.addWidget(QLabel("Minimum Drag Contact Run (frames):"))
         self.drag_consecutive_frames_input = QSpinBox()
         self.drag_consecutive_frames_input.setRange(1, 10)
         self.drag_consecutive_frames_input.setValue(self.drag_min_consecutive_frames)
@@ -604,7 +720,7 @@ class AnalyzeStridePanel(QWidget):
         filter_layout.addWidget(self.filter_cutoff_input)
         movement_layout.addLayout(filter_layout)
         
-        filter_help = QLabel("Butterworth filter frequency to smooth coordinate data. Lower = more smoothing. Typical: 6Hz for mouse gait.")
+        filter_help = QLabel("Lower cutoff means more smoothing. Changing cutoff can move stride/phase boundaries and alter angle peaks; inspect these events against the video.")
         filter_help.setStyleSheet("color: #666; font-size: 11px;")
         filter_help.setWordWrap(True)
         movement_layout.addWidget(filter_help)
@@ -612,7 +728,7 @@ class AnalyzeStridePanel(QWidget):
         scroll_layout.addWidget(movement_group)
 
         # Stride Filtering Section (Collapsible)
-        self.filtering_group = QGroupBox("Stride Filtering (Optional)")
+        self.filtering_group = QGroupBox("Stride Acceptance Limits")
         filtering_layout = QVBoxLayout()
         self.filtering_group.setLayout(filtering_layout)
         
@@ -650,28 +766,56 @@ class AnalyzeStridePanel(QWidget):
         stride_length_layout.addWidget(self.stride_length_max_input)
         filtering_layout.addLayout(stride_length_layout)
         
-        filtering_help = QLabel("Filter out strides outside these ranges. Use to exclude abnormal movements.")
+        filtering_help = QLabel("These limits select intervals after detection and can change summary averages. Minimum step height 0 retains zero-height dragging steps; a positive minimum excludes them.")
         filtering_help.setStyleSheet("color: #666; font-size: 11px;")
         filtering_help.setWordWrap(True)
         filtering_layout.addWidget(filtering_help)
         
         scroll_layout.addWidget(self.filtering_group)
+        self.settings_status_label = QLabel()
+        self.settings_status_label.setWordWrap(True)
+        self.settings_status_label.setStyleSheet("color: #b45309; padding: 8px;")
+        for control in (self.reference_length_input, self.pixels_per_cm_input,
+                        self.frame_rate_input, self.filter_cutoff_input,
+                        self.step_height_min_input, self.step_height_max_input,
+                        self.stride_length_min_input, self.stride_length_max_input):
+            control.valueChanged.connect(lambda _: self.validate_step3())
+        self.on_calib_method_changed()
+        self.joint_cutoff_input.valueChanged.connect(lambda _: self.validate_step3())
+        self.joint_cutoff_checkbox.toggled.connect(lambda _: self.validate_step3())
 
         step3_layout.addWidget(scroll_area)
+        step3_layout.addWidget(self.settings_status_label)
         self.wizard_stack.addWidget(step3_widget)
 
     def on_analysis_type_changed(self):
         """Handle analysis type change"""
+        previous = self.analysis_type
+        self._direction_by_mode[previous] = self.direction_combo.currentText()
         if self.treadmill_radio.isChecked():
             self.analysis_type = "Treadmill"
             self.speed_group.setVisible(True)
+            self.belt_radio.setEnabled(True)
+            self.reference_radio.setEnabled(True)
+            self.runway_group.hide()
         else:
             self.analysis_type = "Spontaneous walking"
             self.speed_group.setVisible(False)
+            self.belt_radio.setEnabled(False)
+            self.reference_radio.setEnabled(False)
+            self.runway_group.show()
+            if self.belt_radio.isChecked() or self.reference_radio.isChecked():
+                self.manual_radio.setChecked(True)
+        self.direction_combo.setCurrentText(self._direction_by_mode[self.analysis_type])
+        self.on_calib_method_changed()
 
     def on_calib_method_changed(self):
         """Handle calibration method change"""
-        if self.reference_radio.isChecked():
+        if self.belt_radio.isChecked():
+            self.calibration_method = 'belt_motion'
+            self.reference_settings.hide()
+            self.manual_settings.hide()
+        elif self.reference_radio.isChecked():
             self.calibration_method = 'reference'
             self.reference_settings.show()
             self.manual_settings.hide()
@@ -679,6 +823,8 @@ class AnalyzeStridePanel(QWidget):
             self.calibration_method = 'manual'
             self.reference_settings.hide()
             self.manual_settings.show()
+        if hasattr(self, 'next_button'):
+            self.validate_step3()
 
     def on_load_fps_from_video(self):
         """Load FPS from a video file"""
@@ -711,8 +857,23 @@ class AnalyzeStridePanel(QWidget):
 
     def validate_step3(self):
         """Validate Step 3 and enable Next button"""
-        # All settings are valid by default since we use spinboxes with ranges
-        self.next_button.setEnabled(True)
+        message = ''
+        if self.calibration_method == 'manual' and self.pixels_per_cm_input.value() <= 0:
+            message = 'Enter a measured pixels-per-cm scale to continue.'
+        elif self.calibration_method == 'reference' and self.reference_length_input.value() <= 0:
+            message = 'Enter the measured reference-segment length to continue.'
+        elif self.filter_cutoff_input.value() >= self.frame_rate_input.value() / 2:
+            message = 'Filter cutoff must be less than half the frame rate.'
+        elif self.analysis_type != 'Treadmill' and self.joint_cutoff_checkbox.isChecked() and self.joint_cutoff_input.value() >= self.frame_rate_input.value()/2:
+            message = 'Joint filter cutoff must be less than half the frame rate.'
+        elif self.step_height_min_input.value() > self.step_height_max_input.value():
+            message = 'Minimum step height must not exceed the maximum.'
+        elif self.stride_length_min_input.value() > self.stride_length_max_input.value():
+            message = 'Minimum stride length must not exceed the maximum.'
+        self.settings_status_label.setText(message)
+        self.settings_status_label.setVisible(bool(message))
+        if self.wizard_step == 3:
+            self.next_button.setEnabled(not message)
         self.next_button.setText("Next")
 
     def setup_step4_output(self):
@@ -847,13 +1008,32 @@ class AnalyzeStridePanel(QWidget):
             segment = self.reference_segment_combo.currentText()
             summary += f"Reference Segment: {segment}\n"
             summary += f"Segment Length: {self.reference_length_input.value()} cm\n"
-        else:
+        elif self.calibration_method == 'manual':
             summary += f"Pixels per CM: {self.pixels_per_cm_input.value()}\n"
+        else:
+            summary += "Spatial scale inferred from tracked belt motion, FPS and treadmill speed.\n"
         
         direction = self.direction_combo.currentText()
         summary += f"Walking Direction: {direction}\n"
         summary += f"Drag Clearance: {self.drag_clearance_input.value()} cm\n"
+        summary += f"Minimum Drag Run: {self.drag_consecutive_frames_input.value()} frames\n"
         summary += f"Filter Cutoff: {self.filter_cutoff_input.value()} Hz\n"
+        summary += f"Step Height Limits: {self.step_height_min_input.value()}–{self.step_height_max_input.value()} cm\n"
+        summary += f"Stride Length Limits: {self.stride_length_min_input.value()}–{self.stride_length_max_input.value()} cm\n"
+        if self.analysis_type != 'Treadmill':
+            summary += f"Tracking Confidence: {self.runway_confidence_input.value()}\n"
+            summary += f"Maximum Event Gap: {self.runway_gap_input.value()} ms\n"
+            summary += f"Minimum Contact: {self.runway_contact_input.value()} ms\n"
+            summary += f"Minimum Body Speed: {self.runway_body_speed_input.value()} reference lengths/s\n"
+            summary += f"Joint Reconstruction: {self.joint_interpolation_input.currentText()}\n"
+            summary += f"Joint Filter: {self.joint_cutoff_input.value() if self.joint_cutoff_checkbox.isChecked() else self.filter_cutoff_input.value()} Hz\n"
+            summary += f"Stick Plot: {self.stickplot_source_input.currentText()}\n"
+            if self.joint_interpolation_input.currentData() != 'none':
+                summary += f"Joint Gap Limit: {self.joint_gap_input.value()} ms; Reconstructed Frame Limit: {self.joint_fraction_input.value()}%; Local Segment Deviation Limit: {self.joint_segment_input.value()}%\n"
+            if self.no_outlier_filter:
+                summary += "Distance/height range filters bypassed by configuration; tracking quality checks remain active.\n"
+            if self.dragging_filter:
+                summary += "Near-continuous dragging intervals excluded by configuration.\n"
         
         self.summary_text.setText(summary)
 
@@ -918,8 +1098,13 @@ class AnalyzeStridePanel(QWidget):
             self.analysis_settings['auto_calibrate_spatial'] = True
             # For reference method, we don't set pixels_per_cm directly
             self.analysis_settings['pixels_per_cm'] = None
-        else:
+        elif self.calibration_method == 'manual':
             self.analysis_settings['pixels_per_cm'] = self.pixels_per_cm_input.value()
+            self.analysis_settings['auto_calibrate_spatial'] = False
+            self.analysis_settings['reference_segment'] = None
+            self.analysis_settings['reference_length_cm'] = None
+        else:
+            self.analysis_settings['pixels_per_cm'] = None
             self.analysis_settings['auto_calibrate_spatial'] = False
             self.analysis_settings['reference_segment'] = None
             self.analysis_settings['reference_length_cm'] = None
@@ -928,6 +1113,18 @@ class AnalyzeStridePanel(QWidget):
         # Treadmill settings
         if self.analysis_type == "Treadmill":
             self.analysis_settings['cm_speed'] = self.treadmill_speed_input.value()
+        else:
+            self.analysis_settings.update(confidence_threshold=self.runway_confidence_input.value(),
+                max_gap_s=self.runway_gap_input.value()/1000,
+                min_body_speed=self.runway_body_speed_input.value(),
+                min_contact_s=self.runway_contact_input.value()/1000,
+                joint_interpolation=self.joint_interpolation_input.currentData(),
+                joint_max_gap_s=self.joint_gap_input.value()/1000,
+                joint_max_interpolated_fraction=self.joint_fraction_input.value()/100,
+                joint_max_segment_change=self.joint_segment_input.value()/100,
+                joint_cutoff_f=self.joint_cutoff_input.value() if self.joint_cutoff_checkbox.isChecked() else None,
+                stickplot_coordinate_source=self.stickplot_source_input.currentData(),
+                no_outlier_filter=self.no_outlier_filter,dragging_filter=self.dragging_filter)
 
     def update_progress(self, value, text):
         """Update progress bar and label"""
@@ -945,7 +1142,7 @@ class AnalyzeStridePanel(QWidget):
             self.progress_label.setVisible(True)
             self.analyze_another_button.setVisible(True)
             QMessageBox.information(self, "Analysis Complete", 
-                f"Analysis completed successfully!\n\nResults saved to: {self.output_folder}")
+                f"{message}\n\nResults saved to: {self.output_folder}")
         else:
             self.progress_label.setText(f"✗ Analysis failed: {message}")
             self.progress_label.setStyleSheet("color: #d32f2f; padding: 10px;")
@@ -1047,6 +1244,7 @@ class AnalysisThread(QThread):
             
             # Process each file
             total_files = len(self.parent.selected_files)
+            analysis_reports = []
             for i, file_path in enumerate(self.parent.selected_files):
                 self.progress_updated.emit(10 + (i * 80 // total_files), 
                     f"Processing file {i+1}/{total_files}: {os.path.basename(file_path)}")
@@ -1056,24 +1254,13 @@ class AnalysisThread(QThread):
                 df = pd.read_csv(file_path, header=[1,2])
                 
                 # Apply bodypart mapping if available
-                if self.parent.custom_bodypart_mapping:
-                    df, bodyparts, bodyparts_raw = KinematicsFunctions.fix_column_names(
-                        df, self.parent.custom_bodypart_mapping)
-                else:
-                    bodyparts_raw = [col[0] for col in df.columns if col[1] == 'x']
-                    bodyparts = bodyparts_raw
+                df, bodyparts, bodyparts_raw = KinematicsFunctions.fix_column_names(
+                    df, self.parent.custom_bodypart_mapping)
                 
                 # Extract parameters
                 if self.parent.analysis_type == "Treadmill":
-                    # For treadmill analysis, we need to determine which bodypart to use
-                    # Use the first available bodypart from the mapping
-                    bodypart = 'toe'  # Default, but we should use the mapped bodypart
-                    if self.parent.custom_bodypart_mapping:
-                        # Find the first mapped bodypart
-                        for mapped_bp in self.parent.custom_bodypart_mapping.values():
-                            if mapped_bp in bodyparts:
-                                bodypart = mapped_bp
-                                break
+                    # Mapping dictionary order must not change calibration.
+                    bodypart = 'toe'
                     
                     parameters, pd_dataframe_coords, is_stance, bodyparts, drag_masks, starts = KinematicsFunctions.extract_parameters(
                         self.parent.analysis_settings['frame_rate'],
@@ -1081,6 +1268,10 @@ class AnalysisThread(QThread):
                         self.parent.analysis_settings['filter_cutoff'],
                         bodypart,
                         cm_speed=self.parent.analysis_settings.get('cm_speed'),
+                        calibration_method=self.parent.analysis_settings.get('calibration_method', 'belt_motion'),
+                        pixels_per_cm=self.parent.analysis_settings.get('pixels_per_cm'),
+                        reference_segment=self.parent.analysis_settings.get('reference_segment'),
+                        reference_length_cm=self.parent.analysis_settings.get('reference_length_cm'),
                         right_to_left=self.parent.analysis_settings['right_to_left'],
                         step_height_min_cm=self.parent.analysis_settings['step_height_min_cm'],
                         step_height_max_cm=self.parent.analysis_settings['step_height_max_cm'],
@@ -1090,24 +1281,32 @@ class AnalysisThread(QThread):
                         drag_min_consecutive_frames=self.parent.analysis_settings['drag_min_consecutive_frames']
                     )
                 else:
-                    # Handle pixels_per_cm - use default if None or empty
+                    # A physical scale must be supplied; never assume one.
                     pixels_per_cm = self.parent.analysis_settings.get('pixels_per_cm')
-                    if pixels_per_cm is None or pixels_per_cm == '':
-                        pixels_per_cm = 49.143
                     
                     parameters, pd_dataframe_coords, is_stance, bodyparts, drag_masks, starts = KinematicsFunctions.extract_spontaneous_parameters(
                         self.parent.analysis_settings['frame_rate'],
                         df,
                         self.parent.analysis_settings['filter_cutoff'],
                         pixels_per_cm=pixels_per_cm,
-                        no_outlier_filter=False,
-                        dragging_filter=False,
+                        no_outlier_filter=self.parent.analysis_settings.get('no_outlier_filter',False),
+                        dragging_filter=self.parent.analysis_settings.get('dragging_filter',False),
                         step_height_min_cm=self.parent.analysis_settings['step_height_min_cm'],
                         step_height_max_cm=self.parent.analysis_settings['step_height_max_cm'],
                         stride_length_min_cm=self.parent.analysis_settings['stride_length_min_cm'],
                         stride_length_max_cm=self.parent.analysis_settings['stride_length_max_cm'],
                         drag_clearance_cm=self.parent.analysis_settings['drag_clearance_cm'],
-                        drag_min_consecutive_frames=self.parent.analysis_settings['drag_min_consecutive_frames']
+                        drag_min_consecutive_frames=self.parent.analysis_settings['drag_min_consecutive_frames'],
+                        confidence_threshold=self.parent.analysis_settings.get('confidence_threshold',.6),
+                        max_gap_s=self.parent.analysis_settings.get('max_gap_s',.02),
+                        min_body_speed=self.parent.analysis_settings.get('min_body_speed',.25),
+                        min_contact_s=self.parent.analysis_settings.get('min_contact_s',.03),
+                        right_to_left=self.parent.analysis_settings.get('right_to_left','auto'),
+                        joint_interpolation=self.parent.analysis_settings.get('joint_interpolation','none'),
+                        joint_max_gap_s=self.parent.analysis_settings.get('joint_max_gap_s',.02),
+                        joint_max_interpolated_fraction=self.parent.analysis_settings.get('joint_max_interpolated_fraction',.1),
+                        joint_max_segment_change=self.parent.analysis_settings.get('joint_max_segment_change',.35),
+                        joint_cutoff_f=self.parent.analysis_settings.get('joint_cutoff_f')
                     )
                 
                 # Save results
@@ -1115,6 +1314,16 @@ class AnalysisThread(QThread):
                 base_name = os.path.splitext(filename)[0]
                 output_file = os.path.join(self.parent.output_folder, f"{base_name}_parameters.csv")
                 parameters.to_csv(output_file, index=False)
+
+                report = parameters.attrs.get('analysis_report')
+                if report is not None:
+                    report['source_csv'] = os.path.basename(file_path)
+                    if self.parent.analysis_type != 'Treadmill':
+                        report['stickplot_coordinate_source'] = self.parent.analysis_settings.get('stickplot_coordinate_source','tracked')
+                    report_file = os.path.join(self.parent.output_folder, f"{base_name}_analysis_report.json")
+                    with open(report_file, 'w', encoding='utf-8') as handle:
+                        json.dump(report, handle, indent=2, allow_nan=False)
+                    analysis_reports.append(report)
                 
                 # Save coordinate data if available
                 if pd_dataframe_coords is not None:
@@ -1141,7 +1350,8 @@ class AnalysisThread(QThread):
                         filename=stickplot_file,  # Pass full SVG path
                         drag_masks=drag_masks,
                         starts=starts,
-                        drag_min_consecutive_frames=self.parent.analysis_settings['drag_min_consecutive_frames']
+                        drag_min_consecutive_frames=self.parent.analysis_settings['drag_min_consecutive_frames'],
+                        coordinate_source=self.parent.analysis_settings.get('stickplot_coordinate_source','tracked') if self.parent.analysis_type != 'Treadmill' else 'analysis'
                     )
                     
                     # The function saves the file internally, just close any remaining figures
@@ -1158,7 +1368,19 @@ class AnalysisThread(QThread):
                     # Continue with analysis even if stickplot fails
             
             self.progress_updated.emit(100, "Analysis completed!")
-            self.analysis_completed.emit(True, "Analysis completed successfully")
+            if analysis_reports:
+                retained = sum(report['retained_intervals'] for report in analysis_reports)
+                candidates = sum(report['candidate_intervals'] for report in analysis_reports)
+                if retained == 0:
+                    self.analysis_completed.emit(False,
+                        "No usable stride measurements were retained. Diagnostic reports were saved with the results; check tracking, direction, calibration, and stride limits.")
+                    return
+                message = f"Analysis completed: {retained} of {candidates} candidate intervals retained."
+                if any(report['warnings'] for report in analysis_reports):
+                    message += "\nQuality warnings were found. Review the analysis_report.json files before interpreting measurements."
+            else:
+                message = "Analysis completed successfully"
+            self.analysis_completed.emit(True, message)
             
         except Exception as e:
             self.analysis_completed.emit(False, str(e))

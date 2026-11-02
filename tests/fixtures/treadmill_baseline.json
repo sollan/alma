@@ -1,0 +1,13 @@
+{
+  "commit": "47703fc",
+  "settings": {
+    "frame_rate": 120,
+    "cutoff_f": 6,
+    "cm_speed": 30,
+    "right_to_left": false,
+    "step_height_max_cm": 2,
+    "drag_clearance_cm": 0.1
+  },
+  "coordinates_csv_sha256": "7b2d3d13432ac0b52d91a0e4263ccd3b82c7edd62285236d2df10a8401901015",
+  "demo_csv_sha256": "b41714ef22e2f942a563ce7cc72679fe8e5f1628dd2c0d55a900de84279bd15b"
+}
